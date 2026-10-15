@@ -18,8 +18,8 @@ import { RelayModule } from './relay/relay.module.js';
 })
 export class AppModule {
   constructor() {
-    if (!process.env.GITLAB_WEBHOOK_SECRET) {
-      throw new Error('GITLAB_WEBHOOK_SECRET is not set; the relay refuses to boot.');
+    if (!process.env.GITHUB_WEBHOOK_SECRET) {
+      throw new Error('GITHUB_WEBHOOK_SECRET is not set; the relay refuses to boot.');
     }
   }
 }
