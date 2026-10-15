@@ -1,19 +1,31 @@
-import { Controller, Headers, HttpCode, Post, UnauthorizedException } from '@nestjs/common';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { Controller, Headers, HttpCode, Post, Req, UnauthorizedException } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
+const SIGNATURE_HEADER = 'x-hub-signature-256';
+const SIGNATURE_PREFIX = 'sha256=';
 
 /**
- * Compares the presented token against the shared secret in constant time.
- * Both sides are SHA-256 hashed first so the comparison never leaks the
- * secret's length and never short-circuits on the first differing byte.
- * An absent token or an empty secret always fails closed.
+ * Verifies GitHub's X-Hub-Signature-256: an HMAC-SHA256 of the raw request
+ * body, hex-encoded and prefixed with "sha256=". Fails closed on a missing
+ * body, header, or secret, and compares the fixed-length hex digests in
+ * constant time so the comparison never short-circuits.
  */
-function tokenMatchesSecret(token: string | undefined, secret: string): boolean {
-  if (!token || !secret) {
+function signatureMatches(
+  rawBody: Buffer | undefined,
+  signature: string | undefined,
+  secret: string,
+): boolean {
+  if (!rawBody || !signature || !secret || !signature.startsWith(SIGNATURE_PREFIX)) {
     return false;
   }
-  const tokenHash = createHash('sha256').update(token).digest();
-  const secretHash = createHash('sha256').update(secret).digest();
-  return timingSafeEqual(tokenHash, secretHash);
+  const provided = signature.slice(SIGNATURE_PREFIX.length);
+  const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+  if (provided.length !== expected.length) {
+    return false;
+  }
+  return timingSafeEqual(Buffer.from(provided, 'utf8'), Buffer.from(expected, 'utf8'));
 }
 
 @Controller()
@@ -26,9 +38,12 @@ export class WebhookController {
 
   @Post()
   @HttpCode(200)
-  accept(@Headers('x-gitlab-token') token?: string): { received: true } {
-    if (!tokenMatchesSecret(token, this.secret)) {
-      throw new UnauthorizedException('invalid or missing X-Gitlab-Token');
+  accept(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers(SIGNATURE_HEADER) signature?: string,
+  ): { received: true } {
+    if (!signatureMatches(req.rawBody, signature, this.secret)) {
+      throw new UnauthorizedException('invalid or missing X-Hub-Signature-256');
     }
     return { received: true };
   }
