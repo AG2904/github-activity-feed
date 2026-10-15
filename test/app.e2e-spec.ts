@@ -1,6 +1,6 @@
 import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
@@ -21,6 +21,7 @@ describe('Relay HTTP seam (ticket 01)', () => {
 
   afterAll(async () => {
     await app?.close();
+    rmSync(dbDir, { recursive: true, force: true });
   });
 
   it('rejects a webhook that does not carry a token with 401', async () => {
