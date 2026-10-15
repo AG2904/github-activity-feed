@@ -171,5 +171,24 @@ describe('Relay HTTP seam', () => {
         expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/44' }),
       );
     });
+
+    it('ignores a critical-looking payload that cannot be normalized', async () => {
+      await postWebhook(
+        JSON.stringify({
+          action: 'closed',
+          sender: { login: 'maria.perez' },
+          pull_request: {
+            merged: true,
+            base: { ref: 'main' },
+            html_url: 'https://github.com/AG2904/Gitlab-notifier/pull/45',
+          },
+        }),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).not.toContainEqual(
+        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/45' }),
+      );
+    });
   });
 });

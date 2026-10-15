@@ -61,7 +61,10 @@ export class WebhookController {
     }
     const payload = parseBody(req.rawBody);
     if (isMergeToMain(payload)) {
-      await this.events.store(toActivityEvent(payload));
+      const event = toActivityEvent(payload);
+      if (event) {
+        await this.events.store(event);
+      }
     }
     return { received: true };
   }

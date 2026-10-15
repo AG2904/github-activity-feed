@@ -1,13 +1,11 @@
 import type { ActivityEvent } from './domain/activity-event.js';
 
 interface GitHubPullRequest {
-  number: number;
   title: string;
   merged: boolean;
   merged_at: string | null;
   html_url: string;
   base: { ref: string };
-  user: { login: string };
   labels: Array<{ name: string }>;
 }
 
@@ -34,16 +32,28 @@ export function isMergeToMain(payload: unknown): payload is GitHubWebhookPayload
   );
 }
 
-/** Maps GitHub's payload to the ActivityEvent shape, flattening labels to strings. */
-export function toActivityEvent(payload: GitHubWebhookPayload): ActivityEvent {
-  const mergedAt = payload.pull_request.merged_at ?? new Date(0).toISOString();
+/**
+ * Maps GitHub's payload to the ActivityEvent shape, flattening labels to
+ * strings. Returns undefined when the payload passes the filter but cannot
+ * be normalized (missing labels, unparseable timestamp) — per the spec such
+ * events are ignored without error rather than failing the request.
+ */
+export function toActivityEvent(payload: GitHubWebhookPayload): ActivityEvent | undefined {
+  const { merged_at: mergedAt, labels } = payload.pull_request;
+  if (!Array.isArray(labels)) {
+    return undefined;
+  }
+  const mergedAtDate = mergedAt ? new Date(mergedAt) : undefined;
+  if (!mergedAtDate || Number.isNaN(mergedAtDate.getTime())) {
+    return undefined;
+  }
   return {
     type: 'pr.merged',
     actor: payload.sender.login,
     subject: payload.pull_request.title,
     assignee: '',
-    labels: payload.pull_request.labels.map((label) => label.name),
+    labels: labels.map((label) => label.name),
     url: payload.pull_request.html_url,
-    when: new Date(mergedAt).toISOString(),
+    when: mergedAtDate.toISOString(),
   };
 }
