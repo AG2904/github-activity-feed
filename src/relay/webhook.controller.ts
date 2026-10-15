@@ -2,6 +2,8 @@ import { Controller, Headers, HttpCode, Post, Req, UnauthorizedException } from 
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { ActivityEventsService } from './activity-events.service.js';
+import { isMergeToMain, toActivityEvent } from './merge-to-main.js';
 
 const SIGNATURE_HEADER = 'x-hub-signature-256';
 const SIGNATURE_PREFIX = 'sha256=';
@@ -28,22 +30,41 @@ function signatureMatches(
   return timingSafeEqual(Buffer.from(provided, 'utf8'), Buffer.from(expected, 'utf8'));
 }
 
+/** Parses the raw body; malformed JSON yields undefined (ignored, not an error). */
+function parseBody(rawBody: Buffer | undefined): unknown {
+  if (!rawBody) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(rawBody.toString('utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
 @Controller()
 export class WebhookController {
   private readonly secret: string;
 
-  constructor() {
+  constructor(private readonly events: ActivityEventsService) {
     this.secret = process.env.GITHUB_WEBHOOK_SECRET ?? '';
   }
 
   @Post()
   @HttpCode(200)
-  accept(
+  async accept(
     @Req() req: RawBodyRequest<Request>,
     @Headers(SIGNATURE_HEADER) signature?: string,
-  ): { received: true } {
+  ): Promise<{ received: true }> {
     if (!signatureMatches(req.rawBody, signature, this.secret)) {
       throw new UnauthorizedException('invalid or missing X-Hub-Signature-256');
+    }
+    const payload = parseBody(req.rawBody);
+    if (isMergeToMain(payload)) {
+      const event = toActivityEvent(payload);
+      if (event) {
+        await this.events.store(event);
+      }
     }
     return { received: true };
   }

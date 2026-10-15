@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import type { DataSourceOptions } from 'typeorm';
+import { ActivityEventEntity } from './relay/activity-event.entity.js';
 import { RelayModule } from './relay/relay.module.js';
 
 @Module({
@@ -9,8 +10,8 @@ import { RelayModule } from './relay/relay.module.js';
       useFactory: (): DataSourceOptions => ({
         type: 'better-sqlite3',
         database: process.env.DATABASE_PATH ?? 'relay.db',
-        entities: [],
-        synchronize: false,
+        entities: [ActivityEventEntity],
+        synchronize: true,
       }),
     }),
     RelayModule,
