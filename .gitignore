@@ -1,2 +1,10 @@
 # gentle-ai generated skill registry (machine-local, contains absolute paths)
 .atl/
+
+node_modules/
+dist/
+.env
+*.tsbuildinfo
+/nest.cmd
+/tsc.cmd
+/typeorm.cmd
