@@ -33,7 +33,7 @@ export class WebhookController {
   private readonly secret: string;
 
   constructor() {
-    this.secret = process.env.GITLAB_WEBHOOK_SECRET ?? '';
+    this.secret = process.env.GITHUB_WEBHOOK_SECRET ?? '';
   }
 
   @Post()

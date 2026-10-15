@@ -19,7 +19,7 @@ describe('Relay HTTP seam (ticket 01)', () => {
   const dbDir = mkdtempSync(join(tmpdir(), 'relay-test-'));
 
   beforeAll(async () => {
-    process.env.GITLAB_WEBHOOK_SECRET = SECRET;
+    process.env.GITHUB_WEBHOOK_SECRET = SECRET;
     process.env.DATABASE_PATH = join(dbDir, 'relay.db');
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication({ rawBody: true });
@@ -78,6 +78,26 @@ describe('Relay HTTP seam (ticket 01)', () => {
       .set('X-Hub-Signature-256', sign(body))
       .send(body)
       .expect(200);
+  });
+
+  it('acknowledges a body signed byte-for-byte as sent, with non-canonical whitespace', async () => {
+    const body = '{\n  "object_kind": "push"\n}';
+    await request(app.getHttpServer())
+      .post('/')
+      .set('Content-Type', 'application/json')
+      .set('X-Hub-Signature-256', sign(body))
+      .send(body)
+      .expect(200);
+  });
+
+  it('rejects a well-formed digest that is not valid hex with 401', async () => {
+    const body = '{}';
+    await request(app.getHttpServer())
+      .post('/')
+      .set('Content-Type', 'application/json')
+      .set('X-Hub-Signature-256', `sha256=${'z'.repeat(64)}`)
+      .send(body)
+      .expect(401);
   });
 
   it('serves an empty audit history before anything is stored', async () => {

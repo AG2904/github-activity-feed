@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** done
+**Status:** ready-for-human
 
 - [x] The app boots against a temporary SQLite file with no external services.
 - [x] A single HTTP POST endpoint stands at the seam where GitHub webhooks arrive.
@@ -19,3 +19,4 @@
 ## Comments
 
 - 2026-10-15: Rewritten for the GitHub migration (see `docs/research/github-notifications-vs-relay.md` and §9 of `gitlab_feed_architecture.md`). Authentication changes from GitLab's plaintext `X-Gitlab-Token` header to GitHub's `X-Hub-Signature-256`: HMAC-SHA256 of the raw request body, verified in constant time. The walking skeleton merged in PR #1 still validates the old header; the remaining work on this ticket is that migration. Boot, seam, history, and the HTTP-only test harness criteria remain satisfied from PR #1.
+- 2026-10-15: HMAC migration completed (`rawBody` capture + constant-time verification, 8 e2e cases covering wrong secret, tampered body, malformed digest, and raw-byte signing). Env secret renamed to `GITHUB_WEBHOOK_SECRET`. Status `ready-for-human` per the canonical triage labels — implementation done, human review/merge pending.
