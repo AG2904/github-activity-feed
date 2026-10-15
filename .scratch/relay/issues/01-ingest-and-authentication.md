@@ -4,13 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The app boots against a temporary SQLite file with no external services.
-- [ ] A single endpoint accepts GitLab webhooks over HTTP POST.
-- [ ] A request with a missing or wrong token is rejected with `401`.
-- [ ] A request with the correct token is acknowledged with a success status.
-- [ ] The secret is read from the environment, never from committed code.
-- [ ] Token comparison does not short-circuit on the first differing byte.
-- [ ] A history endpoint exists and returns an empty collection before anything is stored.
-- [ ] An integration test drives the endpoint over HTTP, not by calling a handler directly.
+- [x] The app boots against a temporary SQLite file with no external services.
+- [x] A single endpoint accepts GitLab webhooks over HTTP POST.
+- [x] A request with a missing or wrong token is rejected with `401`.
+- [x] A request with the correct token is acknowledged with a success status.
+- [x] The secret is read from the environment, never from committed code.
+- [x] Token comparison does not short-circuit on the first differing byte.
+- [x] A history endpoint exists and returns an empty collection before anything is stored.
+- [x] An integration test drives the endpoint over HTTP, not by calling a handler directly.
