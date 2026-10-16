@@ -10,5 +10,9 @@ dist/
 /tsc.cmd
 /typeorm.cmd
 
-# archify diagram output (local scratch, regenerated per request)
-.archify/
+# archify: the diagrams are versioned, the per-run evidence receipts are not
+# (they carry absolute machine paths and are regenerated on every finalize)
+.archify/**/*.finalize.json
+.archify/**/*.finalize-summary.json
+.archify/**/*.browser-check.json
+.archify/**/*.delivery.json
