@@ -108,9 +108,11 @@ gitlab-notifier/
 │       │   └── issue-assignment.ts     # filtro + normalización de la asignación
 │       ├── activity-event.entity.ts    # la fila persistida (ADR-0004)
 │       ├── activity-events.service.ts  # store/list
+│       ├── activity-stream.ts      # el broadcast: entrega en vivo, sin historia
 │       ├── ingress.ts              # el parser único: bytes crudos, firma antes de parsear (ADR-0002)
 │       ├── webhook.controller.ts   # POST / — validación HMAC (ADR-0002)
 │       ├── history.controller.ts   # GET /history — historial de auditoría
+│       ├── stream.controller.ts    # GET /stream — canal SSE en vivo (ADR-0001)
 │       └── relay.module.ts
 ├── test/                      # e2e sobre la seam HTTP (vitest + supertest)
 ├── docs/
@@ -155,7 +157,7 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
    - [x] Una asignación con label `bug` o `feedback` se convierte en un evento almacenado (ticket 03).
    - [x] El barrido negativo del filtro: todo webhook no crítico se acusa y se descarta. Incluyó corregir el ingress, que rechazaba el cuerpo antes de verificar la firma (ticket 04).
    - [x] Idempotencia por identificador de entrega (`X-GitHub-Delivery`): la entrega se guarda una sola vez, con el identificador como columna única de la fila (ticket 05).
-   - [ ] Canal SSE que sostiene la conexión y emite cada evento almacenado a todos los clientes (ticket 06).
+   - [x] Canal SSE que sostiene la conexión y emite cada evento almacenado a todos los clientes conectados (ticket 06).
    - [ ] Historial filtrable por usuario (ticket 07).
 
 2. **Fase 2: El Cliente CLI (Go)**
