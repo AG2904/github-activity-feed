@@ -72,9 +72,21 @@ export class ActivityEventsService {
     }
   }
 
-  /** Audit history, newest first, in the ActivityEvent shape (no storage id leaks). */
-  async list(): Promise<ActivityEvent[]> {
-    const rows = await this.events.find({ order: { id: 'DESC' } });
+  /**
+   * The audit history, newest first, in the ActivityEvent shape (no storage id
+   * leaks), narrowed to one user when asked.
+   *
+   * A user is *involved* in an event either as its actor or as its assignee — the
+   * two roles the glossary gives a name — so the filter matches both. Story 15 is
+   * the reason: reconstruct what a teammate "merged or was assigned".
+   *
+   * A filter that is absent or empty asks for the whole record.
+   */
+  async list(user?: string): Promise<ActivityEvent[]> {
+    const rows = await this.events.find({
+      where: user ? [{ actor: user }, { assignee: user }] : undefined,
+      order: { id: 'DESC' },
+    });
     return rows.map(fromStoredRow);
   }
 }

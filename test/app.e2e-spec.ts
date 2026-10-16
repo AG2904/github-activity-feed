@@ -96,22 +96,82 @@ const issueUrl = (number: number) =>
   `https://github.com/AG2904/Gitlab-notifier/issues/${number}`;
 
 /**
- * A merge posted the way GitHub delivers it: the hook header, and the identifier
- * of the delivery that carried it. Passing no identifier posts a delivery that
- * arrived untagged.
+ * A webhook posted the way GitHub delivers it: the hook named in the
+ * `X-GitHub-Event` header, and the identifier of the delivery when the fixture
+ * has one.
  */
-function postMerge(url: string, deliveryId?: string) {
-  const delivery = postWebhook(JSON.stringify(pullRequestPayload({ html_url: url }))).set(
-    'X-GitHub-Event',
-    'pull_request',
-  );
+function postDelivery(body: string, event: string, deliveryId?: string) {
+  const delivery = postWebhook(body).set('X-GitHub-Event', event);
   return deliveryId ? delivery.set('X-GitHub-Delivery', deliveryId) : delivery;
 }
 
-/** The stored events pointing at one URL, which is the identity of a fixture. */
-async function storedFor(url: string): Promise<unknown[]> {
-  const events = await storedEvents();
+/** A merge, posted as the delivery that carried it. */
+function postMerge(url: string, deliveryId?: string) {
+  return postDelivery(
+    JSON.stringify(pullRequestPayload({ html_url: url })),
+    'pull_request',
+    deliveryId,
+  );
+}
+
+/** The events pointing at one URL, which is the identity of a fixture. */
+function eventsAtUrl(events: unknown[], url: string): unknown[] {
   return events.filter((event) => (event as { url?: string }).url === url);
+}
+
+/** The stored events pointing at one URL. */
+async function storedFor(url: string): Promise<unknown[]> {
+  return eventsAtUrl(await storedEvents(), url);
+}
+
+/** Every stream connection the suite opens, closed before the app is. */
+const streamConnections = new AbortController();
+
+/**
+ * The stream, read one event at a time.
+ *
+ * A plain GET is the whole handshake (ADR-0001): no upgrade, no negotiation,
+ * nothing sent back upstream. Waiting for the response is what tells the caller
+ * the client is connected, and it is deterministic rather than merely likely —
+ * Nest subscribes the route handler and only then commits the SSE headers on the
+ * next macrotask, so bytes on the wire mean the subscription exists.
+ */
+async function openStream(): Promise<() => Promise<Record<string, unknown>>> {
+  const response = await fetch(new URL('/stream', baseUrl), {
+    signal: streamConnections.signal,
+  });
+  expect(response.status).toBe(200);
+  expect(response.headers.get('content-type')).toContain('text/event-stream');
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffered = '';
+
+  return async function nextEvent(): Promise<Record<string, unknown>> {
+    for (;;) {
+      const frameEnd = buffered.indexOf('\n\n');
+      if (frameEnd === -1) {
+        const { value, done } = await reader.read();
+        if (done) {
+          throw new Error('the stream closed before an event arrived');
+        }
+        buffered += decoder.decode(value, { stream: true });
+        continue;
+      }
+      const frame = buffered.slice(0, frameEnd);
+      buffered = buffered.slice(frameEnd + 2);
+      // The bare newline Nest writes when it commits the headers, and any comment
+      // frame, carry no data. A client ignores both; so does this.
+      const data = frame
+        .split('\n')
+        .filter((line) => line.startsWith('data: '))
+        .map((line) => line.slice('data: '.length))
+        .join('\n');
+      if (data !== '') {
+        return JSON.parse(data) as Record<string, unknown>;
+      }
+    }
+  };
 }
 
 let app: NestExpressApplication;
@@ -134,6 +194,7 @@ describe('Relay HTTP seam', () => {
   });
 
   afterAll(async () => {
+    streamConnections.abort();
     await app?.close();
     rmSync(dbDir, { recursive: true, force: true });
   });
@@ -516,15 +577,15 @@ describe('Relay HTTP seam', () => {
       },
     ];
 
-    /** Posts a fixture the way GitHub would: with the hook named in the header. */
-    function postFixture(webhook: NonCriticalWebhook) {
-      return postWebhook(webhook.body).set('X-GitHub-Event', webhook.event);
+    /** Posts a fixture exactly as the table describes it. */
+    function post(webhook: NonCriticalWebhook) {
+      return postDelivery(webhook.body, webhook.event);
     }
 
     it.each(NON_CRITICAL_WEBHOOKS)('acknowledges $name and stores nothing', async (webhook) => {
       const before = await storedEvents();
 
-      const response = await postFixture(webhook).expect(200);
+      const response = await post(webhook).expect(200);
       expect(response.body).toEqual({ received: true });
 
       const after = await storedEvents();
@@ -538,7 +599,7 @@ describe('Relay HTTP seam', () => {
       const before = await storedEvents();
 
       for (const webhook of NON_CRITICAL_WEBHOOKS) {
-        await postFixture(webhook).expect(200);
+        await post(webhook).expect(200);
       }
 
       const after = await storedEvents();
@@ -657,58 +718,6 @@ describe('Relay HTTP seam', () => {
   });
 
   describe('events stream to connected clients (ticket 06)', () => {
-    /** Every connection this block opens, closed together at the end. */
-    const connections = new AbortController();
-
-    afterAll(() => connections.abort());
-
-    /**
-     * The stream, read one event at a time.
-     *
-     * A plain GET is the whole handshake (ADR-0001): no upgrade, no negotiation,
-     * nothing sent back upstream. Waiting for the response is what tells the caller
-     * the client is connected, and it is deterministic rather than merely likely —
-     * Nest subscribes the route handler and only then commits the SSE headers on
-     * the next macrotask, so bytes on the wire mean the subscription exists.
-     */
-    async function openStream(): Promise<() => Promise<Record<string, unknown>>> {
-      const response = await fetch(new URL('/stream', baseUrl), {
-        signal: connections.signal,
-      });
-      expect(response.status).toBe(200);
-      expect(response.headers.get('content-type')).toContain('text/event-stream');
-
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffered = '';
-
-      return async function nextEvent(): Promise<Record<string, unknown>> {
-        for (;;) {
-          const frameEnd = buffered.indexOf('\n\n');
-          if (frameEnd === -1) {
-            const { value, done } = await reader.read();
-            if (done) {
-              throw new Error('the stream closed before an event arrived');
-            }
-            buffered += decoder.decode(value, { stream: true });
-            continue;
-          }
-          const frame = buffered.slice(0, frameEnd);
-          buffered = buffered.slice(frameEnd + 2);
-          // The bare newline Nest writes when it commits the headers, and any
-          // comment frame, carry no data. A client ignores both; so does this.
-          const data = frame
-            .split('\n')
-            .filter((line) => line.startsWith('data: '))
-            .map((line) => line.slice('data: '.length))
-            .join('\n');
-          if (data !== '') {
-            return JSON.parse(data) as Record<string, unknown>;
-          }
-        }
-      };
-    }
-
     it('holds a plain HTTP connection open and sends an event posted while it is connected', async () => {
       const first = pullUrl(161);
       const second = pullUrl(162);
@@ -748,6 +757,94 @@ describe('Relay HTTP seam', () => {
       // The channel is ordered, so the past would have arrived ahead of this one:
       // the stream is live, and the history is where the past lives.
       expect(await nextEvent()).toMatchObject({ url: afterwards });
+    });
+  });
+
+  describe('the history is filtered by user (ticket 07)', () => {
+    /** An issue assignment, posted as the delivery that carried it. */
+    function postAssignment(url: string, deliveryId: string) {
+      return postDelivery(
+        JSON.stringify(issuePayload({ issue: { html_url: url } })),
+        'issues',
+        deliveryId,
+      );
+    }
+
+    /** The history the relay serves when asked for one user. */
+    async function historyFor(user: string): Promise<unknown[]> {
+      const response = await getHistory().query({ user }).expect(200);
+      return response.body as unknown[];
+    }
+
+    it('returns the events of the actor asked for, newest first, and nobody else’s', async () => {
+      const older = pullUrl(171);
+      const newer = pullUrl(172);
+      const assigned = issueUrl(177);
+
+      // Two different actors: maria.perez merged, lucia.gomez assigned.
+      await postMerge(older, 'delivery-171').expect(200);
+      await postMerge(newer, 'delivery-172').expect(200);
+      await postAssignment(assigned, 'delivery-177').expect(200);
+
+      const maria = await historyFor('maria.perez');
+      expect(maria).toContainEqual(expect.objectContaining({ url: older }));
+      expect(maria).toContainEqual(expect.objectContaining({ url: newer }));
+      expect(maria).not.toContainEqual(expect.objectContaining({ url: assigned }));
+
+      // The filter narrows the record without disturbing its order.
+      const ordered = maria.map((event) => (event as { url: string }).url);
+      expect(ordered.indexOf(newer)).toBeLessThan(ordered.indexOf(older));
+    });
+
+    it('returns an event of the assignee as well as of the actor', async () => {
+      const assigned = issueUrl(173);
+      const unrelated = pullUrl(175);
+
+      await postAssignment(assigned, 'delivery-173').expect(200);
+      await postMerge(unrelated, 'delivery-175').expect(200);
+
+      // The ticket asks for the events *involving* a user, and story 15 asks to
+      // reconstruct what a teammate "merged or was assigned": an assignment
+      // involves two people, the one who assigned it and the one who received it.
+      const assignee = await historyFor('tomas.ferreira');
+      expect(assignee).toContainEqual(
+        expect.objectContaining({ url: assigned, assignee: 'tomas.ferreira' }),
+      );
+      // tomas.ferreira is neither the actor nor the assignee of that merge.
+      expect(assignee).not.toContainEqual(expect.objectContaining({ url: unrelated }));
+
+      const actor = await historyFor('lucia.gomez');
+      expect(actor).toContainEqual(expect.objectContaining({ url: assigned }));
+    });
+
+    it('returns an empty collection for a user the relay has never seen', async () => {
+      expect(await historyFor('nobody.in.this.team')).toEqual([]);
+    });
+
+    it('serves the whole record when the filter is empty', async () => {
+      // `?user=` and no filter are the same request: there is no user to narrow by.
+      expect(await historyFor('')).toEqual(await storedEvents());
+    });
+
+    it('serves a filtered event in the same shape as the unfiltered history and the stream', async () => {
+      const merged = pullUrl(174);
+      const assigned = issueUrl(176);
+      const nextEvent = await openStream();
+
+      await postMerge(merged, 'delivery-174').expect(200);
+      await postAssignment(assigned, 'delivery-176').expect(200);
+
+      const streamedMerge = await nextEvent();
+      const streamedAssignment = await nextEvent();
+
+      // One shape, both kinds of event, whoever asks for it and however it travels
+      // (story 16): as streamed, as filtered, and as the whole record serves it.
+      expect(eventsAtUrl(await historyFor('maria.perez'), merged)[0]).toEqual(streamedMerge);
+      expect(eventsAtUrl(await storedEvents(), merged)[0]).toEqual(streamedMerge);
+      expect(eventsAtUrl(await historyFor('tomas.ferreira'), assigned)[0]).toEqual(
+        streamedAssignment,
+      );
+      expect(eventsAtUrl(await storedEvents(), assigned)[0]).toEqual(streamedAssignment);
     });
   });
 });
