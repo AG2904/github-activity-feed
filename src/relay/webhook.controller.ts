@@ -7,6 +7,7 @@ import { toActivityEvent } from './github/to-activity-event.js';
 
 const SIGNATURE_HEADER = 'x-hub-signature-256';
 const SIGNATURE_PREFIX = 'sha256=';
+const DELIVERY_HEADER = 'x-github-delivery';
 
 /**
  * Verifies GitHub's X-Hub-Signature-256: an HMAC-SHA256 of the raw request
@@ -60,6 +61,7 @@ export class WebhookController {
   async accept(
     @Req() req: RawBodyRequest<Request>,
     @Headers(SIGNATURE_HEADER) signature?: string,
+    @Headers(DELIVERY_HEADER) deliveryId?: string,
   ): Promise<{ received: true }> {
     if (!signatureMatches(req.rawBody, signature, this.secret)) {
       throw new UnauthorizedException('invalid or missing X-Hub-Signature-256');
@@ -67,7 +69,8 @@ export class WebhookController {
     const payload = parseBody(req.rawBody);
     const event = toActivityEvent(payload);
     if (event) {
-      await this.events.store(event);
+      // A missing header and an empty one both mean the delivery arrived untagged.
+      await this.events.store(event, deliveryId || null);
     }
     return { received: true };
   }

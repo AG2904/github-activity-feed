@@ -88,6 +88,13 @@ function issuePayload(
   };
 }
 
+/** The URL a pull request fixture is stored under, which is how a test finds it. */
+const pullUrl = (number: number) => `https://github.com/AG2904/Gitlab-notifier/pull/${number}`;
+
+/** The URL an issue fixture is stored under. */
+const issueUrl = (number: number) =>
+  `https://github.com/AG2904/Gitlab-notifier/issues/${number}`;
+
 let app: NestExpressApplication;
 
 describe('Relay HTTP seam', () => {
@@ -377,10 +384,6 @@ describe('Relay HTTP seam', () => {
   });
 
   describe('everything else is ignored (ticket 04)', () => {
-    const pullUrl = (number: number) => `https://github.com/AG2904/Gitlab-notifier/pull/${number}`;
-    const issueUrl = (number: number) =>
-      `https://github.com/AG2904/Gitlab-notifier/issues/${number}`;
-
     /**
      * The negative half of the filter, as one table: every webhook in it has to
      * be acknowledged and discarded. It is a table because the ticket's last
@@ -532,6 +535,132 @@ describe('Relay HTTP seam', () => {
       await postWebhook(UNREADABLE_BODY, sign(UNREADABLE_BODY, 'not-the-secret'))
         .set('X-GitHub-Event', 'pull_request')
         .expect(401);
+    });
+  });
+
+  describe('a resent event is stored once (ticket 05)', () => {
+    /**
+     * Each fixture names its own delivery identifier, so a test can only ever
+     * collide with itself: the whole suite shares one database, and a delivery
+     * identifier is what identifies a delivery, not an event.
+     */
+    function postDelivery(body: string, deliveryId: string) {
+      return postWebhook(body)
+        .set('X-GitHub-Event', 'pull_request')
+        .set('X-GitHub-Delivery', deliveryId);
+    }
+
+    /** The stored events pointing at one URL, which is the identity of a fixture. */
+    async function storedFor(url: string): Promise<unknown[]> {
+      const events = await storedEvents();
+      return events.filter((event) => (event as { url?: string }).url === url);
+    }
+
+    it('stores the same delivery once, acknowledging each one as if it were fresh', async () => {
+      const url = pullUrl(151);
+      const delivery = 'delivery-151';
+      const body = JSON.stringify(pullRequestPayload({ html_url: url }));
+
+      await postDelivery(body, delivery).expect(200);
+
+      // GitHub does not redeliver on its own, but a missed response budget gets
+      // retried and its UI can redeliver by hand — same identifier, same delivery.
+      const redelivery = await postDelivery(body, delivery).expect(200);
+      expect(redelivery.body).toEqual({ received: true });
+
+      expect(await storedFor(url)).toHaveLength(1);
+    });
+
+    it('stores two different events posted back to back', async () => {
+      const first = pullUrl(152);
+      const second = pullUrl(153);
+
+      await postDelivery(
+        JSON.stringify(pullRequestPayload({ html_url: first })),
+        'delivery-152',
+      ).expect(200);
+      await postDelivery(
+        JSON.stringify(pullRequestPayload({ html_url: second })),
+        'delivery-153',
+      ).expect(200);
+
+      expect(await storedFor(first)).toHaveLength(1);
+      expect(await storedFor(second)).toHaveLength(1);
+    });
+
+    it('keeps one row when the same delivery arrives twice at once', async () => {
+      const url = pullUrl(154);
+      const delivery = 'delivery-154';
+      const body = JSON.stringify(pullRequestPayload({ html_url: url }));
+
+      // Both deliveries are in flight before either is answered. This cannot
+      // distinguish a constraint-rejected insert from a read followed by a write:
+      // the driver is synchronous, so the two writes are serialized on the event
+      // loop and a reader-first implementation would pass this too. What it can
+      // check is the contract — both acknowledged, exactly one row — and the
+      // absence of a read is structural: `store` never looks before it inserts.
+      const responses = await Promise.all([
+        postDelivery(body, delivery),
+        postDelivery(body, delivery),
+      ]);
+
+      expect(responses.map((response) => response.status)).toEqual([200, 200]);
+      expect(await storedFor(url)).toHaveLength(1);
+    });
+
+    it('drops a repeated identifier even when the payload differs', async () => {
+      const delivery = 'delivery-156';
+
+      // The identifier names a delivery, not an event. A second delivery carrying
+      // it is that delivery again, whatever its payload now says — which is also
+      // what proves the header's value is the key actually stored on the row.
+      await postDelivery(
+        JSON.stringify(pullRequestPayload({ html_url: pullUrl(156) })),
+        delivery,
+      ).expect(200);
+      await postDelivery(
+        JSON.stringify(pullRequestPayload({ html_url: pullUrl(157) })),
+        delivery,
+      ).expect(200);
+
+      expect(await storedFor(pullUrl(156))).toHaveLength(1);
+      expect(await storedFor(pullUrl(157))).toEqual([]);
+    });
+
+    it('keeps an event that arrives with no delivery identifier, and cannot dedupe it', async () => {
+      const url = pullUrl(158);
+      const body = JSON.stringify(pullRequestPayload({ html_url: url }));
+
+      // GitHub stamps every delivery, so this path is a safety net rather than a
+      // normal one: an authenticated critical event is worth keeping even when
+      // there is nothing to dedupe it by. The column is nullable for that reason,
+      // which also means two untagged arrivals are two rows (ADR-0005 prefers a
+      // duplicate to a dropped event).
+      await postWebhook(body).set('X-GitHub-Event', 'pull_request').expect(200);
+      await postWebhook(body).set('X-GitHub-Event', 'pull_request').expect(200);
+
+      expect(await storedFor(url)).toHaveLength(2);
+    });
+
+    it('serves the stored event without the delivery identifier', async () => {
+      const url = pullUrl(155);
+      await postDelivery(
+        JSON.stringify(pullRequestPayload({ html_url: url })),
+        'delivery-155',
+      ).expect(200);
+
+      const [stored] = await storedFor(url);
+      // Deep equality on purpose: exactly seven fields reach the wire, so an
+      // eighth column arriving there fails here (ADR-0005).
+      expect(stored).toEqual({
+        type: 'pr.merged',
+        actor: 'maria.perez',
+        subject: 'Fix memory leak in parser component',
+        assignee: null,
+        labels: ['bug', 'area:relay'],
+        url,
+        when: '2026-10-15T12:00:00.000Z',
+      });
     });
   });
 });

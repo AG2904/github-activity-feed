@@ -6,6 +6,15 @@ export class ActivityEventEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
+  /**
+   * GitHub's per-delivery identifier, unique so a redelivery cannot become a
+   * second row. It is a storage column and never a field of the ActivityEvent
+   * shape (ADR-0005): this identifies a *delivery*, not a happening. Nullable,
+   * because an event that arrives without one is still a happening.
+   */
+  @Column({ type: 'text', nullable: true, unique: true })
+  deliveryId!: string | null;
+
   @Column()
   type!: string;
 
