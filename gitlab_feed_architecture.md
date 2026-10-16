@@ -99,10 +99,15 @@ gitlab-notifier/
 │   ├── main.ts
 │   └── relay/                 # seam HTTP única
 │       ├── domain/                 # modelo de dominio: sin TypeORM, sin HTTP, sin payloads
-│       │   └── activity-event.ts   # el shape normalizado (§6)
+│       │   ├── activity-event.ts   # el shape normalizado (§6)
+│       │   └── critical.ts         # la regla: qué hace crítico a un evento
+│       ├── github/                 # la frontera del payload: sólo acá se conoce GitHub
+│       │   ├── payload.ts          # lectura defensiva de payloads
+│       │   ├── to-activity-event.ts    # única entrada: payload -> ActivityEvent | undefined
+│       │   ├── merge-to-main.ts        # filtro + normalización del merge
+│       │   └── issue-assignment.ts     # filtro + normalización de la asignación
 │       ├── activity-event.entity.ts    # la fila persistida (ADR-0004)
 │       ├── activity-events.service.ts  # store/list
-│       ├── merge-to-main.ts        # filtro + normalización del merge (payload GitHub)
 │       ├── webhook.controller.ts   # POST / — validación HMAC (ADR-0002)
 │       ├── history.controller.ts   # GET /history — historial de auditoría
 │       └── relay.module.ts
