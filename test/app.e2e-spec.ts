@@ -95,7 +95,27 @@ const pullUrl = (number: number) => `https://github.com/AG2904/Gitlab-notifier/p
 const issueUrl = (number: number) =>
   `https://github.com/AG2904/Gitlab-notifier/issues/${number}`;
 
+/**
+ * A merge posted the way GitHub delivers it: the hook header, and the identifier
+ * of the delivery that carried it. Passing no identifier posts a delivery that
+ * arrived untagged.
+ */
+function postMerge(url: string, deliveryId?: string) {
+  const delivery = postWebhook(JSON.stringify(pullRequestPayload({ html_url: url }))).set(
+    'X-GitHub-Event',
+    'pull_request',
+  );
+  return deliveryId ? delivery.set('X-GitHub-Delivery', deliveryId) : delivery;
+}
+
+/** The stored events pointing at one URL, which is the identity of a fixture. */
+async function storedFor(url: string): Promise<unknown[]> {
+  const events = await storedEvents();
+  return events.filter((event) => (event as { url?: string }).url === url);
+}
+
 let app: NestExpressApplication;
+let baseUrl: string;
 
 describe('Relay HTTP seam', () => {
   const dbDir = mkdtempSync(join(tmpdir(), 'relay-test-'));
@@ -107,6 +127,10 @@ describe('Relay HTTP seam', () => {
     app = moduleRef.createNestApplication<NestExpressApplication>(INGRESS_OPTIONS);
     configureIngress(app);
     await app.init();
+    // Listening on a real ephemeral port, because a held-open stream is not
+    // something supertest can observe: its requests are answered, not streamed.
+    await app.listen(0, '127.0.0.1');
+    baseUrl = await app.getUrl();
   });
 
   afterAll(async () => {
@@ -539,33 +563,18 @@ describe('Relay HTTP seam', () => {
   });
 
   describe('a resent event is stored once (ticket 05)', () => {
-    /**
-     * Each fixture names its own delivery identifier, so a test can only ever
-     * collide with itself: the whole suite shares one database, and a delivery
-     * identifier is what identifies a delivery, not an event.
-     */
-    function postDelivery(body: string, deliveryId: string) {
-      return postWebhook(body)
-        .set('X-GitHub-Event', 'pull_request')
-        .set('X-GitHub-Delivery', deliveryId);
-    }
-
-    /** The stored events pointing at one URL, which is the identity of a fixture. */
-    async function storedFor(url: string): Promise<unknown[]> {
-      const events = await storedEvents();
-      return events.filter((event) => (event as { url?: string }).url === url);
-    }
+    // Each fixture names its own delivery identifier, so a test can only ever
+    // collide with itself: the suite shares one database, and an identifier names
+    // a delivery rather than an event.
 
     it('stores the same delivery once, acknowledging each one as if it were fresh', async () => {
       const url = pullUrl(151);
-      const delivery = 'delivery-151';
-      const body = JSON.stringify(pullRequestPayload({ html_url: url }));
 
-      await postDelivery(body, delivery).expect(200);
+      await postMerge(url, 'delivery-151').expect(200);
 
       // GitHub does not redeliver on its own, but a missed response budget gets
       // retried and its UI can redeliver by hand — same identifier, same delivery.
-      const redelivery = await postDelivery(body, delivery).expect(200);
+      const redelivery = await postMerge(url, 'delivery-151').expect(200);
       expect(redelivery.body).toEqual({ received: true });
 
       expect(await storedFor(url)).toHaveLength(1);
@@ -575,14 +584,8 @@ describe('Relay HTTP seam', () => {
       const first = pullUrl(152);
       const second = pullUrl(153);
 
-      await postDelivery(
-        JSON.stringify(pullRequestPayload({ html_url: first })),
-        'delivery-152',
-      ).expect(200);
-      await postDelivery(
-        JSON.stringify(pullRequestPayload({ html_url: second })),
-        'delivery-153',
-      ).expect(200);
+      await postMerge(first, 'delivery-152').expect(200);
+      await postMerge(second, 'delivery-153').expect(200);
 
       expect(await storedFor(first)).toHaveLength(1);
       expect(await storedFor(second)).toHaveLength(1);
@@ -591,7 +594,6 @@ describe('Relay HTTP seam', () => {
     it('keeps one row when the same delivery arrives twice at once', async () => {
       const url = pullUrl(154);
       const delivery = 'delivery-154';
-      const body = JSON.stringify(pullRequestPayload({ html_url: url }));
 
       // Both deliveries are in flight before either is answered. This cannot
       // distinguish a constraint-rejected insert from a read followed by a write:
@@ -600,8 +602,8 @@ describe('Relay HTTP seam', () => {
       // check is the contract — both acknowledged, exactly one row — and the
       // absence of a read is structural: `store` never looks before it inserts.
       const responses = await Promise.all([
-        postDelivery(body, delivery),
-        postDelivery(body, delivery),
+        postMerge(url, delivery),
+        postMerge(url, delivery),
       ]);
 
       expect(responses.map((response) => response.status)).toEqual([200, 200]);
@@ -614,14 +616,8 @@ describe('Relay HTTP seam', () => {
       // The identifier names a delivery, not an event. A second delivery carrying
       // it is that delivery again, whatever its payload now says — which is also
       // what proves the header's value is the key actually stored on the row.
-      await postDelivery(
-        JSON.stringify(pullRequestPayload({ html_url: pullUrl(156) })),
-        delivery,
-      ).expect(200);
-      await postDelivery(
-        JSON.stringify(pullRequestPayload({ html_url: pullUrl(157) })),
-        delivery,
-      ).expect(200);
+      await postMerge(pullUrl(156), delivery).expect(200);
+      await postMerge(pullUrl(157), delivery).expect(200);
 
       expect(await storedFor(pullUrl(156))).toHaveLength(1);
       expect(await storedFor(pullUrl(157))).toEqual([]);
@@ -629,25 +625,21 @@ describe('Relay HTTP seam', () => {
 
     it('keeps an event that arrives with no delivery identifier, and cannot dedupe it', async () => {
       const url = pullUrl(158);
-      const body = JSON.stringify(pullRequestPayload({ html_url: url }));
 
       // GitHub stamps every delivery, so this path is a safety net rather than a
       // normal one: an authenticated critical event is worth keeping even when
       // there is nothing to dedupe it by. The column is nullable for that reason,
       // which also means two untagged arrivals are two rows (ADR-0005 prefers a
       // duplicate to a dropped event).
-      await postWebhook(body).set('X-GitHub-Event', 'pull_request').expect(200);
-      await postWebhook(body).set('X-GitHub-Event', 'pull_request').expect(200);
+      await postMerge(url).expect(200);
+      await postMerge(url).expect(200);
 
       expect(await storedFor(url)).toHaveLength(2);
     });
 
     it('serves the stored event without the delivery identifier', async () => {
       const url = pullUrl(155);
-      await postDelivery(
-        JSON.stringify(pullRequestPayload({ html_url: url })),
-        'delivery-155',
-      ).expect(200);
+      await postMerge(url, 'delivery-155').expect(200);
 
       const [stored] = await storedFor(url);
       // Deep equality on purpose: exactly seven fields reach the wire, so an
@@ -661,6 +653,101 @@ describe('Relay HTTP seam', () => {
         url,
         when: '2026-10-15T12:00:00.000Z',
       });
+    });
+  });
+
+  describe('events stream to connected clients (ticket 06)', () => {
+    /** Every connection this block opens, closed together at the end. */
+    const connections = new AbortController();
+
+    afterAll(() => connections.abort());
+
+    /**
+     * The stream, read one event at a time.
+     *
+     * A plain GET is the whole handshake (ADR-0001): no upgrade, no negotiation,
+     * nothing sent back upstream. Waiting for the response is what tells the caller
+     * the client is connected, and it is deterministic rather than merely likely —
+     * Nest subscribes the route handler and only then commits the SSE headers on
+     * the next macrotask, so bytes on the wire mean the subscription exists.
+     */
+    async function openStream(): Promise<() => Promise<Record<string, unknown>>> {
+      const response = await fetch(new URL('/stream', baseUrl), {
+        signal: connections.signal,
+      });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/event-stream');
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffered = '';
+
+      return async function nextEvent(): Promise<Record<string, unknown>> {
+        for (;;) {
+          const frameEnd = buffered.indexOf('\n\n');
+          if (frameEnd === -1) {
+            const { value, done } = await reader.read();
+            if (done) {
+              throw new Error('the stream closed before an event arrived');
+            }
+            buffered += decoder.decode(value, { stream: true });
+            continue;
+          }
+          const frame = buffered.slice(0, frameEnd);
+          buffered = buffered.slice(frameEnd + 2);
+          // The bare newline Nest writes when it commits the headers, and any
+          // comment frame, carry no data. A client ignores both; so does this.
+          const data = frame
+            .split('\n')
+            .filter((line) => line.startsWith('data: '))
+            .map((line) => line.slice('data: '.length))
+            .join('\n');
+          if (data !== '') {
+            return JSON.parse(data) as Record<string, unknown>;
+          }
+        }
+      };
+    }
+
+    it('holds a plain HTTP connection open and sends an event posted while it is connected', async () => {
+      const first = pullUrl(161);
+      const second = pullUrl(162);
+      const nextEvent = await openStream();
+
+      await postMerge(first, 'delivery-161').expect(200);
+      // The streamed event and the stored one are the same event in the same
+      // shape, so a client parses one thing (user story 16).
+      expect(await nextEvent()).toEqual((await storedFor(first))[0]);
+
+      // One connection, still open, still current: this is what holding it open
+      // and emitting events as they are stored means.
+      await postMerge(second, 'delivery-162').expect(200);
+      expect(await nextEvent()).toMatchObject({ url: second });
+    });
+
+    it('delivers every stored event to every connected client', async () => {
+      const url = pullUrl(163);
+      const firstClient = await openStream();
+      const secondClient = await openStream();
+
+      await postMerge(url, 'delivery-163').expect(200);
+
+      expect(await firstClient()).toMatchObject({ url });
+      expect(await secondClient()).toMatchObject({ url });
+    });
+
+    it('does not replay what was stored before a client connected', async () => {
+      const alreadyStored = pullUrl(164);
+      const afterwards = pullUrl(165);
+
+      await postMerge(alreadyStored, 'delivery-164').expect(200);
+
+      const nextEvent = await openStream();
+      await postMerge(afterwards, 'delivery-165').expect(200);
+
+      // The channel is ordered, so the past would have arrived ahead of this one:
+      // the stream is live, and the history is where the past lives.
+      expect(await nextEvent()).toMatchObject({ url: afterwards });
     });
   });
 });

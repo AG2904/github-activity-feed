@@ -3,6 +3,7 @@ import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { ActivityEventsService } from './activity-events.service.js';
+import { ActivityStream } from './activity-stream.js';
 import { toActivityEvent } from './github/to-activity-event.js';
 
 const SIGNATURE_HEADER = 'x-hub-signature-256';
@@ -47,7 +48,10 @@ function parseBody(rawBody: Buffer | undefined): unknown {
 export class WebhookController {
   private readonly secret: string;
 
-  constructor(private readonly events: ActivityEventsService) {
+  constructor(
+    private readonly events: ActivityEventsService,
+    private readonly stream: ActivityStream,
+  ) {
     this.secret = process.env.GITHUB_WEBHOOK_SECRET ?? '';
   }
 
@@ -70,7 +74,12 @@ export class WebhookController {
     const event = toActivityEvent(payload);
     if (event) {
       // A missing header and an empty one both mean the delivery arrived untagged.
-      await this.events.store(event, deliveryId || null);
+      const stored = await this.events.store(event, deliveryId || null);
+      if (stored) {
+        // A redelivery was announced when it first arrived, so it must not reach
+        // the stream a second time.
+        this.stream.deliver(event);
+      }
     }
     return { received: true };
   }

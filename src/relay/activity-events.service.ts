@@ -47,22 +47,26 @@ export class ActivityEventsService {
   ) {}
 
   /**
-   * Stores an event under the delivery that carried it. A redelivery collides
-   * with the row it already wrote, on the delivery identifier's unique index,
-   * and that collision is the entire dedupe: the row is dropped here, the caller
-   * answers success anyway, and a duplicate is indistinguishable from a fresh
-   * store in the response (ADR-0005).
+   * Stores an event under the delivery that carried it, and answers whether the
+   * row was written. A redelivery collides with the row it already wrote, on the
+   * delivery identifier's unique index, and that collision is the entire dedupe:
+   * the row is dropped here, the caller answers success anyway, and a duplicate is
+   * indistinguishable from a fresh store in the response (ADR-0005).
+   *
+   * The answer is what tells the two apart where it matters: only an event that
+   * was actually stored may reach the stream.
    *
    * Nothing is read before the write. Reading first would mean two deliveries
    * that arrive together both find nothing and both insert, which is exactly the
    * case the constraint exists to settle.
    */
-  async store(event: ActivityEvent, deliveryId: string | null): Promise<void> {
+  async store(event: ActivityEvent, deliveryId: string | null): Promise<boolean> {
     try {
       await this.events.save(this.events.create({ ...event, deliveryId }));
+      return true;
     } catch (error) {
       if (isDuplicateDelivery(error)) {
-        return;
+        return false;
       }
       throw error;
     }
