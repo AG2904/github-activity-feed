@@ -1,5 +1,5 @@
-import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { createHmac } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -7,8 +7,16 @@ import { join } from 'node:path';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
+import { configureIngress, INGRESS_OPTIONS } from '../src/relay/ingress.js';
 
 const SECRET = 'test-secret';
+
+/**
+ * A body that is not valid JSON, sent the way GitHub would send it: with a
+ * signature over exactly these bytes. The relay must verify that signature and
+ * then discard the body, never let a parser reject it first.
+ */
+const UNREADABLE_BODY = '{ "action": "closed", "pull_request": { "merged": true,';
 
 function sign(body: string, secret: string = SECRET): string {
   return `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
@@ -26,11 +34,22 @@ function getHistory() {
   return request(app.getHttpServer()).get('/history');
 }
 
+/** The audit history the relay serves, as it stands right now. */
+async function storedEvents(): Promise<unknown[]> {
+  const response = await getHistory().expect(200);
+  return response.body as unknown[];
+}
+
+/**
+ * A captured `pull_request` delivery. `action` is the action GitHub reports at
+ * the top level; every other key overrides a field of the `pull_request` object.
+ */
 function pullRequestPayload(
-  overrides: Record<string, unknown> = {},
+  overrides: { action?: string } & Record<string, unknown> = {},
 ): Record<string, unknown> {
+  const { action = 'closed', ...pullRequest } = overrides;
   return {
-    action: 'closed',
+    action,
     sender: { login: 'maria.perez' },
     pull_request: {
       number: 42,
@@ -41,7 +60,7 @@ function pullRequestPayload(
       base: { ref: 'main' },
       user: { login: 'maria.perez' },
       labels: [{ name: 'bug' }, { name: 'area:relay' }],
-      ...overrides,
+      ...pullRequest,
     },
   };
 }
@@ -69,7 +88,7 @@ function issuePayload(
   };
 }
 
-let app: INestApplication;
+let app: NestExpressApplication;
 
 describe('Relay HTTP seam', () => {
   const dbDir = mkdtempSync(join(tmpdir(), 'relay-test-'));
@@ -78,7 +97,8 @@ describe('Relay HTTP seam', () => {
     process.env.GITHUB_WEBHOOK_SECRET = SECRET;
     process.env.DATABASE_PATH = join(dbDir, 'relay.db');
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication({ rawBody: true });
+    app = moduleRef.createNestApplication<NestExpressApplication>(INGRESS_OPTIONS);
+    configureIngress(app);
     await app.init();
   });
 
@@ -353,6 +373,165 @@ describe('Relay HTTP seam', () => {
 
     it('ignores a malformed issue payload without error', async () => {
       await postWebhook(JSON.stringify({ action: 'assigned', issue: null })).expect(200);
+    });
+  });
+
+  describe('everything else is ignored (ticket 04)', () => {
+    const pullUrl = (number: number) => `https://github.com/AG2904/Gitlab-notifier/pull/${number}`;
+    const issueUrl = (number: number) =>
+      `https://github.com/AG2904/Gitlab-notifier/issues/${number}`;
+
+    /**
+     * The negative half of the filter, as one table: every webhook in it has to
+     * be acknowledged and discarded. It is a table because the ticket's last
+     * criterion is a sweep — posting the whole set must leave the audit history
+     * exactly as it was.
+     *
+     * `marker` is the URL the payload would be stored under if the filter ever
+     * let it through, so a silent regression names the payload that leaked.
+     */
+    interface NonCriticalWebhook {
+      /** The hook GitHub names in `X-GitHub-Event`; the relay keys on the payload. */
+      event: string;
+      name: string;
+      body: string;
+      marker?: string;
+    }
+
+    const NON_CRITICAL_WEBHOOKS: NonCriticalWebhook[] = [
+      {
+        event: 'pull_request',
+        name: 'a pull request merged into a branch other than main',
+        body: JSON.stringify(
+          pullRequestPayload({ base: { ref: 'develop' }, html_url: pullUrl(141) }),
+        ),
+        marker: pullUrl(141),
+      },
+      {
+        event: 'pull_request',
+        name: 'a pull request that is opened',
+        body: JSON.stringify(
+          pullRequestPayload({
+            action: 'opened',
+            merged: false,
+            merged_at: null,
+            html_url: pullUrl(142),
+          }),
+        ),
+        marker: pullUrl(142),
+      },
+      {
+        event: 'pull_request',
+        name: 'a pull request that is closed without being merged',
+        body: JSON.stringify(
+          pullRequestPayload({ merged: false, merged_at: null, html_url: pullUrl(143) }),
+        ),
+        marker: pullUrl(143),
+      },
+      {
+        event: 'pull_request',
+        name: 'a pull request that is reopened',
+        body: JSON.stringify(
+          pullRequestPayload({
+            action: 'reopened',
+            merged: false,
+            merged_at: null,
+            html_url: pullUrl(144),
+          }),
+        ),
+        marker: pullUrl(144),
+      },
+      {
+        // Editing a merged pull request's title is an ordinary delivery, and the
+        // merge state alone — closed, merged, base `main` — would store it. This
+        // is the fixture that proves the action carries half the filter.
+        event: 'pull_request',
+        name: 'a merged pull request that is only edited afterwards',
+        body: JSON.stringify(pullRequestPayload({ action: 'edited', html_url: pullUrl(145) })),
+        marker: pullUrl(145),
+      },
+      {
+        event: 'issues',
+        name: 'an issue assigned without a critical label',
+        body: JSON.stringify(
+          issuePayload({ issue: { html_url: issueUrl(81), labels: [{ name: 'chore' }] } }),
+        ),
+        marker: issueUrl(81),
+      },
+      {
+        event: 'ping',
+        name: 'a ping, the hook GitHub sends when a webhook is configured',
+        body: JSON.stringify({ zen: 'Non-blocking is better than blocking.' }),
+      },
+      {
+        event: 'push',
+        name: 'a push to main, which is not a merge',
+        body: JSON.stringify({
+          ref: 'refs/heads/main',
+          after: 'a1b2c3d4e5f6',
+          sender: { login: 'maria.perez' },
+        }),
+      },
+      {
+        event: 'issues',
+        name: 'a payload whose shape is not usable',
+        body: JSON.stringify({ action: 'assigned', issue: null }),
+      },
+      {
+        event: 'issues',
+        name: 'a payload that is not an object',
+        body: JSON.stringify('a string where an object should be'),
+      },
+      {
+        event: 'pull_request',
+        name: 'a body the relay cannot read at all',
+        body: UNREADABLE_BODY,
+      },
+    ];
+
+    /** Posts a fixture the way GitHub would: with the hook named in the header. */
+    function postFixture(webhook: NonCriticalWebhook) {
+      return postWebhook(webhook.body).set('X-GitHub-Event', webhook.event);
+    }
+
+    it.each(NON_CRITICAL_WEBHOOKS)('acknowledges $name and stores nothing', async (webhook) => {
+      const before = await storedEvents();
+
+      const response = await postFixture(webhook).expect(200);
+      expect(response.body).toEqual({ received: true });
+
+      const after = await storedEvents();
+      expect(after).toEqual(before);
+      if (webhook.marker) {
+        expect(after).not.toContainEqual(expect.objectContaining({ url: webhook.marker }));
+      }
+    });
+
+    it('reports no new rows after the whole negative set is posted', async () => {
+      const before = await storedEvents();
+
+      for (const webhook of NON_CRITICAL_WEBHOOKS) {
+        await postFixture(webhook).expect(200);
+      }
+
+      const after = await storedEvents();
+      expect(after).toHaveLength(before.length);
+      expect(after).toEqual(before);
+    });
+
+    it('rejects a body it cannot read that carries no signature with 401', async () => {
+      await request(app.getHttpServer())
+        .post('/')
+        .set('Content-Type', 'application/json')
+        .set('X-GitHub-Event', 'pull_request')
+        .send(UNREADABLE_BODY)
+        .expect(401);
+    });
+
+    it('rejects a body it cannot read signed with the wrong secret with 401', async () => {
+      await postWebhook(UNREADABLE_BODY, sign(UNREADABLE_BODY, 'not-the-secret'))
+        .set('X-GitHub-Event', 'pull_request')
+        .expect(401);
     });
   });
 });
