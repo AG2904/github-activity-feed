@@ -98,15 +98,21 @@ gitlab-notifier/
 │   ├── app.module.ts          # wiring + fail-fast del secreto de entorno
 │   ├── main.ts
 │   └── relay/                 # seam HTTP única
-│       ├── webhook.controller.ts   # POST / — validación HMAC (en migración)
+│       ├── domain/                 # modelo de dominio: sin TypeORM, sin HTTP, sin payloads
+│       │   └── activity-event.ts   # el shape normalizado (§6)
+│       ├── activity-event.entity.ts    # la fila persistida (ADR-0004)
+│       ├── activity-events.service.ts  # store/list
+│       ├── merge-to-main.ts        # filtro + normalización del merge (payload GitHub)
+│       ├── webhook.controller.ts   # POST / — validación HMAC (ADR-0002)
 │       ├── history.controller.ts   # GET /history — historial de auditoría
 │       └── relay.module.ts
 ├── test/                      # e2e sobre la seam HTTP (vitest + supertest)
 ├── docs/
 │   ├── adr/                   # registro de decisiones (ADR)
 │   ├── agents/                # convenciones del tracker de issues
-│   └── research/              # feasibility research (GitHub vs relay)
-├── .scratch/relay/            # spec + tickets (pendientes de migrar a eventos GitHub)
+│   ├── research/              # feasibility research (GitHub vs relay)
+│   └── tickets/relay/         # registros de evidencia por ticket completado
+├── .scratch/relay/            # spec + tickets
 ├── GLOSSARY.md                # lenguaje de dominio compartido
 └── client/                    # CLI en Go — Fase 2 (pendiente)
 ```
@@ -120,12 +126,16 @@ gitlab-notifier/
   "type": "pr.merged",
   "actor": "maria.perez",
   "subject": "Fix memory leak in parser component",
-  "assignee": "",
+  "assignee": null,
   "labels": ["bug"],
   "url": "https://github.com/AG2904/Gitlab-notifier/pull/42",
-  "when": "2026-10-11T13:00:00Z"
+  "when": "2026-10-11T13:00:00.000Z"
 }
 ```
+
+Siete campos, ni uno más. `type` es un conjunto cerrado de literales (`pr.merged`, `issue.assigned`); `assignee` es `null` cuando el evento no tiene ninguno, nunca cadena vacía; `when` es UTC en ISO-8601 con milisegundos (`toISOString()`), forma canónica fijada por test. El mismo shape sirve el stream y el historial, para que el cliente parsee una sola cosa.
+
+El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este contrato: es una columna de la fila, junto al id de storage, y ninguno de los dos llega al cable (ADR-0005).
 
 ---
 
@@ -133,9 +143,9 @@ gitlab-notifier/
 
 1. **Fase 1: El Relay (NestJS + SQLite)** — *en curso*
    - [x] Walking skeleton: app boota contra SQLite temporal, seam HTTP con autenticación, historial vacío, suite e2e (ticket 01).
-   - [ ] Migrar la autenticación de `X-Gitlab-Token` a **HMAC `X-Hub-Signature-256`** sobre el cuerpo del request.
-   - [ ] Reescribir los tickets de filtrado (02–07) con la semántica de eventos de GitHub (`pull_request`, `issues`).
-   - [ ] Implementar normalización a `ActivityEvent`, idempotencia por identificador de evento y el canal SSE.
+   - [x] Migrar la autenticación de `X-Gitlab-Token` a **HMAC `X-Hub-Signature-256`** sobre el cuerpo del request.
+   - [x] Reescribir el spec y los tickets de filtrado (02–07) con la semántica de eventos de GitHub (`pull_request`, `issues`).
+   - [ ] Completar el segundo tipo de evento crítico (asignación, ticket 03), la idempotencia por identificador de entrega (tickets 04–05) y el canal SSE (ticket 06).
 
 2. **Fase 2: El Cliente CLI (Go)**
    - Estructurar el binario con manejo de flags (conexión al relay, filtrado local).
@@ -166,7 +176,8 @@ gitlab-notifier/
 - [x] Plataforma objetivo cambiada de GitLab self-managed a **GitHub** — decisión fundamentada en §2.
 - [x] Investigación de factibilidad con fuentes primarias publicada en `docs/research/`.
 - [x] Relay walking skeleton implementado y mergeado en `main` (PR #1).
-- [ ] Spec y tickets en `.scratch/relay/` reescritos para eventos de GitHub.
-- [ ] Autenticación migrada a HMAC `X-Hub-Signature-256` (ticket 01 aún valida `X-Gitlab-Token`).
-- [ ] `GLOSSARY.md` y README actualizados a la terminología de GitHub.
+- [x] Spec y tickets en `.scratch/relay/` reescritos para eventos de GitHub.
+- [x] Autenticación migrada a HMAC `X-Hub-Signature-256` (PR #3).
+- [x] `GLOSSARY.md` actualizado a la terminología de GitHub. Los ADRs también: ADR-0002 y ADR-0005 reescritos, ADR-0003 corregido.
+- [ ] README del repositorio — **no existe todavía**. Este item lo daba por pendiente de actualizar, pero nunca hubo un README que actualizar; o se escribe uno, o el §6 de este documento sigue siendo la referencia pública del contrato.
 - [ ] CI (GitHub Actions) configurado.

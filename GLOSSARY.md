@@ -1,15 +1,15 @@
-# GitLab Activity Feed
+# GitHub Activity Feed
 
-Terminal notifications for a three-developer team on a self-managed GitLab. This repo holds two contexts: the **relay** (a NestJS backend that receives GitLab webhooks) and the **CLI** (a Go binary developers run in their terminal).
+Terminal notifications for a development team on GitHub. This repo holds two contexts: the **relay** (a NestJS backend that receives GitHub webhooks) and the **CLI** (a Go binary developers run in their terminal).
 
 ## Language
 
 **ActivityEvent**:
-The single normalized shape the relay emits and the CLI renders, whatever GitLab hook it came from.
+The single normalized shape the relay emits and the CLI renders, whatever GitHub hook it came from.
 _Avoid_: notification, message, alert, payload
 
 **Relay**:
-The internal backend that receives GitLab webhooks, normalizes them into ActivityEvents, persists them, and streams them to connected clients.
+The internal backend that receives GitHub webhooks, normalizes them into ActivityEvents, persists them, and streams them to connected clients.
 _Avoid_: server, backend, notifier, bot
 
 **CLI**:
@@ -17,23 +17,23 @@ The Go binary a developer runs in their terminal to receive and display Activity
 _Avoid_: app, client, agent, daemon
 
 **Critical event**:
-A GitLab happening worth interrupting a developer for. Today that means an MR merged into `main`, or an issue assigned with a `bug` or `feedback` label.
+A GitHub happening worth interrupting a developer for. Today that means a pull request merged into `main`, or an issue assigned while carrying a `bug` or `feedback` label.
 _Avoid_: important event, alert, notification
 
 **Merge to main**:
-An MR that GitLab reports as merged and whose target branch is `main`. Merges into any other branch are not critical events.
+A pull request that GitHub reports as merged and whose base branch is `main`. Merges into any other branch are not critical events.
 _Avoid_: merge, integration
 
 **Assignment**:
-An issue gaining an assignee, whether at creation or later. It is the trigger for the issue-side critical event, gated on the issue carrying a `bug` or `feedback` label.
+An issue gaining an assignee, whether at creation or later. It is the trigger for the issue-side critical event, gated on the issue carrying a `bug` or `feedback` label at that moment.
 _Avoid_: allocation, ownership
 
 **Actor**:
-The GitLab user who caused the event — who merged the MR, or who assigned the issue.
+The GitHub user who caused the event — who merged the pull request, or who assigned the issue.
 _Avoid_: author, user, committer
 
 **Assignee**:
-The GitLab user an issue was assigned to; the person an assignment event is about.
+The GitHub user an issue was assigned to; the person an assignment event is about.
 _Avoid_: owner, responsible, target
 
 **Broadcast**:

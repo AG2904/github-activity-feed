@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] A merge request merged into a branch other than `main` stores nothing.
-- [ ] A merge request that is opened, closed, reopened, or edited stores nothing.
+- [ ] A pull request merged into a branch other than `main` stores nothing.
+- [ ] A pull request that is opened, closed, reopened, or edited stores nothing.
 - [ ] An issue assigned without a `bug` or `feedback` label stores nothing.
 - [ ] An unrecognized hook type stores nothing.
 - [ ] A malformed payload is handled without error and stores nothing.
