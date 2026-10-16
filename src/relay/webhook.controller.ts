@@ -3,7 +3,7 @@ import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { ActivityEventsService } from './activity-events.service.js';
-import { isMergeToMain, toActivityEvent } from './merge-to-main.js';
+import { toActivityEvent } from './github/to-activity-event.js';
 
 const SIGNATURE_HEADER = 'x-hub-signature-256';
 const SIGNATURE_PREFIX = 'sha256=';
@@ -60,11 +60,9 @@ export class WebhookController {
       throw new UnauthorizedException('invalid or missing X-Hub-Signature-256');
     }
     const payload = parseBody(req.rawBody);
-    if (isMergeToMain(payload)) {
-      const event = toActivityEvent(payload);
-      if (event) {
-        await this.events.store(event);
-      }
+    const event = toActivityEvent(payload);
+    if (event) {
+      await this.events.store(event);
     }
     return { received: true };
   }

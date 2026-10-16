@@ -46,6 +46,29 @@ function pullRequestPayload(
   };
 }
 
+function issuePayload(
+  overrides: { issue?: Record<string, unknown> } & Record<string, unknown> = {},
+): Record<string, unknown> {
+  const { issue, ...rest } = overrides;
+  return {
+    action: 'assigned',
+    sender: { login: 'lucia.gomez' },
+    assignee: { login: 'tomas.ferreira' },
+    issue: {
+      number: 7,
+      title: 'Webhook drops events under load',
+      html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/7',
+      created_at: '2026-10-15T09:00:00Z',
+      updated_at: '2026-10-15T11:00:00Z',
+      labels: [{ name: 'bug' }],
+      assignee: { login: 'tomas.ferreira' },
+      assignees: [{ login: 'tomas.ferreira' }],
+      ...issue,
+    },
+    ...rest,
+  };
+}
+
 let app: INestApplication;
 
 describe('Relay HTTP seam', () => {
@@ -121,7 +144,7 @@ describe('Relay HTTP seam', () => {
         type: 'pr.merged',
         actor: 'maria.perez',
         subject: 'Fix memory leak in parser component',
-        assignee: '',
+        assignee: null,
         labels: ['bug', 'area:relay'],
         url: 'https://github.com/AG2904/Gitlab-notifier/pull/42',
         when: '2026-10-15T12:00:00.000Z',
@@ -189,6 +212,147 @@ describe('Relay HTTP seam', () => {
       expect(history.body).not.toContainEqual(
         expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/45' }),
       );
+    });
+
+    it('ignores a filter-passing merge payload with no actor, without error', async () => {
+      await postWebhook(
+        JSON.stringify({
+          action: 'closed',
+          // No `sender`: the payload passes the filter but has nobody to
+          // attribute it to, so it must be dropped rather than throw.
+          pull_request: {
+            title: 'Fix memory leak in parser component',
+            merged: true,
+            merged_at: '2026-10-15T12:00:00Z',
+            html_url: 'https://github.com/AG2904/Gitlab-notifier/pull/46',
+            base: { ref: 'main' },
+            labels: [{ name: 'bug' }],
+          },
+        }),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).not.toContainEqual(
+        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/46' }),
+      );
+    });
+  });
+
+  describe('an issue assignment becomes an event (ticket 03)', () => {
+    it('stores an issue update that adds an assignee while carrying bug', async () => {
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            issue: { html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/71' },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).toContainEqual({
+        type: 'issue.assigned',
+        actor: 'lucia.gomez',
+        subject: 'Webhook drops events under load',
+        assignee: 'tomas.ferreira',
+        labels: ['bug'],
+        url: 'https://github.com/AG2904/Gitlab-notifier/issues/71',
+        when: '2026-10-15T11:00:00.000Z',
+      });
+    });
+
+    it('stores an issue created with an assignee and carrying feedback', async () => {
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            action: 'opened',
+            // GitHub sends no top-level `assignee` on `opened`; the issue itself
+            // carries who is on it.
+            assignee: undefined,
+            issue: {
+              html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/72',
+              labels: [{ name: 'feedback' }],
+              created_at: '2026-10-15T08:30:00Z',
+              // Deliberately later than created_at, so that reading the wrong
+              // field for `when` fails this test instead of passing by luck.
+              updated_at: '2026-10-15T09:45:00Z',
+            },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).toContainEqual(
+        expect.objectContaining({
+          type: 'issue.assigned',
+          actor: 'lucia.gomez',
+          assignee: 'tomas.ferreira',
+          labels: ['feedback'],
+          url: 'https://github.com/AG2904/Gitlab-notifier/issues/72',
+          when: '2026-10-15T08:30:00.000Z',
+        }),
+      );
+    });
+
+    it('ignores an issue assignment that carries no critical label', async () => {
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            issue: {
+              html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/73',
+              labels: [{ name: 'chore' }, { name: 'area:relay' }],
+            },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).not.toContainEqual(
+        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/issues/73' }),
+      );
+    });
+
+    it('ignores an issue opened with a critical label but nobody assigned', async () => {
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            action: 'opened',
+            assignee: undefined,
+            issue: {
+              html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/74',
+              assignee: null,
+              assignees: [],
+            },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).not.toContainEqual(
+        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/issues/74' }),
+      );
+    });
+
+    it('ignores an already-assigned issue that is instead labeled', async () => {
+      // The issue carries a critical label and someone is on it, but nothing
+      // was assigned: firing here would credit the labeler with the assignment.
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            action: 'labeled',
+            assignee: undefined,
+            issue: { html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/75' },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).not.toContainEqual(
+        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/issues/75' }),
+      );
+    });
+
+    it('ignores a malformed issue payload without error', async () => {
+      await postWebhook(JSON.stringify({ action: 'assigned', issue: null })).expect(200);
     });
   });
 });

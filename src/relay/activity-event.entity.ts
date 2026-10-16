@@ -15,8 +15,8 @@ export class ActivityEventEntity {
   @Column()
   subject!: string;
 
-  @Column()
-  assignee!: string;
+  @Column({ type: 'text', nullable: true })
+  assignee!: string | null;
 
   @Column({ type: 'json' })
   labels!: string[];
