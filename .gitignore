@@ -9,3 +9,6 @@ dist/
 /nest.cmd
 /tsc.cmd
 /typeorm.cmd
+
+# archify diagram output (local scratch, regenerated per request)
+.archify/
