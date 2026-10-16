@@ -50,6 +50,11 @@ export class WebhookController {
     this.secret = process.env.GITHUB_WEBHOOK_SECRET ?? '';
   }
 
+  /**
+   * Verifies the signature over the raw bytes, and parses only after that. A
+   * malformed, non-critical, or unrecognized payload is acknowledged and
+   * discarded — never rejected, and never stored (ADR-0002, ticket 04).
+   */
   @Post()
   @HttpCode(200)
   async accept(
