@@ -108,6 +108,7 @@ gitlab-notifier/
 │       │   └── issue-assignment.ts     # filtro + normalización de la asignación
 │       ├── activity-event.entity.ts    # la fila persistida (ADR-0004)
 │       ├── activity-events.service.ts  # store/list
+│       ├── ingress.ts              # el parser único: bytes crudos, firma antes de parsear (ADR-0002)
 │       ├── webhook.controller.ts   # POST / — validación HMAC (ADR-0002)
 │       ├── history.controller.ts   # GET /history — historial de auditoría
 │       └── relay.module.ts
