@@ -104,9 +104,13 @@ body '"a string where an object should be"'  (JSON válido)      → 400
   expected 401 "Unauthorized", got 400 "Bad Request"
 ```
 
-Dos commits en la rama `feat/04-ignore-everything-else`: `fix: verify the webhook
-signature before parsing the body` y `test: prove every non-critical webhook is
-acknowledged and discarded (ticket 04)`.
+Tres commits, hechos en la rama `feat/04-ignore-everything-else`:
+`fix: verify the webhook signature before parsing the body`,
+`test: prove every non-critical webhook is acknowledged and discarded (ticket 04)`
+y `docs: add the ticket 04 record and refresh the repo tree`. Los tres se mergearon
+en `main` por fast-forward y se pushearon a `origin/main` sin PR — decisión de
+Andrés para un repo personal, donde el feature-branching no aporta. La rama local
+quedó apuntando al mismo commit.
 
 ## Acceptance Criteria
 
