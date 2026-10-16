@@ -149,7 +149,7 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
 
 ## 7. Plan de Implementación por Fases
 
-1. **Fase 1: El Relay (NestJS + SQLite)** — *en curso*
+1. **Fase 1: El Relay (NestJS + SQLite)** — *completa*
    - [x] Walking skeleton: app boota contra SQLite temporal, seam HTTP con autenticación, historial vacío, suite e2e (ticket 01).
    - [x] Migrar la autenticación de `X-Gitlab-Token` a **HMAC `X-Hub-Signature-256`** sobre el cuerpo del request.
    - [x] Reescribir el spec y los tickets de filtrado (02–07) con la semántica de eventos de GitHub (`pull_request`, `issues`).
