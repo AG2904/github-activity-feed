@@ -154,7 +154,7 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
    - [x] Un merge a `main` se convierte en un evento almacenado y legible por HTTP (ticket 02).
    - [x] Una asignación con label `bug` o `feedback` se convierte en un evento almacenado (ticket 03).
    - [x] El barrido negativo del filtro: todo webhook no crítico se acusa y se descarta. Incluyó corregir el ingress, que rechazaba el cuerpo antes de verificar la firma (ticket 04).
-   - [ ] Idempotencia por identificador de entrega (`X-GitHub-Delivery`, ticket 05).
+   - [x] Idempotencia por identificador de entrega (`X-GitHub-Delivery`): la entrega se guarda una sola vez, con el identificador como columna única de la fila (ticket 05).
    - [ ] Canal SSE que sostiene la conexión y emite cada evento almacenado a todos los clientes (ticket 06).
    - [ ] Historial filtrable por usuario (ticket 07).
 
