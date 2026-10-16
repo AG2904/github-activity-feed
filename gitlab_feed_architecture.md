@@ -151,7 +151,12 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
    - [x] Walking skeleton: app boota contra SQLite temporal, seam HTTP con autenticación, historial vacío, suite e2e (ticket 01).
    - [x] Migrar la autenticación de `X-Gitlab-Token` a **HMAC `X-Hub-Signature-256`** sobre el cuerpo del request.
    - [x] Reescribir el spec y los tickets de filtrado (02–07) con la semántica de eventos de GitHub (`pull_request`, `issues`).
-   - [ ] Completar el segundo tipo de evento crítico (asignación, ticket 03), la idempotencia por identificador de entrega (tickets 04–05) y el canal SSE (ticket 06).
+   - [x] Un merge a `main` se convierte en un evento almacenado y legible por HTTP (ticket 02).
+   - [x] Una asignación con label `bug` o `feedback` se convierte en un evento almacenado (ticket 03).
+   - [x] El barrido negativo del filtro: todo webhook no crítico se acusa y se descarta. Incluyó corregir el ingress, que rechazaba el cuerpo antes de verificar la firma (ticket 04).
+   - [ ] Idempotencia por identificador de entrega (`X-GitHub-Delivery`, ticket 05).
+   - [ ] Canal SSE que sostiene la conexión y emite cada evento almacenado a todos los clientes (ticket 06).
+   - [ ] Historial filtrable por usuario (ticket 07).
 
 2. **Fase 2: El Cliente CLI (Go)**
    - Estructurar el binario con manejo de flags (conexión al relay, filtrado local).
@@ -177,7 +182,7 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
 
 ---
 
-## 9. Estado de la Migración a GitHub (15 de Octubre, 2026)
+## 9. Estado de la Migración a GitHub (16 de Octubre, 2026)
 
 - [x] Plataforma objetivo cambiada de GitLab self-managed a **GitHub** — decisión fundamentada en §2.
 - [x] Investigación de factibilidad con fuentes primarias publicada en `docs/research/`.
@@ -185,5 +190,6 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
 - [x] Spec y tickets en `.scratch/relay/` reescritos para eventos de GitHub.
 - [x] Autenticación migrada a HMAC `X-Hub-Signature-256` (PR #3).
 - [x] `GLOSSARY.md` actualizado a la terminología de GitHub. Los ADRs también: ADR-0002 y ADR-0005 reescritos, ADR-0003 corregido.
+- [x] Los tres tickets del filtro están en `main`: merge a `main` (ticket 02, PR #4), asignación crítica (ticket 03) y el barrido negativo con el fix del ingress (ticket 04). El 03 y el 04 aterrizaron directo en `main`, sin rama de feature: es un proyecto personal y el PR no aportaba.
 - [ ] README del repositorio — **no existe todavía**. Este item lo daba por pendiente de actualizar, pero nunca hubo un README que actualizar; o se escribe uno, o el §6 de este documento sigue siendo la referencia pública del contrato.
 - [ ] CI (GitHub Actions) configurado.
