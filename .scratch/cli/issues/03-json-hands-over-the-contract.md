@@ -7,7 +7,7 @@
 **Status:** ready-for-agent
 
 - [ ] `feed watch --json` writes one line per event: the frame's `data:` payload, byte for byte, with no re-serialization.
-- [ ] The emitted line preserves the seven keys in the relay's order, `assignee: null` for an event that has none, and the `.000Z` timestamp form.
+- [ ] The emitted line preserves the eight keys in the relay's order, `assignee: null` for an event that has none, and the `.000Z` timestamp form.
 - [ ] `feed history --json` writes the relay's response body verbatim.
 - [ ] `--json` combined with `--group-by-repo` exits 2 with a message on stderr: grouping is presentation, and raw output has none.
 - [ ] `--json` suppresses colour and hyperlinks regardless of whether stdout is a terminal.

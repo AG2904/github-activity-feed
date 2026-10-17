@@ -1,5 +1,11 @@
 # The repository is derived from the event's URL, not added to the shape
 
+> **Superseded by [ADR-0010](0010-repository-as-a-field-of-the-event.md).** The
+> derivation below was the answer while the shape was frozen at seven fields and the
+> CLI had not been written. The field landed in ticket 09, and this record is kept
+> because the reasoning is *why* the derivation was chosen — and because it is the
+> argument anyone would make again if the field were ever taken away.
+
 The CLI groups and filters by repository, and `ActivityEvent` has no repository field. Rather than extend the shape, the CLI derives it from the event's `url` — its first two path segments — and keeps that derivation in one place.
 
 The relay receives `repository.full_name` on every webhook and discards it, so a field would be the honest model. It is not added here for three reasons. The shape is a frozen, tested, and documented contract: "seven fields, not one more" is written into the architecture document, enumerated in user story 10, and asserted by deep equality across the whole suite, so changing it reopens a completed phase and touches the storage schema. Grouping is a *presentation* concern, and forcing a schema and wire change on a shipped backend for a view the client renders is engineering in the wrong direction. And the derivation is robust for the cases that exist, because a GitHub pull request or issue URL always carries `owner/repo` as its first two path segments — including on GitHub Enterprise, where only the host differs.

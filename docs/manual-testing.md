@@ -71,14 +71,14 @@ El body se manda **raw**, sin reformatear entre firmar y enviar. Este es el de u
 merge a `main`, que es un evento crítico:
 
 ```json
-{"action":"closed","sender":{"login":"maria.perez"},"pull_request":{"title":"Prueba manual","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/Gitlab-notifier/pull/998","base":{"ref":"main"},"labels":[{"name":"bug"}]}}
+{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Prueba manual","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/github-activity-feed/pull/998","base":{"ref":"main"},"labels":[{"name":"bug"}]}}
 ```
 
 ### Opción A — PowerShell (probado)
 
 ```powershell
 $secret = "un-secreto-largo-de-prueba"
-$body = '{"action":"closed","sender":{"login":"maria.perez"},"pull_request":{"title":"Prueba manual","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/Gitlab-notifier/pull/998","base":{"ref":"main"},"labels":[{"name":"bug"}]}}'
+$body = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Prueba manual","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/github-activity-feed/pull/998","base":{"ref":"main"},"labels":[{"name":"bug"}]}}'
 
 $h = New-Object System.Security.Cryptography.HMACSHA256
 $h.Key = [Text.Encoding]::UTF8.GetBytes($secret)
@@ -133,11 +133,12 @@ curl http://localhost:3000/history
 ```
 
 ```json
-[{"type":"pr.merged","actor":"maria.perez","subject":"Prueba manual","assignee":null,"labels":["bug"],"url":"https://github.com/AG2904/Gitlab-notifier/pull/998","when":"2026-10-16T12:00:00.000Z"}]
+[{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Prueba manual","assignee":null,"labels":["bug"],"url":"https://github.com/AG2904/github-activity-feed/pull/998","when":"2026-10-16T12:00:00.000Z"}]
 ```
 
-Siete campos, ni uno más: el identificador de entrega quedó en la fila y no se sirve
-(ADR-0005). El `when` es el `merged_at` que mandaste, normalizado a UTC con
+Ocho campos, ni uno más: el identificador de entrega quedó en la fila y no se sirve
+(ADR-0005). El `repository` sale del `repository.full_name` del payload, no del `url`
+(ADR-0010). El `when` es el `merged_at` que mandaste, normalizado a UTC con
 milisegundos.
 
 ## Paso 5 — El canal en vivo
@@ -157,7 +158,7 @@ frame:
 
 ```text
 id: 1
-data: {"type":"pr.merged","actor":"maria.perez","subject":"Prueba manual","assignee":null,"labels":["bug"],"url":"https://github.com/AG2904/Gitlab-notifier/pull/998","when":"2026-10-16T12:00:00.000Z"}
+data: {"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Prueba manual","assignee":null,"labels":["bug"],"url":"https://github.com/AG2904/github-activity-feed/pull/998","when":"2026-10-16T12:00:00.000Z"}
 ```
 
 Es el mismo evento que sirve `/history`, con el mismo shape, para que el cliente
@@ -187,7 +188,7 @@ ver el cable. Después de cada uno, mirá `/history`.
 El body de asignación, para el caso de arriba:
 
 ```json
-{"action":"assigned","sender":{"login":"lucia.gomez"},"assignee":{"login":"tomas.ferreira"},"issue":{"title":"Webhook drops events under load","html_url":"https://github.com/AG2904/Gitlab-notifier/issues/7","updated_at":"2026-10-16T11:00:00Z","labels":[{"name":"bug"}],"assignees":[{"login":"tomas.ferreira"}]}}
+{"action":"assigned","sender":{"login":"lucia.gomez"},"assignee":{"login":"tomas.ferreira"},"issue":{"title":"Webhook drops events under load","html_url":"https://github.com/AG2904/github-activity-feed/issues/7","updated_at":"2026-10-16T11:00:00Z","labels":[{"name":"bug"}],"assignees":[{"login":"tomas.ferreira"}]}}
 ```
 
 ## Paso 7 — Empezar de cero

@@ -8,7 +8,7 @@
 
 - [ ] `--user <login>` passes an event where the user is the actor, passes an event where the user is the assignee, and drops everything else.
 - [ ] `--repo <owner/name>` passes only events whose repository matches, and drops everything else.
-- [ ] The repository is derived from the event's `url` — its first two path segments — in one place, so that a field on the relay could replace the derivation without touching the parser, the renderer, or the filters.
+- [ ] The repository comes from the event's `repository` field, which the relay reports (ADR-0010); there is no derivation from the `url` anywhere.
 - [ ] `--user` and `--repo` combine as a conjunction.
 - [ ] Filtering is local: the CLI still receives every event the relay broadcasts, and a filtered-out event produces no output at all.
 

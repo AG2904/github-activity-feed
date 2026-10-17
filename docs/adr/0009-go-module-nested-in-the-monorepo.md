@@ -2,7 +2,7 @@
 
 The client is a Go module at `github.com/AG2904/github-activity-feed/client`, living in a `client/` directory beside `src/`, `test/`, and `docs/`. One repository holds both contexts — the relay and the CLI — and each keeps its own toolchain.
 
-A separate repository was the alternative, and it was rejected because the CLI's reason to exist is the relay's contract. The seven-field shape, the frame format, and the read endpoints *are* the interface between the two contexts, and a change on one side is a change the other must follow. Keeping them in one checkout makes that interface reviewable in a single diff, and makes the Phase 3 work — CI for both, a demo that runs both — one repository to configure instead of two to keep in step.
+A separate repository was the alternative, and it was rejected because the CLI's reason to exist is the relay's contract. The eight-field shape, the frame format, and the read endpoints *are* the interface between the two contexts, and a change on one side is a change the other must follow. Keeping them in one checkout makes that interface reviewable in a single diff, and makes the Phase 3 work — CI for both, a demo that runs both — one repository to configure instead of two to keep in step.
 
 The cost is that a Go module now lives inside a repository whose root is a Node project. `go build ./...` does not work from the root, tooling has to change directory into `client/`, and the module path is written into every import — which is why the repository was renamed before the first line of Go was written, rather than after. A nested module is a supported and ordinary layout; it is the mixed-toolchain repository that a reader will notice.
 

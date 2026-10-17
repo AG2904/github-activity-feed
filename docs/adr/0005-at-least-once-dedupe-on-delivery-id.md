@@ -8,7 +8,7 @@ We persist that identifier on each ActivityEvent **row** under a unique index, a
 
 The delivery identifier is deliberately **not** part of the `ActivityEvent` shape. This is the part of the decision a future reader will otherwise try to "fix", so it is worth stating plainly:
 
-- An ActivityEvent describes a *happening*: what happened, to whom, where to look, and when. It carries exactly seven fields, enumerated in the spec's normalization decision and in user story 10, and the same shape is served by both the stream and the history so the CLI parses one thing (user story 16).
+- An ActivityEvent describes a *happening*: what happened, where, to whom, where to look, and when. It carries exactly eight fields, enumerated in the spec's normalization decision and in user story 10, and the same shape is served by both the stream and the history so the CLI parses one thing (user story 16).
 - The identifier identifies a *delivery*, not the happening. Attaching it to the shape would put transport metadata into the audit record and hand every client a field it can never use — the CLI is a display client with nothing to dedupe.
 - It does not even exist where an event is built: `X-GitHub-Delivery` is a request **header**, not a body field. An event assembled from the payload cannot carry it without the domain reaching into HTTP.
 
