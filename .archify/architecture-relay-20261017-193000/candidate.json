@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Relay: arquitectura actual (Fase 1)",
+    "locale": "es",
+    "output": ".archify/architecture-relay-20261017-193000/relay.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AG2904/github-activity-feed.git",
+      "provider": "github",
+      "revision": "abc23afc534bdf4436f30ae6de72fdd3e6f27bea"
+    }
+  },
+  "components": [
+    {
+      "id": "github",
+      "type": "external",
+      "label": "GitHub",
+      "sublabel": "instancia corporativa",
+      "pos": [40, 40],
+      "size": [170, 64],
+      "sources": [{ "path": ".scratch/relay/spec.md", "line": 7, "end_line": 11 }]
+    },
+    {
+      "id": "ingress",
+      "type": "backend",
+      "label": "Ingreso de webhooks",
+      "sublabel": "POST / · bytes crudos",
+      "tag": "HMAC-SHA256",
+      "pos": [40, 178],
+      "size": [170, 64],
+      "sources": [
+        { "path": "src/relay/ingress.ts", "line": 4, "end_line": 28 },
+        { "path": "src/relay/webhook.controller.ts", "line": 17, "end_line": 31 },
+        { "path": "src/relay/webhook.controller.ts", "line": 61, "end_line": 84 }
+      ]
+    },
+    {
+      "id": "adapter",
+      "type": "backend",
+      "label": "Adaptador GitHub",
+      "sublabel": "github/ · filtra y normaliza",
+      "tag": "2 tipos de evento",
+      "pos": [40, 316],
+      "size": [170, 64],
+      "sources": [
+        { "path": "src/relay/github/to-activity-event.ts", "line": 5, "end_line": 26 },
+        { "path": "src/relay/github/payload.ts", "line": 46, "end_line": 56 },
+        { "path": "src/relay/domain/critical.ts", "line": 12, "end_line": 24 }
+      ]
+    },
+    {
+      "id": "events",
+      "type": "backend",
+      "label": "Servicio de eventos",
+      "sublabel": "ActivityEventsService",
+      "tag": "store + list + filtros",
+      "pos": [40, 454],
+      "size": [170, 64],
+      "sources": [
+        { "path": "src/relay/activity-events.service.ts", "line": 84, "end_line": 94 },
+        { "path": "src/relay/activity-events.service.ts", "line": 106, "end_line": 113 },
+        { "path": "src/relay/activity-events.service.ts", "line": 43, "end_line": 61 }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Archivo SQLite",
+      "sublabel": "tabla activity_events",
+      "tag": "relay.db · 8 columnas de datos",
+      "pos": [40, 592],
+      "size": [170, 64],
+      "sources": [
+        { "path": "src/relay/activity-event.entity.ts", "line": 4, "end_line": 52 },
+        { "path": "src/app.module.ts", "line": 9, "end_line": 18 }
+      ]
+    },
+    {
+      "id": "live",
+      "type": "messagebus",
+      "label": "Emisión en vivo",
+      "sublabel": "GET /stream · SSE",
+      "tag": "sin historia · late cada 15 s",
+      "pos": [360, 350],
+      "size": [170, 64],
+      "sources": [
+        { "path": "src/relay/activity-stream.ts", "line": 5, "end_line": 31 },
+        { "path": "src/relay/stream.controller.ts", "line": 30, "end_line": 38 },
+        { "path": "src/relay/stream-heartbeat.ts", "line": 32, "end_line": 50 }
+      ]
+    },
+    {
+      "id": "history",
+      "type": "backend",
+      "label": "Historial",
+      "sublabel": "GET /history",
+      "tag": "?user= · ?repository=",
+      "pos": [360, 560],
+      "size": [170, 64],
+      "sources": [{ "path": "src/relay/history.controller.ts", "line": 17, "end_line": 23 }]
+    },
+    {
+      "id": "cli",
+      "type": "external",
+      "label": "CLI (Go)",
+      "sublabel": "Fase 2 · no existe todavía",
+      "pos": [700, 455],
+      "size": [170, 64],
+      "sources": [{ "path": "ARCHITECTURE.md", "line": 165, "end_line": 169 }]
+    }
+  ],
+  "connections": [
+    { "id": "webhook-post", "from": "github", "to": "ingress", "label": "webhook", "variant": "emphasis" },
+    { "id": "payload-to-adapter", "from": "ingress", "to": "adapter", "label": "payload", "variant": "emphasis" },
+    { "id": "event-out", "from": "adapter", "to": "events", "label": "evento", "variant": "emphasis" },
+    { "id": "insert-row", "from": "events", "to": "db", "label": "INSERT" },
+    { "id": "deliver-stored", "from": "events", "to": "live", "label": "si se guardó", "variant": "emphasis" },
+    { "id": "query-history", "from": "events", "to": "history", "label": "consulta" },
+    { "id": "sse-frames", "from": "live", "to": "cli", "label": "SSE", "variant": "emphasis" },
+    { "id": "json-history", "from": "history", "to": "cli", "label": "JSON" }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Puerta de entrada",
+      "items": [
+        "HMAC-SHA256 sobre los bytes crudos; sin firma válida responde 401 (ADR-0002)",
+        "El parser JSON del framework está apagado: parsea el controlador, después de verificar",
+        "Un payload no crítico o ilegible se acusa y se descarta, nunca se guarda"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Filtro y forma",
+      "items": [
+        "Merge a main = acción closed + merged + base.ref main",
+        "Asignación = assigned, u opened ya asignado, con label bug o feedback",
+        "Una sola forma de ocho campos para el stream y el historial (user story 16)",
+        "El repositorio sale de repository.full_name del payload, no del url (ADR-0010)"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Entrega e idempotencia",
+      "items": [
+        "Entrega at-least-once: X-GitHub-Delivery es columna única de la fila",
+        "Un reenvío lo rechaza ese índice y se acusa igual que uno nuevo (ADR-0005)",
+        "El canal en vivo no guarda historia: el que llega tarde recibe lo que viene",
+        "Ocioso, el stream escribe un comentario SSE cada 15 s: late sin que ningún cliente lo confunda con un evento (ticket 08)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Todavía falta",
+      "items": [
+        "El CLI en Go (Fase 2): no existe nada en client/",
+        "CI en GitHub Actions y README (Fase 3)",
+        "Fixtures sintéticas: no hay una entrega real de GitHub capturada"
+      ]
+    }
+  ]
+}
