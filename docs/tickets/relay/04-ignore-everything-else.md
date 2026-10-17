@@ -154,7 +154,7 @@ quedó apuntando al mismo commit.
   `action: 'edited'` nunca llegaba al nivel superior, así que la top-level quedaba
   en `closed` y el relay hacía lo correcto con un fixture que probaba lo contrario
   de lo que decía. Lo destapó la aserción sobre las filas, no la del status.
-- **`gitlab_feed_architecture.md`: §5 en el pase de docs, §7 y §9 en uno posterior.**
+- **`ARCHITECTURE.md` (entonces `gitlab_feed_architecture.md`): §5 en el pase de docs, §7 y §9 en uno posterior.**
   El plan de fases daba la idempotencia como "tickets 04–05" (es sólo el 05) y no
   marcaba cerrado el ticket 03, así que se sincronizó en un commit aparte
   (`docs: sync the phase plan with what has landed`) en vez de mezclar la evidencia

@@ -1,5 +1,5 @@
 {
-  "name": "gitlab-notifier",
+  "name": "github-activity-feed",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -18,14 +18,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AG2904/Gitlab-notifier.git"
+    "url": "git+https://github.com/AG2904/github-activity-feed.git"
   },
   "keywords": [],
   "type": "module",
   "bugs": {
-    "url": "https://github.com/AG2904/Gitlab-notifier/issues"
+    "url": "https://github.com/AG2904/github-activity-feed/issues"
   },
-  "homepage": "https://github.com/AG2904/Gitlab-notifier#readme",
+  "homepage": "https://github.com/AG2904/github-activity-feed#readme",
   "devDependencies": {
     "@nestjs/cli": "^12.0.8",
     "@nestjs/schematics": "^12.0.0",

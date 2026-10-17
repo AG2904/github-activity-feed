@@ -93,7 +93,7 @@ Ambos eventos **se pueden expresar** en Actions (`pull_request: types: [closed]`
 ## 5. Estructura Actual del Repositorio (monorepo: el Relay hoy, el cliente Go en Fase 2)
 
 ```text
-gitlab-notifier/
+github-activity-feed/
 ├── src/                       # Relay (NestJS + SQLite)
 │   ├── app.module.ts          # wiring + fail-fast del secreto de entorno
 │   ├── main.ts
