@@ -120,7 +120,9 @@ github-activity-feed/
 │   ├── agents/                # convenciones del tracker de issues
 │   ├── research/              # feasibility research (GitHub vs relay)
 │   ├── manual-testing.md      # cómo probar el relay a mano, paso a paso
+│   ├── relay-flow.md          # el flujo del relay, archivo por archivo
 │   └── tickets/relay/         # registros de evidencia por ticket completado
+├── .archify/                  # diagramas versionados (el HTML y su candidato)
 ├── .scratch/relay/            # spec + tickets
 ├── GLOSSARY.md                # lenguaje de dominio compartido
 └── client/                    # CLI en Go — Fase 2 (pendiente)
