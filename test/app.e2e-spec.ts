@@ -128,7 +128,7 @@ async function storedFor(url: string): Promise<unknown[]> {
 const streamConnections = new AbortController();
 
 /**
- * The stream, read one event at a time.
+ * The stream, read one frame at a time — the comments included.
  *
  * A plain GET is the whole handshake (ADR-0001): no upgrade, no negotiation,
  * nothing sent back upstream. Waiting for the response is what tells the caller
@@ -136,7 +136,7 @@ const streamConnections = new AbortController();
  * Nest subscribes the route handler and only then commits the SSE headers on the
  * next macrotask, so bytes on the wire mean the subscription exists.
  */
-async function openStream(): Promise<() => Promise<Record<string, unknown>>> {
+async function openFrameStream(): Promise<() => Promise<string>> {
   const response = await fetch(new URL('/stream', baseUrl), {
     signal: streamConnections.signal,
   });
@@ -147,21 +147,40 @@ async function openStream(): Promise<() => Promise<Record<string, unknown>>> {
   const decoder = new TextDecoder();
   let buffered = '';
 
-  return async function nextEvent(): Promise<Record<string, unknown>> {
+  return async function nextFrame(): Promise<string> {
     for (;;) {
       const frameEnd = buffered.indexOf('\n\n');
       if (frameEnd === -1) {
         const { value, done } = await reader.read();
         if (done) {
-          throw new Error('the stream closed before an event arrived');
+          throw new Error('the stream closed before a frame arrived');
         }
         buffered += decoder.decode(value, { stream: true });
         continue;
       }
-      const frame = buffered.slice(0, frameEnd);
+      const frame = buffered.slice(0, frameEnd).trim();
       buffered = buffered.slice(frameEnd + 2);
-      // The bare newline Nest writes when it commits the headers, and any comment
-      // frame, carry no data. A client ignores both; so does this.
+      // Nest writes a bare newline when it commits the headers. It arrives as a
+      // separator on its own, which is not a frame.
+      if (frame !== '') {
+        return frame;
+      }
+    }
+  };
+}
+
+/**
+ * The stream, read one event at a time: the frames carrying data, parsed.
+ *
+ * A comment frame — the heartbeat — carries no data, so a client ignores it, and
+ * so does this: the reader skips it and waits for the next event.
+ */
+async function openStream(): Promise<() => Promise<Record<string, unknown>>> {
+  const nextFrame = await openFrameStream();
+
+  return async function nextEvent(): Promise<Record<string, unknown>> {
+    for (;;) {
+      const frame = await nextFrame();
       const data = frame
         .split('\n')
         .filter((line) => line.startsWith('data: '))
@@ -183,6 +202,9 @@ describe('Relay HTTP seam', () => {
   beforeAll(async () => {
     process.env.GITHUB_WEBHOOK_SECRET = SECRET;
     process.env.DATABASE_PATH = join(dbDir, 'relay.db');
+    // The heartbeat interval belongs to the deployment, not to the relay, so the
+    // suite sets it: a case can then observe one without waiting fifteen seconds.
+    process.env.STREAM_HEARTBEAT_MS = '100';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>(INGRESS_OPTIONS);
     configureIngress(app);
@@ -845,6 +867,26 @@ describe('Relay HTTP seam', () => {
         streamedAssignment,
       );
       expect(eventsAtUrl(await storedEvents(), assigned)[0]).toEqual(streamedAssignment);
+    });
+  });
+
+  describe('the stream announces that it is alive (ticket 08)', () => {
+    it('writes a heartbeat while the connection has nothing to say', async () => {
+      const nextFrame = await openFrameStream();
+
+      // Nothing is posted: an idle connection is the case a heartbeat exists for,
+      // and the case a proxy would otherwise reap in silence.
+      const first = await nextFrame();
+
+      // A comment frame, which a client skips by rule — never a data frame, which
+      // a client would parse as an ActivityEvent (user story 11).
+      expect(first.startsWith(':')).toBe(true);
+      expect(first).not.toContain('data:');
+
+      // And again, because the heartbeat is periodic: a single greeting would leave
+      // the connection to be reaped the moment the proxy's own timer expires.
+      const second = await nextFrame();
+      expect(second.startsWith(':')).toBe(true);
     });
   });
 });
