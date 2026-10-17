@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Llamadas entre archivos — relay",
+    "locale": "es",
+    "output": ".archify/architecture-file-calls-20261017-111541/file-calls.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AG2904/Gitlab-notifier.git",
+      "provider": "github",
+      "revision": "22f15508761f2df2a982867f5f87bf52aa838507"
+    }
+  },
+  "components": [
+    {
+      "id": "main",
+      "type": "backend",
+      "label": "main.ts",
+      "sublabel": "bootstrap · PORT ?? 3000",
+      "pos": [40, 40],
+      "size": [160, 58],
+      "sources": [{ "path": "src/main.ts", "line": 6, "end_line": 10 }]
+    },
+    {
+      "id": "app-module",
+      "type": "backend",
+      "label": "app.module.ts",
+      "sublabel": "DataSource better-sqlite3",
+      "tag": "synchronize: true",
+      "pos": [300, 36],
+      "size": [200, 66],
+      "sources": [{ "path": "src/app.module.ts", "line": 7, "end_line": 25 }]
+    },
+    {
+      "id": "ingress",
+      "type": "backend",
+      "label": "ingress.ts",
+      "sublabel": "rawBody, sin bodyParser",
+      "pos": [40, 190],
+      "size": [180, 66],
+      "sources": [
+        { "path": "src/relay/ingress.ts", "line": 16, "end_line": 28 },
+        { "path": "test/app.e2e-spec.ts", "line": 187, "end_line": 188, "label": "el harness e2e lo llama igual" }
+      ]
+    },
+    {
+      "id": "github",
+      "type": "external",
+      "label": "GitHub",
+      "sublabel": "firma X-Hub-Signature-256",
+      "pos": [40, 340],
+      "size": [180, 64],
+      "sources": [{ "path": "docs/adr/0002-webhook-auth-via-hmac-signature.md", "line": 3, "end_line": 3 }]
+    },
+    {
+      "id": "webhook",
+      "type": "backend",
+      "label": "webhook.controller.ts",
+      "sublabel": "POST / · HMAC-SHA256",
+      "tag": "401 si falta la firma",
+      "pos": [40, 480],
+      "size": [190, 66],
+      "sources": [
+        { "path": "src/relay/webhook.controller.ts", "line": 13, "end_line": 33 },
+        { "path": "src/relay/webhook.controller.ts", "line": 63, "end_line": 85 }
+      ]
+    },
+    {
+      "id": "to-event",
+      "type": "backend",
+      "label": "to-activity-event.ts",
+      "sublabel": "github/ · única entrada",
+      "pos": [380, 480],
+      "size": [190, 66],
+      "sources": [{ "path": "src/relay/github/to-activity-event.ts", "line": 18, "end_line": 26 }]
+    },
+    {
+      "id": "merge-to-main",
+      "type": "backend",
+      "label": "merge-to-main.ts",
+      "sublabel": "github/ · pr.merged",
+      "pos": [400, 660],
+      "size": [190, 66],
+      "sources": [
+        { "path": "src/relay/github/merge-to-main.ts", "line": 25, "end_line": 32 },
+        { "path": "src/relay/github/merge-to-main.ts", "line": 40, "end_line": 64 }
+      ]
+    },
+    {
+      "id": "issue-assignment",
+      "type": "backend",
+      "label": "issue-assignment.ts",
+      "sublabel": "github/ · issue.assigned",
+      "pos": [640, 660],
+      "size": [200, 66],
+      "sources": [
+        { "path": "src/relay/github/issue-assignment.ts", "line": 43, "end_line": 56 },
+        { "path": "src/relay/github/issue-assignment.ts", "line": 64, "end_line": 84 }
+      ]
+    },
+    {
+      "id": "payload",
+      "type": "backend",
+      "label": "payload.ts",
+      "sublabel": "asRecord · loginOf · labelNames",
+      "pos": [1000, 560],
+      "size": [180, 70],
+      "sources": [{ "path": "src/relay/github/payload.ts", "line": 11, "end_line": 31 }]
+    },
+    {
+      "id": "activity-event",
+      "type": "backend",
+      "label": "domain/activity-event.ts",
+      "sublabel": "isoInstant() · 7 campos",
+      "pos": [1000, 700],
+      "size": [180, 70],
+      "sources": [
+        { "path": "src/relay/domain/activity-event.ts", "line": 27, "end_line": 36 },
+        { "path": "src/relay/domain/activity-event.ts", "line": 38, "end_line": 47 }
+      ]
+    },
+    {
+      "id": "critical",
+      "type": "backend",
+      "label": "domain/critical.ts",
+      "sublabel": "MAIN_BRANCH · CRITICAL_LABELS",
+      "pos": [1000, 840],
+      "size": [180, 70],
+      "sources": [{ "path": "src/relay/domain/critical.ts", "line": 13, "end_line": 24 }]
+    },
+    {
+      "id": "service",
+      "type": "backend",
+      "label": "activity-events.service.ts",
+      "sublabel": "store() · list()",
+      "pos": [40, 780],
+      "size": [190, 68],
+      "sources": [
+        { "path": "src/relay/activity-events.service.ts", "line": 63, "end_line": 73 },
+        { "path": "src/relay/activity-events.service.ts", "line": 85, "end_line": 91 },
+        { "path": "src/relay/activity-events.service.ts", "line": 28, "end_line": 40 }
+      ]
+    },
+    {
+      "id": "entity",
+      "type": "database",
+      "label": "activity-event.entity.ts",
+      "sublabel": "tabla activity_events",
+      "tag": "deliveryId único",
+      "pos": [40, 1040],
+      "size": [190, 68],
+      "sources": [
+        { "path": "src/relay/activity-event.entity.ts", "line": 4, "end_line": 38 },
+        { "path": "src/app.module.ts", "line": 9, "end_line": 15 }
+      ]
+    },
+    {
+      "id": "stream",
+      "type": "messagebus",
+      "label": "activity-stream.ts",
+      "sublabel": "Subject · sin historia",
+      "pos": [360, 1000],
+      "size": [190, 68],
+      "sources": [{ "path": "src/relay/activity-stream.ts", "line": 23, "end_line": 30 }]
+    },
+    {
+      "id": "stream-ctrl",
+      "type": "backend",
+      "label": "stream.controller.ts",
+      "sublabel": "GET /stream · SSE",
+      "pos": [640, 1000],
+      "size": [190, 68],
+      "sources": [{ "path": "src/relay/stream.controller.ts", "line": 24, "end_line": 27 }]
+    },
+    {
+      "id": "history",
+      "type": "backend",
+      "label": "history.controller.ts",
+      "sublabel": "GET /history · ?user=",
+      "pos": [360, 1160],
+      "size": [190, 68],
+      "sources": [{ "path": "src/relay/history.controller.ts", "line": 17, "end_line": 20 }]
+    },
+    {
+      "id": "clients",
+      "type": "external",
+      "label": "Clientes",
+      "sublabel": "curl hoy · CLI en Go es fase 2",
+      "pos": [660, 1160],
+      "size": [190, 68],
+      "sources": [
+        { "path": "docs/adr/0001-sse-for-realtime-channel.md", "line": 3, "end_line": 3 },
+        { "path": "docs/adr/0001-sse-for-realtime-channel.md", "line": 11, "end_line": 11 }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "main-creates-app", "from": "main", "to": "app-module", "label": "crea la app" },
+    { "id": "main-configures-ingress", "from": "main", "to": "ingress", "label": "configureIngress()" },
+    { "id": "github-posts", "from": "github", "to": "webhook", "label": "POST / + HMAC", "variant": "emphasis" },
+    { "id": "webhook-normalizes", "from": "webhook", "to": "to-event", "label": "toActivityEvent()" },
+    { "id": "webhook-stores", "from": "webhook", "to": "service", "label": "store()", "variant": "emphasis" },
+    { "id": "webhook-delivers", "from": "webhook", "to": "stream", "label": "deliver()" },
+    { "id": "dispatch-merge", "from": "to-event", "to": "merge-to-main", "label": "isMergeToMain()" },
+    { "id": "dispatch-assignment", "from": "to-event", "to": "issue-assignment", "label": "isCriticalAssignment()" },
+    { "id": "merge-reads-payload", "from": "merge-to-main", "to": "payload", "label": "asRecord()" },
+    { "id": "merge-instants", "from": "merge-to-main", "to": "activity-event", "label": "isoInstant()" },
+    { "id": "merge-branch-rule", "from": "merge-to-main", "to": "critical", "label": "isMainBranch()" },
+    { "id": "assignment-reads-payload", "from": "issue-assignment", "to": "payload", "label": "asRecord()" },
+    { "id": "assignment-instants", "from": "issue-assignment", "to": "activity-event", "label": "isoInstant()" },
+    { "id": "assignment-label-rule", "from": "issue-assignment", "to": "critical", "label": "carriesCriticalLabel()" },
+    { "id": "service-writes-row", "from": "service", "to": "entity", "label": "save() · find()", "variant": "emphasis" },
+    { "id": "history-queries", "from": "history", "to": "service", "label": "list(user)" },
+    { "id": "stream-controller-receives", "from": "stream-ctrl", "to": "stream", "label": "receive()" },
+    { "id": "clients-open-stream", "from": "clients", "to": "stream-ctrl", "label": "GET /stream · SSE" },
+    { "id": "clients-read-history", "from": "clients", "to": "history", "label": "GET /history" }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Arranque y cableado (sin llamadas)",
+      "items": [
+        "relay.module.ts declara los 3 controladores y los 2 providers: Nest los instancia, ningún archivo llama a otro ahí",
+        "app.module.ts crea el DataSource y registra ActivityEventEntity; synchronize: true crea la tabla",
+        "main.ts y el harness e2e comparten INGRESS_OPTIONS y configureIngress(), para no divergir"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "De GitHub al evento",
+      "items": [
+        "El controlador verifica la firma sobre los bytes crudos y recién después parsea; un payload no crítico se acusa y se descarta",
+        "to-activity-event.ts es la única entrada al adaptador: prueba isMergeToMain() y luego isCriticalAssignment()",
+        "payload.ts y domain/ son las hojas compartidas: ninguna conoce a los controladores"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Persistencia y emisión",
+      "items": [
+        "store() no lee antes de escribir: el índice único de deliveryId resuelve el reenvío (ADR-0005)",
+        "Solo el evento realmente guardado se entrega al canal: deliver() recibe el booleano de store()",
+        "activity-stream.ts no guarda historia; el historial la reconstruye desde la tabla"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Fuera de este mapa",
+      "items": [
+        "Los Clientes hoy son curl: el CLI en Go es fase 2 y todavía no existe (ADR-0001)",
+        "El grafo no incluye la DI de Nest ni las entidades registradas: son declaraciones, no llamadas",
+        "Tampoco hay migrations: la tabla la crea synchronize al arrancar"
+      ]
+    }
+  ]
+}
