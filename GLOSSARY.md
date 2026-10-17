@@ -16,6 +16,10 @@ _Avoid_: server, backend, notifier, bot
 The Go binary a developer runs in their terminal to receive and display ActivityEvents.
 _Avoid_: app, client, agent, daemon
 
+**Feed**:
+What the CLI shows: the sequence of ActivityEvents a developer sees in their terminal, whether as they arrive or as the result of a query.
+_Avoid_: inbox, timeline, log, stream
+
 **Critical event**:
 A GitHub happening worth interrupting a developer for. Today that means a pull request merged into `main`, or an issue assigned while carrying a `bug` or `feedback` label.
 _Avoid_: important event, alert, notification
@@ -27,6 +31,10 @@ _Avoid_: merge, integration
 **Assignment**:
 An issue gaining an assignee, whether at creation or later. It is the trigger for the issue-side critical event, gated on the issue carrying a `bug` or `feedback` label at that moment.
 _Avoid_: allocation, ownership
+
+**Repository**:
+The GitHub project an ActivityEvent happened in; the unit the CLI groups and filters by.
+_Avoid_: project, codebase, origin
 
 **Actor**:
 The GitHub user who caused the event — who merged the pull request, or who assigned the issue.
@@ -41,5 +49,5 @@ The relay's delivery model. Every connected CLI receives every ActivityEvent, an
 _Avoid_: push, fan-out, pub/sub, routing
 
 **Audit history**:
-The persisted record of ActivityEvents the relay keeps in SQLite and serves for retrospective queries such as `feed --user`.
+The persisted record of ActivityEvents the relay keeps in SQLite and serves for retrospective queries such as `feed history --user`.
 _Avoid_: log, archive, dump
