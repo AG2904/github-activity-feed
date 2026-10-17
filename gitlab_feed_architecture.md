@@ -119,6 +119,7 @@ gitlab-notifier/
 │   ├── adr/                   # registro de decisiones (ADR)
 │   ├── agents/                # convenciones del tracker de issues
 │   ├── research/              # feasibility research (GitHub vs relay)
+│   ├── manual-testing.md      # cómo probar el relay a mano, paso a paso
 │   └── tickets/relay/         # registros de evidencia por ticket completado
 ├── .scratch/relay/            # spec + tickets
 ├── GLOSSARY.md                # lenguaje de dominio compartido
