@@ -1,15 +1,13 @@
 import { isoInstant, type ActivityEvent } from '../domain/activity-event.js';
 import { carriesCriticalLabel } from '../domain/critical.js';
-import { asRecord, labelNames, loginOf } from './payload.js';
+import { asRecord, labelNames, loginOf, repositoryName, type GitHubDelivery } from './payload.js';
 
 interface GitHubUser {
   login: string;
 }
 
-export interface IssuePayload {
-  action: string;
+export interface IssuePayload extends GitHubDelivery {
   issue: Record<string, unknown>;
-  sender: GitHubUser;
   assignee?: GitHubUser | null;
 }
 
@@ -74,6 +72,7 @@ export function toAssignmentEvent(payload: IssuePayload): ActivityEvent | undefi
   }
   return {
     type: 'issue.assigned',
+    repository: repositoryName(payload?.repository),
     actor,
     subject,
     assignee: loginOf(payload.assignee) ?? reportedAssignees(issue)[0] ?? null,

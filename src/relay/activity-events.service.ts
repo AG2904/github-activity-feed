@@ -16,6 +16,7 @@ import type { ActivityEvent, ActivityEventType, IsoInstant } from './domain/acti
 function fromStoredRow(row: ActivityEventEntity): ActivityEvent {
   return {
     type: row.type as ActivityEventType,
+    repository: row.repository,
     actor: row.actor,
     subject: row.subject,
     assignee: row.assignee,
@@ -37,6 +38,26 @@ const UNIQUE_VIOLATION = 'SQLITE_CONSTRAINT_UNIQUE';
 function isDuplicateDelivery(error: unknown): boolean {
   const driverError = error instanceof QueryFailedError ? error.driverError : undefined;
   return (driverError as { code?: string } | undefined)?.code === UNIQUE_VIOLATION;
+}
+
+/** What the audit history can be narrowed by. A key left out narrows nothing. */
+export interface HistoryFilter {
+  user?: string;
+  repository?: string;
+}
+
+/**
+ * One clause per role a user can play in an event, each narrowed by the repository
+ * when one was asked for: an array of clauses is an OR and the keys inside one
+ * clause are an AND, so this is the only shape that narrows the user's two roles
+ * and the repository at the same time.
+ */
+function clausesForUser(user: string, repository?: string) {
+  const byRepository = repository ? { repository } : {};
+  return [
+    { actor: user, ...byRepository },
+    { assignee: user, ...byRepository },
+  ];
 }
 
 @Injectable()
@@ -74,7 +95,7 @@ export class ActivityEventsService {
 
   /**
    * The audit history, newest first, in the ActivityEvent shape (no storage id
-   * leaks), narrowed to one user when asked.
+   * leaks), narrowed by user, by repository, or by both.
    *
    * A user is *involved* in an event either as its actor or as its assignee — the
    * two roles the glossary gives a name — so the filter matches both. Story 15 is
@@ -82,9 +103,10 @@ export class ActivityEventsService {
    *
    * A filter that is absent or empty asks for the whole record.
    */
-  async list(user?: string): Promise<ActivityEvent[]> {
+  async list(filter: HistoryFilter = {}): Promise<ActivityEvent[]> {
+    const { user, repository } = filter;
     const rows = await this.events.find({
-      where: user ? [{ actor: user }, { assignee: user }] : undefined,
+      where: user ? clausesForUser(user, repository) : repository ? { repository } : undefined,
       order: { id: 'DESC' },
     });
     return rows.map(fromStoredRow);

@@ -1,6 +1,6 @@
 import { isoInstant, type ActivityEvent } from '../domain/activity-event.js';
 import { isMainBranch } from '../domain/critical.js';
-import { asRecord, labelNames, loginOf } from './payload.js';
+import { asRecord, labelNames, loginOf, repositoryName, type GitHubDelivery } from './payload.js';
 
 interface GitHubPullRequest {
   title: string;
@@ -11,9 +11,7 @@ interface GitHubPullRequest {
   labels: Array<{ name: string }>;
 }
 
-export interface PullRequestPayload {
-  action: string;
-  sender: { login: string };
+export interface PullRequestPayload extends GitHubDelivery {
   pull_request: GitHubPullRequest;
 }
 
@@ -54,6 +52,7 @@ export function toMergeToMainEvent(payload: PullRequestPayload): ActivityEvent |
   }
   return {
     type: 'pr.merged',
+    repository: repositoryName(payload?.repository),
     actor,
     subject,
     assignee: null,

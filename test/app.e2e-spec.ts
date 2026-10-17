@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
+import { DataSource } from 'typeorm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { configureIngress, INGRESS_OPTIONS } from '../src/relay/ingress.js';
@@ -40,23 +41,28 @@ async function storedEvents(): Promise<unknown[]> {
   return response.body as unknown[];
 }
 
+/** The repository the fixtures belong to, unless a test names another. */
+const REPOSITORY = 'AG2904/github-activity-feed';
+
 /**
- * A captured `pull_request` delivery. `action` is the action GitHub reports at
- * the top level; every other key overrides a field of the `pull_request` object.
+ * A captured `pull_request` delivery. `action` and `repository` are the fields
+ * GitHub reports at the top level; every other key overrides a field of the
+ * `pull_request` object.
  */
 function pullRequestPayload(
-  overrides: { action?: string } & Record<string, unknown> = {},
+  overrides: { action?: string; repository?: string } & Record<string, unknown> = {},
 ): Record<string, unknown> {
-  const { action = 'closed', ...pullRequest } = overrides;
+  const { action = 'closed', repository = REPOSITORY, ...pullRequest } = overrides;
   return {
     action,
     sender: { login: 'maria.perez' },
+    repository: { full_name: repository },
     pull_request: {
       number: 42,
       title: 'Fix memory leak in parser component',
       merged: true,
       merged_at: '2026-10-15T12:00:00Z',
-      html_url: 'https://github.com/AG2904/Gitlab-notifier/pull/42',
+      html_url: 'https://github.com/AG2904/github-activity-feed/pull/42',
       base: { ref: 'main' },
       user: { login: 'maria.perez' },
       labels: [{ name: 'bug' }, { name: 'area:relay' }],
@@ -65,18 +71,27 @@ function pullRequestPayload(
   };
 }
 
+/**
+ * A captured `issues` delivery. `repository` is the field GitHub reports at the
+ * top level; `issue` overrides fields of the issue object and everything else
+ * lands beside it.
+ */
 function issuePayload(
-  overrides: { issue?: Record<string, unknown> } & Record<string, unknown> = {},
+  overrides: {
+    issue?: Record<string, unknown>;
+    repository?: string;
+  } & Record<string, unknown> = {},
 ): Record<string, unknown> {
-  const { issue, ...rest } = overrides;
+  const { issue, repository = REPOSITORY, ...rest } = overrides;
   return {
     action: 'assigned',
     sender: { login: 'lucia.gomez' },
+    repository: { full_name: repository },
     assignee: { login: 'tomas.ferreira' },
     issue: {
       number: 7,
       title: 'Webhook drops events under load',
-      html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/7',
+      html_url: 'https://github.com/AG2904/github-activity-feed/issues/7',
       created_at: '2026-10-15T09:00:00Z',
       updated_at: '2026-10-15T11:00:00Z',
       labels: [{ name: 'bug' }],
@@ -89,11 +104,11 @@ function issuePayload(
 }
 
 /** The URL a pull request fixture is stored under, which is how a test finds it. */
-const pullUrl = (number: number) => `https://github.com/AG2904/Gitlab-notifier/pull/${number}`;
+const pullUrl = (number: number) => `https://github.com/AG2904/github-activity-feed/pull/${number}`;
 
 /** The URL an issue fixture is stored under. */
 const issueUrl = (number: number) =>
-  `https://github.com/AG2904/Gitlab-notifier/issues/${number}`;
+  `https://github.com/AG2904/github-activity-feed/issues/${number}`;
 
 /**
  * A webhook posted the way GitHub delivers it: the hook named in the
@@ -276,11 +291,12 @@ describe('Relay HTTP seam', () => {
       const history = await getHistory().expect(200);
       expect(history.body).toContainEqual({
         type: 'pr.merged',
+        repository: REPOSITORY,
         actor: 'maria.perez',
         subject: 'Fix memory leak in parser component',
         assignee: null,
         labels: ['bug', 'area:relay'],
-        url: 'https://github.com/AG2904/Gitlab-notifier/pull/42',
+        url: 'https://github.com/AG2904/github-activity-feed/pull/42',
         when: '2026-10-15T12:00:00.000Z',
       });
     });
@@ -292,8 +308,21 @@ describe('Relay HTTP seam', () => {
 
       const history = await getHistory().expect(200);
       expect(history.body).toContainEqual(
-        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/42', when: '2026-10-15T12:00:00.000Z' }),
+        expect.objectContaining({ url: 'https://github.com/AG2904/github-activity-feed/pull/42', when: '2026-10-15T12:00:00.000Z' }),
       );
+    });
+
+    it('carries the repository the payload names, not the one in the url', async () => {
+      // A payload whose url and repository disagree, which GitHub would not send:
+      // it is the only shape that tells apart a relay reading `repository.full_name`
+      // from one parsing the url, and reading the payload is the whole point of the
+      // column. Every other fixture has the two agreeing, as a real one does.
+      const url = pullUrl(191);
+      await postWebhook(
+        JSON.stringify(pullRequestPayload({ repository: 'AG2904/another-repo', html_url: url })),
+      ).expect(200);
+
+      expect((await storedFor(url))[0]).toMatchObject({ repository: 'AG2904/another-repo' });
     });
 
     it('ignores a PR merged into a branch other than main', async () => {
@@ -301,14 +330,14 @@ describe('Relay HTTP seam', () => {
         JSON.stringify(
           pullRequestPayload({
             base: { ref: 'develop' },
-            html_url: 'https://github.com/AG2904/Gitlab-notifier/pull/43',
+            html_url: 'https://github.com/AG2904/github-activity-feed/pull/43',
           }),
         ),
       ).expect(200);
 
       const history = await getHistory().expect(200);
       expect(history.body).not.toContainEqual(
-        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/43' }),
+        expect.objectContaining({ url: 'https://github.com/AG2904/github-activity-feed/pull/43' }),
       );
     });
 
@@ -318,14 +347,14 @@ describe('Relay HTTP seam', () => {
           pullRequestPayload({
             merged: false,
             merged_at: null,
-            html_url: 'https://github.com/AG2904/Gitlab-notifier/pull/44',
+            html_url: 'https://github.com/AG2904/github-activity-feed/pull/44',
           }),
         ),
       ).expect(200);
 
       const history = await getHistory().expect(200);
       expect(history.body).not.toContainEqual(
-        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/44' }),
+        expect.objectContaining({ url: 'https://github.com/AG2904/github-activity-feed/pull/44' }),
       );
     });
 
@@ -334,17 +363,18 @@ describe('Relay HTTP seam', () => {
         JSON.stringify({
           action: 'closed',
           sender: { login: 'maria.perez' },
+          repository: { full_name: REPOSITORY },
           pull_request: {
             merged: true,
             base: { ref: 'main' },
-            html_url: 'https://github.com/AG2904/Gitlab-notifier/pull/45',
+            html_url: 'https://github.com/AG2904/github-activity-feed/pull/45',
           },
         }),
       ).expect(200);
 
       const history = await getHistory().expect(200);
       expect(history.body).not.toContainEqual(
-        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/45' }),
+        expect.objectContaining({ url: 'https://github.com/AG2904/github-activity-feed/pull/45' }),
       );
     });
 
@@ -354,11 +384,12 @@ describe('Relay HTTP seam', () => {
           action: 'closed',
           // No `sender`: the payload passes the filter but has nobody to
           // attribute it to, so it must be dropped rather than throw.
+          repository: { full_name: REPOSITORY },
           pull_request: {
             title: 'Fix memory leak in parser component',
             merged: true,
             merged_at: '2026-10-15T12:00:00Z',
-            html_url: 'https://github.com/AG2904/Gitlab-notifier/pull/46',
+            html_url: 'https://github.com/AG2904/github-activity-feed/pull/46',
             base: { ref: 'main' },
             labels: [{ name: 'bug' }],
           },
@@ -367,7 +398,7 @@ describe('Relay HTTP seam', () => {
 
       const history = await getHistory().expect(200);
       expect(history.body).not.toContainEqual(
-        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/pull/46' }),
+        expect.objectContaining({ url: 'https://github.com/AG2904/github-activity-feed/pull/46' }),
       );
     });
   });
@@ -377,7 +408,7 @@ describe('Relay HTTP seam', () => {
       await postWebhook(
         JSON.stringify(
           issuePayload({
-            issue: { html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/71' },
+            issue: { html_url: 'https://github.com/AG2904/github-activity-feed/issues/71' },
           }),
         ),
       ).expect(200);
@@ -385,11 +416,12 @@ describe('Relay HTTP seam', () => {
       const history = await getHistory().expect(200);
       expect(history.body).toContainEqual({
         type: 'issue.assigned',
+        repository: REPOSITORY,
         actor: 'lucia.gomez',
         subject: 'Webhook drops events under load',
         assignee: 'tomas.ferreira',
         labels: ['bug'],
-        url: 'https://github.com/AG2904/Gitlab-notifier/issues/71',
+        url: 'https://github.com/AG2904/github-activity-feed/issues/71',
         when: '2026-10-15T11:00:00.000Z',
       });
     });
@@ -403,7 +435,7 @@ describe('Relay HTTP seam', () => {
             // carries who is on it.
             assignee: undefined,
             issue: {
-              html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/72',
+              html_url: 'https://github.com/AG2904/github-activity-feed/issues/72',
               labels: [{ name: 'feedback' }],
               created_at: '2026-10-15T08:30:00Z',
               // Deliberately later than created_at, so that reading the wrong
@@ -421,7 +453,7 @@ describe('Relay HTTP seam', () => {
           actor: 'lucia.gomez',
           assignee: 'tomas.ferreira',
           labels: ['feedback'],
-          url: 'https://github.com/AG2904/Gitlab-notifier/issues/72',
+          url: 'https://github.com/AG2904/github-activity-feed/issues/72',
           when: '2026-10-15T08:30:00.000Z',
         }),
       );
@@ -432,7 +464,7 @@ describe('Relay HTTP seam', () => {
         JSON.stringify(
           issuePayload({
             issue: {
-              html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/73',
+              html_url: 'https://github.com/AG2904/github-activity-feed/issues/73',
               labels: [{ name: 'chore' }, { name: 'area:relay' }],
             },
           }),
@@ -441,7 +473,7 @@ describe('Relay HTTP seam', () => {
 
       const history = await getHistory().expect(200);
       expect(history.body).not.toContainEqual(
-        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/issues/73' }),
+        expect.objectContaining({ url: 'https://github.com/AG2904/github-activity-feed/issues/73' }),
       );
     });
 
@@ -452,7 +484,7 @@ describe('Relay HTTP seam', () => {
             action: 'opened',
             assignee: undefined,
             issue: {
-              html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/74',
+              html_url: 'https://github.com/AG2904/github-activity-feed/issues/74',
               assignee: null,
               assignees: [],
             },
@@ -462,7 +494,7 @@ describe('Relay HTTP seam', () => {
 
       const history = await getHistory().expect(200);
       expect(history.body).not.toContainEqual(
-        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/issues/74' }),
+        expect.objectContaining({ url: 'https://github.com/AG2904/github-activity-feed/issues/74' }),
       );
     });
 
@@ -474,14 +506,14 @@ describe('Relay HTTP seam', () => {
           issuePayload({
             action: 'labeled',
             assignee: undefined,
-            issue: { html_url: 'https://github.com/AG2904/Gitlab-notifier/issues/75' },
+            issue: { html_url: 'https://github.com/AG2904/github-activity-feed/issues/75' },
           }),
         ),
       ).expect(200);
 
       const history = await getHistory().expect(200);
       expect(history.body).not.toContainEqual(
-        expect.objectContaining({ url: 'https://github.com/AG2904/Gitlab-notifier/issues/75' }),
+        expect.objectContaining({ url: 'https://github.com/AG2904/github-activity-feed/issues/75' }),
       );
     });
 
@@ -725,10 +757,11 @@ describe('Relay HTTP seam', () => {
       await postMerge(url, 'delivery-155').expect(200);
 
       const [stored] = await storedFor(url);
-      // Deep equality on purpose: exactly seven fields reach the wire, so an
-      // eighth column arriving there fails here (ADR-0005).
+      // Deep equality on purpose: exactly eight fields reach the wire, so a ninth
+      // column arriving there fails here (ADR-0005).
       expect(stored).toEqual({
         type: 'pr.merged',
+        repository: REPOSITORY,
         actor: 'maria.perez',
         subject: 'Fix memory leak in parser component',
         assignee: null,
@@ -870,6 +903,74 @@ describe('Relay HTTP seam', () => {
     });
   });
 
+  describe('the history is filtered by repository (ticket 09)', () => {
+    /** The history the relay serves when asked for one repository. */
+    async function historyForRepository(repository: string): Promise<unknown[]> {
+      const response = await getHistory().query({ repository }).expect(200);
+      return response.body as unknown[];
+    }
+
+    it('returns the events of the repository asked for, and not the other one', async () => {
+      const ours = pullUrl(181);
+      const theirs = pullUrl(182);
+
+      await postWebhook(JSON.stringify(pullRequestPayload({ html_url: ours }))).expect(200);
+      await postWebhook(
+        JSON.stringify(
+          pullRequestPayload({ repository: 'AG2904/another-repo', html_url: theirs }),
+        ),
+      ).expect(200);
+
+      const filtered = await historyForRepository(REPOSITORY);
+      expect(filtered).toContainEqual(expect.objectContaining({ url: ours }));
+      expect(filtered).not.toContainEqual(expect.objectContaining({ url: theirs }));
+
+      const others = await historyForRepository('AG2904/another-repo');
+      expect(others).toContainEqual(expect.objectContaining({ url: theirs }));
+      expect(others).not.toContainEqual(expect.objectContaining({ url: ours }));
+    });
+
+    it('narrows by repository and by user together', async () => {
+      const merged = pullUrl(183);
+      const assigned = issueUrl(184);
+      const thirdRepo = issueUrl(185);
+
+      await postWebhook(JSON.stringify(pullRequestPayload({ html_url: merged }))).expect(200);
+      await postWebhook(
+        JSON.stringify(issuePayload({ issue: { html_url: assigned } })),
+      ).expect(200);
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({ repository: 'AG2904/third-repo', issue: { html_url: thirdRepo } }),
+        ),
+      ).expect(200);
+
+      // Both events are in this repository, and maria.perez is involved in only one
+      // of them: the repository narrows each clause of the user filter rather than
+      // replacing it, which is the difference between an AND and an OR.
+      const narrowed = await getHistory()
+        .query({ repository: REPOSITORY, user: 'maria.perez' })
+        .expect(200);
+      expect(narrowed.body).toContainEqual(expect.objectContaining({ url: merged }));
+      expect(narrowed.body).not.toContainEqual(expect.objectContaining({ url: assigned }));
+
+      // A third repository, with an event of its own: maria.perez has merged, and
+      // this repository has history, but the two never meet. An OR would answer with
+      // her merges here, which is exactly what the AND must not do.
+      expect(await historyForRepository('AG2904/third-repo')).toContainEqual(
+        expect.objectContaining({ url: thirdRepo }),
+      );
+      const disjoint = await getHistory()
+        .query({ repository: 'AG2904/third-repo', user: 'maria.perez' })
+        .expect(200);
+      expect(disjoint.body).toEqual([]);
+    });
+
+    it('returns an empty collection for a repository the relay has never seen', async () => {
+      expect(await historyForRepository('AG2904/never.seen')).toEqual([]);
+    });
+  });
+
   describe('the stream announces that it is alive (ticket 08)', () => {
     it('writes a heartbeat while the connection has nothing to say', async () => {
       const nextFrame = await openFrameStream();
@@ -887,6 +988,64 @@ describe('Relay HTTP seam', () => {
       // the connection to be reaped the moment the proxy's own timer expires.
       const second = await nextFrame();
       expect(second.startsWith(':')).toBe(true);
+    });
+  });
+
+  describe('an existing audit history survives the new column (ticket 09)', () => {
+    /**
+     * The table as it stood before the repository column, frozen on purpose: a
+     * migration is tested against the shape it upgrades from, and no declaration in
+     * the codebase can produce the old shape any more.
+     */
+    const SCHEMA_BEFORE_REPOSITORY = `CREATE TABLE "activity_events" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "deliveryId" text, "type" varchar NOT NULL, "actor" varchar NOT NULL, "subject" varchar NOT NULL, "assignee" text, "labels" json NOT NULL, "url" varchar NOT NULL, "when" varchar NOT NULL, CONSTRAINT "UQ_7d44c2a358a94e65c769aab1367" UNIQUE ("deliveryId"))`;
+
+    it('boots against a database written before the column existed, and serves it', async () => {
+      const legacyDir = mkdtempSync(join(tmpdir(), 'relay-legacy-'));
+      const legacyDb = join(legacyDir, 'relay.db');
+
+      // A database with rows already in it is the whole point: SQLite cannot add a
+      // NOT NULL column to a populated table, and TypeORM answers a schema change by
+      // rebuilding the table and copying the rows, so the copy is what has to work.
+      const before = new DataSource({ type: 'better-sqlite3', database: legacyDb });
+      await before.initialize();
+      await before.query(SCHEMA_BEFORE_REPOSITORY);
+      await before.query(
+        `INSERT INTO activity_events ("deliveryId", "type", "actor", "subject", "assignee", "labels", "url", "when") VALUES ('legacy-delivery', 'pr.merged', 'maria.perez', 'Stored before the column existed', NULL, '["bug"]', 'https://github.com/AG2904/github-activity-feed/pull/900', '2026-10-16T10:00:00.000Z')`,
+      );
+      await before.destroy();
+
+      // The only case that boots an app of its own, because the subject under test
+      // is what happens to a database that already has rows when the schema moves.
+      const databasePath = process.env.DATABASE_PATH;
+      process.env.DATABASE_PATH = legacyDb;
+      const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+      const legacyApp = moduleRef.createNestApplication<NestExpressApplication>(INGRESS_OPTIONS);
+      configureIngress(legacyApp);
+
+      try {
+        await legacyApp.init();
+        const response = await request(legacyApp.getHttpServer()).get('/history').expect(200);
+
+        // The row outlived the table rebuild, and it answers with no repository: it
+        // was written before anyone recorded one, and recovering it from the url is
+        // the derivation this ticket exists to remove.
+        expect(response.body).toEqual([
+          {
+            type: 'pr.merged',
+            repository: null,
+            actor: 'maria.perez',
+            subject: 'Stored before the column existed',
+            assignee: null,
+            labels: ['bug'],
+            url: 'https://github.com/AG2904/github-activity-feed/pull/900',
+            when: '2026-10-16T10:00:00.000Z',
+          },
+        ]);
+      } finally {
+        await legacyApp.close();
+        process.env.DATABASE_PATH = databasePath;
+        rmSync(legacyDir, { recursive: true, force: true });
+      }
     });
   });
 });

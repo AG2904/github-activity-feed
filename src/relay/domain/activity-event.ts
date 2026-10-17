@@ -1,9 +1,10 @@
 /**
  * The single normalized shape the relay stores and serves (see GLOSSARY.md).
  *
- * Seven fields, no more. An ActivityEvent describes a *happening* — what
- * happened, to whom, where to look, and when — so the identifiers that belong
- * to a delivery or to a storage row deliberately do not appear here (ADR-0005).
+ * Eight fields, no more. An ActivityEvent describes a *happening* — what
+ * happened, where, to whom, where to look, and when — so the identifiers that
+ * belong to a delivery or to a storage row deliberately do not appear here
+ * (ADR-0005).
  */
 
 /** The critical happenings the relay knows how to normalize. A closed set. */
@@ -37,6 +38,14 @@ export function isoInstant(source: unknown): IsoInstant | undefined {
 
 export interface ActivityEvent {
   type: ActivityEventType;
+  /**
+   * The repository the happening belongs to, as `owner/name`.
+   *
+   * Null only for an event stored before the relay recorded one: the column
+   * arrived after the audit history did, so a row that predates it has no
+   * repository to report rather than one to guess at (ticket 09).
+   */
+  repository: string | null;
   actor: string;
   subject: string;
   /** The user the issue was assigned to; `null` for an event that has none. */
