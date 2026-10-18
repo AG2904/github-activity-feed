@@ -195,7 +195,7 @@ func TestWatchJSONWritesTheFramePayloadVerbatim(t *testing.T) {
 	}
 }
 
-func TestHistoryJSONWritesTheResponseBodyVerbatim(t *testing.T) {
+func TestHistoryJSONHandsOverTheRelayBytes(t *testing.T) {
 	relay := newFakeRelay(t)
 	relay.setHistory(historyBody)
 
@@ -204,11 +204,32 @@ func TestHistoryJSONWritesTheResponseBodyVerbatim(t *testing.T) {
 	if got.code != 0 {
 		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
 	}
+	// Without a filter the array the CLI frames is the array the relay served,
+	// so the body comes through byte for byte, ampersand included.
 	if got.stdout != historyBody {
 		t.Errorf("stdout = %q, want the relay's body byte for byte %q", got.stdout, historyBody)
 	}
 	if got.stderr != "" {
 		t.Errorf("stderr = %q, want empty", got.stderr)
+	}
+}
+
+func TestHistoryJSONFiltersBeforeFraming(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	assigned := payloadOf(assignedFrame(when))
+	relay.setHistory(historyOf(payloadOf(mergedFrame(when)), assigned))
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--json", "--user", "lucia.gomez")
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	// Raw is a shape, not an exemption: the filter runs, and what survives keeps
+	// the relay's own bytes.
+	want := "[" + assigned + "]"
+	if got.stdout != want {
+		t.Errorf("stdout = %q, want only the matching event's bytes %q", got.stdout, want)
 	}
 }
 
@@ -797,11 +818,12 @@ func TestHistoryFiltersCombineAsConjunction(t *testing.T) {
 func TestHistoryGroupsByRepository(t *testing.T) {
 	relay := newFakeRelay(t)
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
-	// Interleaved in the relay's order, so grouping has to reorder and the
-	// order inside each group still has to survive.
+	// other/repo comes first in the relay's order, so alphabetical order is not
+	// the order these groups were first seen in; grouping has to reorder them,
+	// and the order inside each group still has to survive.
 	relay.setHistory(historyOf(
-		payloadOf(mergedFrame(when)),
 		payloadOf(eventFrame(when, "pr.merged", "other/repo", "someone.else", "Other repo merge", nil, "[]", "https://github.com/other/repo/pull/9")),
+		payloadOf(mergedFrame(when)),
 		payloadOf(assignedFrame(when)),
 	))
 
@@ -812,11 +834,7 @@ func TestHistoryGroupsByRepository(t *testing.T) {
 	}
 	// Alphabetical, the relay's order inside each group, and no repository
 	// repeated on the per-event lines.
-	want := "AG2904/github-activity-feed\n" +
-		"[pr.merged] Fix memory leak in parser component\n" +
-		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n" +
-		"[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
-		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n" +
+	want := "AG2904/github-activity-feed\n" + mergedGrouped + assignedGrouped +
 		"\n" +
 		"other/repo\n" +
 		"[pr.merged] Other repo merge\n" +
@@ -842,9 +860,7 @@ func TestHistoryGroupsTheEventsWithoutARepositoryLast(t *testing.T) {
 	}
 	// Nothing to group it under and no name worth inventing, so it is written
 	// last without a header.
-	want := "AG2904/github-activity-feed\n" +
-		"[pr.merged] Fix memory leak in parser component\n" +
-		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n" +
+	want := "AG2904/github-activity-feed\n" + mergedGrouped +
 		"\n" +
 		"[pr.merged] Legacy merge\n" +
 		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/1\n"
@@ -921,6 +937,15 @@ const (
 		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n"
 	assignedOutput = "[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
 		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n"
+)
+
+// The same two events inside a grouped report, where the header already named
+// the repository and the second line therefore does not.
+const (
+	mergedGrouped = "[pr.merged] Fix memory leak in parser component\n" +
+		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n"
+	assignedGrouped = "[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
+		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n"
 )
 
 func mergedFrame(when time.Time) string {

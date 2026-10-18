@@ -85,7 +85,7 @@ func byRepository(events []activity.Event) ([]repositoryGroup, []activity.Event)
 	var unnamed []activity.Event
 
 	for _, event := range events {
-		if event.Repository == nil || *event.Repository == "" {
+		if !hasRepository(event) {
 			unnamed = append(unnamed, event)
 			continue
 		}
@@ -114,6 +114,13 @@ func (p Palette) heading(w io.Writer, repository string) error {
 	return err
 }
 
+// hasRepository reports whether the event carries a repository the report can
+// name: a row stored before the column existed does not (ADR-0010), and neither
+// does an empty one the relay should never send.
+func hasRepository(event activity.Event) bool {
+	return event.Repository != nil && *event.Repository != ""
+}
+
 // line writes one event's two lines. repository decides whether the second line
 // repeats it: a grouped report has already named it in the header.
 func (p Palette) line(w io.Writer, event activity.Event, now time.Time, repository bool) error {
@@ -130,7 +137,7 @@ func (p Palette) line(w io.Writer, event activity.Event, now time.Time, reposito
 	// A nil repository is a row stored before the field existed (ADR-0010);
 	// the segment disappears rather than inventing a name for it.
 	second := make([]string, 0, 4)
-	if repository && event.Repository != nil && *event.Repository != "" {
+	if repository && hasRepository(event) {
 		second = append(second, *event.Repository)
 	}
 	second = append(second, event.Actor, relative(now, event.When))

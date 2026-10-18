@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/AG2904/github-activity-feed/client/internal/activity"
-	"github.com/AG2904/github-activity-feed/client/internal/render"
 )
 
 // history answers a retrospective question about the stored past: the audit
@@ -21,7 +20,7 @@ func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	user := fs.String("user", "", "only events where this login is the actor or the assignee")
 	repository := fs.String("repo", "", "only events in this owner/name repository")
 	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
-	jsonOut := fs.Bool("json", false, "write the relay's response verbatim")
+	jsonOut := fs.Bool("json", false, "write each stored event's bytes verbatim")
 	groupByRepo := fs.Bool("group-by-repo", false, "group the history by repository")
 	if code, ok := parseFlags(fs, args); !ok {
 		return code
@@ -33,7 +32,7 @@ func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 
 	target := endpoint(strings.TrimRight(*relay, "/"), "/history")
-	resp, err := fetch(ctx, target)
+	payloads, err := storedHistory(ctx, target)
 	if err != nil {
 		if ctx.Err() != nil {
 			return 0
@@ -41,42 +40,28 @@ func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "history: %v\n", err)
 		return 1
 	}
-	defer resp.Body.Close()
 
-	out := emitter{
-		out:     stdout,
-		palette: render.Palette{Color: colorEnabled(stdout, *noColor)},
-		filter:  activity.Filter{User: *user, Repository: *repository},
-	}
+	out := newEmitter(stdout, *noColor, activity.Filter{User: *user, Repository: *repository})
+	rows := out.shown(payloads)
 
-	// Raw output is the relay's own bytes, the whole array, and not a rendering
-	// of them: that contract belongs to whoever is scripting against it. It is
-	// also why the emitter below carries no --json: everything past this point
-	// is the report.
+	// Raw output is the relay's own bytes of every event this client shows,
+	// framed as the array the relay served them in. Nothing is re-marshalled —
+	// key order, null, and the millisecond timestamp arrive as they were — and a
+	// filter still narrows it, because raw is a shape and not an exemption.
 	if *jsonOut {
-		if _, err := io.Copy(stdout, resp.Body); err != nil {
-			if ctx.Err() != nil {
-				return 0
-			}
+		if err := writeArray(stdout, rows); err != nil {
 			fmt.Fprintf(stderr, "history: %v\n", err)
 			return 1
 		}
 		return 0
 	}
 
-	payloads, err := storedRows(resp.Body)
-	if err != nil {
-		fmt.Fprintf(stderr, "history: %v\n", err)
-		return 1
-	}
-	shown := out.shown(payloads)
-
 	// Grouping is presentation over a finite list, which is why it lives here
 	// and not on the stream: a live feed is unbounded and unordered.
 	if *groupByRepo {
-		events := make([]activity.Event, 0, len(shown))
-		for _, stored := range shown {
-			events = append(events, stored.event)
+		events := make([]activity.Event, 0, len(rows))
+		for _, row := range rows {
+			events = append(events, row.event)
 		}
 		if err := out.palette.Grouped(stdout, events, time.Now()); err != nil {
 			fmt.Fprintf(stderr, "history: %v\n", err)
@@ -86,11 +71,23 @@ func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 
 	// Newest first, the order the relay serves: a report is read from the top.
-	for _, stored := range shown {
-		if err := out.paint(stored.payload, stored.event); err != nil {
+	for _, row := range rows {
+		if err := out.paint(row.payload, row.event); err != nil {
 			fmt.Fprintf(stderr, "history: %v\n", err)
 			return 1
 		}
 	}
 	return 0
+}
+
+// writeArray frames stored rows as the JSON array the relay served them in. The
+// envelope is the CLI's — that is all it adds — and every byte inside it belongs
+// to the relay.
+func writeArray(w io.Writer, rows []storedEvent) error {
+	payloads := make([]string, 0, len(rows))
+	for _, row := range rows {
+		payloads = append(payloads, row.payload)
+	}
+	_, err := io.WriteString(w, "["+strings.Join(payloads, ",")+"]")
+	return err
 }

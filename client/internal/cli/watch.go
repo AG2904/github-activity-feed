@@ -66,12 +66,10 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	historyURL := endpoint(base, "/history")
 	fmt.Fprintf(stderr, "watching %s\n", target)
 
-	out := emitter{
-		out:     stdout,
-		palette: render.Palette{Color: colorEnabled(stdout, *noColor)},
-		json:    *jsonOut,
-		filter:  activity.Filter{User: *user, Repository: *repository},
-	}
+	out := newEmitter(stdout, *noColor, activity.Filter{User: *user, Repository: *repository})
+	// The live feed is the one place --json changes how a single event is
+	// written, so it is the one place the emitter carries that flag.
+	out.json = *jsonOut
 	backoff := &backoff{}
 	attempts := 0
 	filled := false
@@ -195,6 +193,17 @@ type emitter struct {
 	filter  activity.Filter
 }
 
+// newEmitter builds the output policy both commands hand their events to: the
+// same stdout, the same colour rule, the same filter, so `--no-color` and
+// `--user` cannot come to mean different things in the two of them.
+func newEmitter(stdout io.Writer, noColor bool, filter activity.Filter) emitter {
+	return emitter{
+		out:     stdout,
+		palette: render.Palette{Color: colorEnabled(stdout, noColor)},
+		filter:  filter,
+	}
+}
+
 // accept parses one payload and answers what it is to this client: valid when
 // the CLI could read it as an event at all — an event the filter drops is still
 // valid, and that is what resets the backoff — and shown when this client shows
@@ -208,9 +217,11 @@ func (e emitter) accept(payload string) (event activity.Event, valid, shown bool
 	return event, true, e.filter.Match(event)
 }
 
-// paint writes one event this client shows. It is the only place an event
-// reaches stdout, so the backfill and the live stream cannot disagree about
-// --json, about colour, or about the rendered form.
+// paint writes one event of the feed. It is the only place the feed reaches
+// stdout as feed lines, so the backfill and the live stream cannot disagree
+// about --json, about colour, or about the rendered form. The report shapes —
+// the raw array and the grouped report — are their own, because neither is a
+// line of the feed.
 func (e emitter) paint(payload string, event activity.Event) error {
 	if e.json {
 		// Re-marshalling would reorder keys and could reshape null or the
