@@ -77,9 +77,7 @@ The relay resolves as --relay, then $RELAY_URL, then %s.
 // frame that does not parse is discarded, not fatal - the same stance the relay
 // takes on a hook it does not understand. Reconnection arrives with ticket 04.
 func watch(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("watch", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	fs.Usage = func() { fmt.Fprintf(stderr, "usage: feed watch [--relay <url>] [--no-color]\n") }
+	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--no-color]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
 	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
 	if code, ok := parseFlags(fs, args); !ok {
@@ -127,9 +125,7 @@ func watch(args []string, stdout, stderr io.Writer) int {
 // history fetches the audit history once. This ticket only proves the seam;
 // ticket 07 gives the response its shape.
 func history(args []string, stderr io.Writer) int {
-	fs := flag.NewFlagSet("history", flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	fs.Usage = func() { fmt.Fprintf(stderr, "usage: feed history [--relay <url>]\n") }
+	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
 	if code, ok := parseFlags(fs, args); !ok {
 		return code
@@ -164,6 +160,13 @@ func relayFallback() string {
 	return defaultRelay
 }
 
+func newFlagSet(name string, stderr io.Writer, usage string) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	fs.Usage = func() { fmt.Fprintln(stderr, usage) }
+	return fs
+}
+
 func parseFlags(fs *flag.FlagSet, args []string) (code int, ok bool) {
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -190,11 +193,7 @@ func colorEnabled(stdout io.Writer, noColor bool) bool {
 	if !ok {
 		return false
 	}
-	info, err := file.Stat()
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeCharDevice != 0
+	return isTerminal(file)
 }
 
 func endpoint(relay, path string) string {

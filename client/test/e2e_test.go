@@ -133,7 +133,7 @@ func TestWatchPaintsTheAssigneeOnAnAssignment(t *testing.T) {
 
 	relay.send(t, assignedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
 
-	want := "[issue.assigned] @lucia.gomez Ship the onboarding checklist\n" +
+	want := "[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
 		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n"
 	feed.waitStdout(t, want)
 
@@ -164,7 +164,7 @@ func TestWatchDiscardsFramesItCannotUseAndKeepsReading(t *testing.T) {
 
 	want := "[pr.merged] Fix memory leak in parser component\n" +
 		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n" +
-		"[issue.assigned] @lucia.gomez Ship the onboarding checklist\n" +
+		"[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
 		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n"
 	feed.waitStdout(t, want)
 

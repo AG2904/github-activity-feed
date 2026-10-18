@@ -33,41 +33,34 @@ func (r *Reader) Next() (string, error) {
 	for {
 		line, readErr := r.br.ReadString('\n')
 
-		if line == "" && readErr != nil {
-			if len(data) > 0 {
-				return strings.Join(data, "\n"), nil
-			}
-			if errors.Is(readErr, io.EOF) {
-				return "", io.EOF
-			}
-			return "", readErr
-		}
+		if line != "" || readErr == nil {
+			line = strings.TrimRight(line, "\r\n")
 
-		line = strings.TrimRight(line, "\r\n")
-
-		switch {
-		case line == "":
-			if len(data) > 0 {
-				return strings.Join(data, "\n"), nil
-			}
-		case strings.HasPrefix(line, ":"):
-			// A comment frame, including the relay's heartbeat.
-		default:
-			field, value, _ := strings.Cut(line, ":")
-			value = strings.TrimPrefix(value, " ")
-			if field == "data" {
-				data = append(data, value)
+			switch {
+			case line == "":
+				if len(data) > 0 {
+					return strings.Join(data, "\n"), nil
+				}
+			case strings.HasPrefix(line, ":"):
+				// A comment frame, including the relay's heartbeat.
+			default:
+				field, value, _ := strings.Cut(line, ":")
+				if field == "data" {
+					data = append(data, strings.TrimPrefix(value, " "))
+				}
 			}
 		}
 
-		if readErr != nil {
-			if len(data) > 0 {
-				return strings.Join(data, "\n"), nil
-			}
-			if errors.Is(readErr, io.EOF) {
-				return "", io.EOF
-			}
-			return "", readErr
+		if readErr == nil {
+			continue
 		}
+		// A frame that ended at EOF without its blank line still counts.
+		if len(data) > 0 {
+			return strings.Join(data, "\n"), nil
+		}
+		if errors.Is(readErr, io.EOF) {
+			return "", io.EOF
+		}
+		return "", readErr
 	}
 }

@@ -6,6 +6,7 @@ package render
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/AG2904/github-activity-feed/client/internal/activity"
@@ -29,7 +30,7 @@ type Palette struct {
 func (p Palette) Event(w io.Writer, event activity.Event, now time.Time) error {
 	first := p.badge(event.Type)
 	if event.Assignee != nil && *event.Assignee != "" {
-		assignee := "@" + *event.Assignee
+		assignee := *event.Assignee
 		if p.Color {
 			assignee = bold + assignee + reset
 		}
@@ -37,16 +38,18 @@ func (p Palette) Event(w io.Writer, event activity.Event, now time.Time) error {
 	}
 	first += " " + p.subject(event.URL, event.Subject)
 
-	repository := "unknown repository"
+	// A nil repository is a row stored before the field existed (ADR-0010);
+	// the segment disappears rather than inventing a name for it.
+	second := make([]string, 0, 4)
 	if event.Repository != nil && *event.Repository != "" {
-		repository = *event.Repository
+		second = append(second, *event.Repository)
 	}
-	second := repository + " · " + event.Actor + " · " + relative(now, event.When)
+	second = append(second, event.Actor, relative(now, event.When))
 	if !p.Color {
-		second += " · " + event.URL
+		second = append(second, event.URL)
 	}
 
-	_, err := fmt.Fprintf(w, "%s\n%s\n", first, second)
+	_, err := fmt.Fprintf(w, "%s\n%s\n", first, strings.Join(second, " · "))
 	return err
 }
 
@@ -84,9 +87,7 @@ func relative(now, when time.Time) string {
 		return fmt.Sprintf("%dm ago", int(elapsed/time.Minute))
 	case elapsed < 24*time.Hour:
 		return fmt.Sprintf("%dh ago", int(elapsed/time.Hour))
-	case elapsed < 30*24*time.Hour:
-		return fmt.Sprintf("%dd ago", int(elapsed/(24*time.Hour)))
 	default:
-		return when.UTC().Format("2006-01-02")
+		return fmt.Sprintf("%dd ago", int(elapsed/(24*time.Hour)))
 	}
 }
