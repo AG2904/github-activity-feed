@@ -3,7 +3,7 @@ import { Observable, Subject } from 'rxjs';
 import type { ActivityEvent } from './domain/activity-event.js';
 
 /**
- * The relay's broadcast (see GLOSSARY.md): every connected CLI receives every
+ * The relay's broadcast (see GLOSSARY.md): every connected client receives every
  * ActivityEvent and filters for itself, because the channel carries no identity
  * and no authentication (ADR-0001).
  *
@@ -18,7 +18,7 @@ export class ActivityStream {
   /**
    * Hands a stored event to every client listening right now. The stream names
    * this "deliver" rather than "publish" because the glossary's word is *receive*:
-   * every connected CLI receives every event and filters for itself.
+   * every connected client receives every event and filters for itself.
    */
   deliver(event: ActivityEvent): void {
     this.events.next(event);

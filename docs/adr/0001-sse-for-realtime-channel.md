@@ -8,7 +8,7 @@ Traffic on the realtime channel flows one way: the relay emits ActivityEvents, t
 
 ## Consequences
 
-The channel is an unauthenticated broadcast: every connected CLI receives every ActivityEvent and filters locally. Routing events per developer would require identity and authentication on the CLI, and is deliberately deferred.
+The channel is an unauthenticated broadcast: every connected client receives every ActivityEvent and filters locally. Routing events per developer would require identity and authentication on the client, and is deliberately deferred.
 
 The broadcast holds while the relay watches one team's repositories. It stops being affordable when either of these becomes true, and this is the trigger to revisit — not a headcount:
 

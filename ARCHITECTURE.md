@@ -18,7 +18,7 @@ El proyecto es principalmente un **portafolio técnico** — demuestra arquitect
 
 - **Cero Slack / Teams como destino final:** Evaluados y descartados (§2.3). Las notificaciones llegan a la terminal, sin ruido de chat.
 - **Cero Docker:** El relay es un proceso **NestJS (TypeScript)** nativo con **SQLite** embebido — sin contenedores ni servidores de base de datos. Trivial de correr en una demo; admisible por TI si algún día se despliega en la empresa.
-- **Autonomía del Cliente:** El cliente CLI será desarrollado 100% en **Go** y distribuido como un **único binario estático** por plataforma (sin dependencias en la máquina del dev).
+- **Autonomía del CLI:** El CLI será desarrollado 100% en **Go** y distribuido como un **único binario estático** por plataforma (sin dependencias en la máquina del dev).
 - **Privacidad y Auditoría:** Sin payloads hacia servicios de terceros; el relay es dueño del dato: **SQLite** para persistencia y soporte del futuro comando analítico `feed --user`.
 - **Autenticación:** webhooks de GitHub firmados con **HMAC SHA-256** (`X-Hub-Signature-256`) y verificación en tiempo constante. El secreto vive solo en variables de entorno, nunca en código commiteado.
 
@@ -50,7 +50,7 @@ Ambos eventos **se pueden expresar** en Actions (`pull_request: types: [closed]`
 
 - **Soberanía y Cero Dependencias de Terceros:** Un bot de chat depende de APIs externas y de la aprobación de red de la empresa. Un relay propio en NestJS y un CLI en Go garantizan autonomía y privacidad de los metadatos (*NIST SP 800-122*).
 - **Ergonomía (*Non-Intrusive DX*):** Las apps de chat generan ruido social y pop-ups disruptivos. La terminal es un canal privado, asíncrono y enfocado.
-- **Programabilidad Local:** Un mensaje de chat es texto estático. El evento en el cliente CLI es programable: automatizaciones locales desde la consola (atajos para interactuar con Git, etc.).
+- **Programabilidad Local:** Un mensaje de chat es texto estático. El evento en el CLI es programable: automatizaciones locales desde la consola (atajos para interactuar con Git, etc.).
 - **Historial Estructurado y Auditoría:** El relay almacena los eventos en **SQLite** — de forma indefinida y compartida por el equipo — habilitando consultas retroactivas como `feed --user <nombre>`.
 
 ---
@@ -83,7 +83,7 @@ Ambos eventos **se pueden expresar** en Actions (`pull_request: types: [closed]`
 
        ▼
 
-[ CLI en Go (Cliente) ] ──> (pinta la notificación en la terminal del dev)
+[ CLI en Go ] ──> (pinta la notificación en la terminal del dev)
 ```
 
 **Nota de alcance:** los webhooks de GitHub son *push-only* (GitHub llama a tu endpoint; no existe modo pull oficial). Para las demos y el desarrollo se usan payloads de prueba/fixtures y, opcionalmente, un túnel temporal; un despliegue con webhook real requiere un endpoint alcanzable desde internet.
@@ -164,7 +164,7 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
    - [x] Canal SSE que sostiene la conexión y emite cada evento almacenado a todos los clientes conectados (ticket 06).
    - [x] Historial filtrable por usuario (ticket 07). Con esto la Fase 1 queda cerrada.
 
-2. **Fase 2: El Cliente CLI (Go)**
+2. **Fase 2: El CLI (Go)**
    - Estructurar el binario con manejo de flags (conexión al relay, filtrado local).
    - Cliente de recepción en tiempo real (SSE) desde el Relay.
    - Interfaz visual en terminal (formato legible, timestamps relativos).
