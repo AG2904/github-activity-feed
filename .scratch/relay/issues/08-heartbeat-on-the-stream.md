@@ -2,7 +2,7 @@
 
 **What to build:** A heartbeat on `GET /stream`, so a client can tell a quiet relay from a dead connection instead of guessing.
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] The stream writes a heartbeat at a fixed interval whenever no event has been sent in that interval.
 - [x] The heartbeat does not reach a client as an ActivityEvent: it must not appear on the stream as data a client would parse.

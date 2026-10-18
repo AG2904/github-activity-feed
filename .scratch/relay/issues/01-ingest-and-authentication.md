@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] The app boots against a temporary SQLite file with no external services.
 - [x] A single HTTP POST endpoint stands at the seam where GitHub webhooks arrive.

@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] The delivery identifier (`X-GitHub-Delivery`) is stored on the event's row under a unique constraint.
 - [x] The identifier is a storage column, never a field of the `ActivityEvent` shape (ADR-0005).

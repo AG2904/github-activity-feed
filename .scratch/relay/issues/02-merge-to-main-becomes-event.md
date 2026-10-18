@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] A PR reported as closed and merged with base branch `main` is stored as an event.
 - [x] Merge detection keys on the merge state GitHub reports (`action: closed` plus `pull_request.merged`), never on intermediate payload detail.

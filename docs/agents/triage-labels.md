@@ -13,3 +13,13 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
 
 Edit the "Label in our tracker" column to match whatever vocabulary you actually use.
+
+## Completion state
+
+`done` is not a triage role; it is the terminal state. A ticket is `done` when
+its acceptance criteria are all met, its work is merged, and its evidence record
+exists under `docs/tickets/<feature-slug>/`.
+
+`ready-for-human` is not a synonym: it means the implementation is finished but
+a human review or a merge is still pending. `done` means there is nothing left
+to do on that ticket.

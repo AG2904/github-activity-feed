@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] `feed watch` holds a connection to `GET /stream` open and prints an event when the relay writes one.
 - [x] An event is printed as two lines: the type badge, the assignee when there is one, and the subject; then the repository, the actor, and the time relative to now.

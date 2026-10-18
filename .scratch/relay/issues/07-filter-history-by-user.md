@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] The history endpoint accepts a user filter.
 - [x] With events from two different actors stored, filtering by one returns only that one's.

@@ -2,7 +2,7 @@
 
 **What to build:** A `client/` Go module holding a `feed` binary that resolves where the relay is, knows its own version, and dispatches its two subcommands — plus the test harness every later ticket builds on.
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] `client/` holds a Go module at `github.com/AG2904/github-activity-feed/client`, with `cmd/feed` as the entry point and `go.mod` carrying no `require` directive.
 - [x] The relay's location resolves as flag over environment over default: `--relay <url>`, then `RELAY_URL`, then `http://localhost:3000`.

@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] A stream endpoint holds the connection open and emits events as they are stored.
 - [x] An event posted while a client is connected arrives on that connection.

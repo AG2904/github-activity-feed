@@ -2,7 +2,7 @@
 
 **What to build:** A `repository` field on `ActivityEvent`, carried from the payload through storage to the wire.
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] The shape carries the repository as `owner/name`, read from the payload's `repository.full_name`.
 - [x] The stored row gains a column, and an existing audit history survives the change.

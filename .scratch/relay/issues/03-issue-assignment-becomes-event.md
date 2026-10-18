@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] An issue update that adds an assignee while carrying `bug` is stored.
 - [x] An issue created with an assignee and carrying `feedback` is stored.

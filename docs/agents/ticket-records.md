@@ -34,7 +34,9 @@ Programa-Tuberias repo (Spanish, professional register).
 ## Rules
 
 - Write it when the ticket's acceptance criteria are all met and the work is
-  merged (or ready to merge) — not before.
+  merged (or ready to merge) — not before. When the record exists and the work
+  is merged, set the ticket's `Status: done`; `ready-for-human` stays for
+  finished implementation still awaiting review or merge.
 - Quote real outputs, never invented ones; if something was not verified, say so
   explicitly (as the Programa-Tuberias record does for docs-only tickets).
 - The Acceptance Criteria list mirrors the ticket checklist; every criterion is
