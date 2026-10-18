@@ -1,6 +1,6 @@
 # GitHub Activity Feed
 
-Terminal notifications for a development team on GitHub. This repo holds two contexts: the **relay** (a NestJS backend that receives GitHub webhooks) and the **CLI** (a Go binary developers run in their terminal).
+The critical GitHub activity a development team sees in its terminal. This repo holds two contexts: the **relay** (a NestJS backend that receives GitHub webhooks) and the **CLI** (a Go binary developers run in their terminal).
 
 ## Language
 
@@ -8,16 +8,25 @@ Terminal notifications for a development team on GitHub. This repo holds two con
 The single normalized shape the relay emits and the CLI renders, whatever GitHub hook it came from.
 _Avoid_: notification, message, alert, payload
 
+**Delivery**:
+One HTTP POST from GitHub, carrying a payload. It is the unit GitHub retries and the unit the relay deduplicates on; it is not an ActivityEvent, because a delivery can be ignored and the same happening can arrive in two deliveries.
+_Avoid_: request, event
+
 **Relay**:
 The internal backend that receives GitHub webhooks, normalizes them into ActivityEvents, persists them, and streams them to connected clients.
 _Avoid_: server, backend, notifier, bot
 
 **CLI**:
 The Go binary a developer runs in their terminal to receive and display ActivityEvents.
-_Avoid_: app, client, agent, daemon
+_Avoid_: app, agent, daemon
+
+**Client**:
+A process that holds the stream open or reads the audit history. The CLI is one; `curl` is another, and for as long as the CLI did not exist it was the only one.
+_Avoid_: consumer, subscriber, user
 
 **Feed**:
-What the CLI shows: the sequence of ActivityEvents a developer sees in their terminal, whether as they arrive or as the result of a query.
+What the CLI shows: the sequence of ActivityEvents a developer sees in their terminal. It is the same artifact whether the events arrived live or came from a query — the origin differs, not the thing.
+_Note_: capitalized `Feed` is the concept; `feed` in code font is the binary.
 _Avoid_: inbox, timeline, log, stream
 
 **Critical event**:
@@ -44,8 +53,12 @@ _Avoid_: author, user, committer
 The GitHub user an issue was assigned to; the person an assignment event is about.
 _Avoid_: owner, responsible, target
 
+**Involvement**:
+A user's relation to an event, as its actor or its assignee. It is what "a user's events" means in every filter, and it introduces no third role: it is the union of the two the glossary already names.
+_Avoid_: participation, ownership, membership
+
 **Broadcast**:
-The relay's delivery model. Every connected CLI receives every ActivityEvent, and each CLI filters for itself.
+The relay's delivery model. Every connected client receives every ActivityEvent, and each client filters for itself.
 _Avoid_: push, fan-out, pub/sub, routing
 
 **Audit history**:
