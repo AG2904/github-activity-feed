@@ -3,16 +3,15 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"net/http"
 	"slices"
 
 	"github.com/AG2904/github-activity-feed/client/internal/activity"
 )
 
-// row is one stored event: the relay's own bytes and the event they carry, so
-// the filter and the renderer read the same thing the wire did.
-type row struct {
+// storedEvent is one row of the audit history: the relay's own bytes and the
+// event they carry, so the filter and the renderer read the same thing the wire
+// did.
+type storedEvent struct {
 	payload string
 	event   activity.Event
 }
@@ -40,8 +39,8 @@ func backfill(ctx context.Context, url string, out emitter, limit int) error {
 	// The relay serves the history newest first, and this is the head of a
 	// stream: printed oldest first, the live events carry on below it.
 	slices.Reverse(recent)
-	for _, row := range recent {
-		if err := out.paint(row.payload, row.event); err != nil {
+	for _, stored := range recent {
+		if err := out.paint(stored.payload, stored.event); err != nil {
 			return err
 		}
 	}
@@ -52,19 +51,11 @@ func backfill(ctx context.Context, url string, out emitter, limit int) error {
 // filtering is local, exactly as it is on the stream (ADR-0001), so the CLI
 // never narrows what the relay sends.
 func storedHistory(ctx context.Context, url string) ([]json.RawMessage, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := fetch(ctx, url)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s answered %s", url, resp.Status)
-	}
 
 	// Raw messages, so each stored event keeps the relay's bytes: re-marshalling
 	// a parsed event would reorder its keys and reshape null and the millisecond
@@ -81,14 +72,14 @@ func storedHistory(ctx context.Context, url string) ([]json.RawMessage, error) {
 // the ten most recent events of mine rather than whatever of everyone's last
 // ten happened to be mine. A row the relay stored but the CLI cannot read is
 // dropped, the same stance the stream takes on a frame it cannot use.
-func mostRecent(payloads []json.RawMessage, filter activity.Filter, limit int) []row {
-	recent := make([]row, 0, min(limit, len(payloads)))
+func mostRecent(payloads []json.RawMessage, filter activity.Filter, limit int) []storedEvent {
+	recent := make([]storedEvent, 0, min(limit, len(payloads)))
 	for _, payload := range payloads {
 		event, err := activity.Parse(payload)
 		if err != nil || !filter.Match(event) {
 			continue
 		}
-		recent = append(recent, row{payload: string(payload), event: event})
+		recent = append(recent, storedEvent{payload: string(payload), event: event})
 		if len(recent) == limit {
 			break
 		}

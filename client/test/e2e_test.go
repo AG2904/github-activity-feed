@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -554,6 +555,49 @@ func TestWatchBackfillHonoursTheFiltersBeforeTheLimit(t *testing.T) {
 	if got := feed.stdout.String(); got != want {
 		t.Errorf("stdout = %q, want the most recent event of mine %q", got, want)
 	}
+	// Filtering never narrows what the relay sends, and it is asked for after
+	// the stream is already subscribed, so nothing that happens during the read
+	// is missed.
+	if got := strings.Join(relay.requests(), " "); got != "/stream /history" {
+		t.Errorf("relay saw %q, want the stream first and an unfiltered history", got)
+	}
+}
+
+func TestWatchBackfillsTenEventsByDefault(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+
+	// Twelve stored events, newest first, as the relay serves them: the last to
+	// happen carries the highest number, so it comes first.
+	payloads := make([]string, 0, 12)
+	for i := 11; i >= 0; i-- {
+		payloads = append(payloads, payloadOf(eventFrame(when, "pr.merged", "AG2904/github-activity-feed",
+			"maria.perez", fmt.Sprintf("Merge %d", i), nil, "[]",
+			fmt.Sprintf("https://github.com/AG2904/github-activity-feed/pull/%d", 100+i))))
+	}
+	relay.setHistory(historyOf(payloads...))
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	// Merge 11 is the newest of the ten the default prints, and therefore the
+	// last of the backfill to reach stdout.
+	feed.waitStdout(t, "Merge 11\n")
+
+	// Ten events, two lines each: the default is ten and not twelve.
+	if lines := nonEmptyLines(feed.stdout.String()); len(lines) != 20 {
+		t.Errorf("stdout has %d lines, want 10 events on two lines each\n%v", len(lines), lines)
+	}
+	for _, want := range []string{"Merge 11\n", "Merge 2\n"} {
+		if !strings.Contains(feed.stdout.String(), want) {
+			t.Errorf("stdout = %q, want it to contain %q", feed.stdout.String(), want)
+		}
+	}
+	for _, unwanted := range []string{"Merge 1\n", "Merge 0\n"} {
+		if strings.Contains(feed.stdout.String(), unwanted) {
+			t.Errorf("stdout = %q, want the older events left out: found %q", feed.stdout.String(), unwanted)
+		}
+	}
 }
 
 func TestReconnectNeverRepeatsTheBackfill(t *testing.T) {
@@ -606,6 +650,23 @@ func TestWatchFollowsTheStreamWhenTheHistoryIsUnreadable(t *testing.T) {
 	// is a duller terminal, not a broken watch.
 	if got := feed.stdout.String(); got != mergedOutput {
 		t.Errorf("stdout = %q, want the live feed despite the unreadable history", got)
+	}
+}
+
+func TestWatchFollowsTheStreamWhenTheHistoryAnswersBadly(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.setHistoryStatus(http.StatusInternalServerError)
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+	feed.waitStdout(t, mergedOutput)
+
+	if got := feed.stdout.String(); got != mergedOutput {
+		t.Errorf("stdout = %q, want the live feed despite the failing history", got)
+	}
+	if got := strings.Join(relay.requests(), " "); got != "/stream /history" {
+		t.Errorf("relay saw %q, want the history asked for once and not retried", got)
 	}
 }
 

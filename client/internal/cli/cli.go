@@ -86,12 +86,7 @@ func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 
 	target := endpoint(strings.TrimRight(*relay, "/"), "/history")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
-	if err != nil {
-		fmt.Fprintf(stderr, "history: %v\n", err)
-		return 1
-	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := fetch(ctx, target)
 	if err != nil {
 		if ctx.Err() != nil {
 			return 0
@@ -100,11 +95,6 @@ func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Fprintf(stderr, "history: %s answered %s\n", target, resp.Status)
-		return 1
-	}
 
 	if *jsonOut {
 		if _, err := io.Copy(stdout, resp.Body); err != nil {
@@ -174,4 +164,23 @@ func colorEnabled(stdout io.Writer, noColor bool) bool {
 
 func endpoint(relay, path string) string {
 	return relay + path
+}
+
+// fetch opens one read request against the relay and refuses anything that is
+// not a 200, so the two read paths agree about what a relay that answered badly
+// looks like. The caller owns the body.
+func fetch(ctx context.Context, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("%s answered %s", url, resp.Status)
+	}
+	return resp, nil
 }

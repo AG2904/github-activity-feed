@@ -23,14 +23,15 @@ import (
 type fakeRelay struct {
 	*httptest.Server
 
-	mu          sync.Mutex
-	request     []string
-	lastEventID []string
-	frames      chan string
-	drop        chan struct{}
-	historyBody string
-	done        chan struct{}
-	doneOnce    sync.Once
+	mu            sync.Mutex
+	request       []string
+	lastEventID   []string
+	frames        chan string
+	drop          chan struct{}
+	historyBody   string
+	historyStatus int
+	done          chan struct{}
+	doneOnce      sync.Once
 
 	connected chan struct{}
 }
@@ -46,7 +47,7 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 		connected:   make(chan struct{}),
 	}
 	relay.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		relay.record(r.URL.Path)
+		relay.record(r.URL.RequestURI())
 		switch r.URL.Path {
 		case "/stream":
 			relay.recordEventID(r.Header.Get("Last-Event-ID"))
@@ -82,6 +83,10 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 				}
 			}
 		case "/history":
+			if code := relay.status(); code != 0 {
+				http.Error(w, "the relay is having a bad day", code)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(relay.history()))
 		default:
@@ -95,10 +100,12 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 	return relay
 }
 
-func (f *fakeRelay) record(path string) {
+// record keeps the whole request line, not just the path, so a query string the
+// CLI should not be sending is visible to a test instead of hidden behind it.
+func (f *fakeRelay) record(requestURI string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.request = append(f.request, path)
+	f.request = append(f.request, requestURI)
 }
 
 // requests is a snapshot, so a test can assert both what the relay saw and
@@ -133,6 +140,20 @@ func (f *fakeRelay) history() string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.historyBody
+}
+
+// setHistoryStatus makes /history fail the way a relay that is up but unhappy
+// would. Zero, the default, answers 200 with the stored body.
+func (f *fakeRelay) setHistoryStatus(code int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.historyStatus = code
+}
+
+func (f *fakeRelay) status() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.historyStatus
 }
 
 func (f *fakeRelay) hits(path string) int {
