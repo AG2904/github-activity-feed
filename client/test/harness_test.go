@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -15,28 +16,57 @@ import (
 )
 
 // fakeRelay is the test harness's counterpart at the process seam: a real HTTP
-// server that answers the relay's two read endpoints and records what the
-// binary asked for. Later tickets replace the canned responses with a real
-// stream; the harness itself is the deliverable this ticket stands up.
+// server that answers the relay's two read endpoints, holds the stream open,
+// and records what the binary asked for. A test writes frames into the stream
+// after the CLI connected, so the stream is exercised rather than inspected.
 type fakeRelay struct {
 	*httptest.Server
 
-	mu      sync.Mutex
-	request []string
+	mu       sync.Mutex
+	request  []string
+	frames   chan string
+	done     chan struct{}
+	doneOnce sync.Once
+
+	connected     chan struct{}
+	connectedOnce sync.Once
 }
 
 func newFakeRelay(t *testing.T) *fakeRelay {
 	t.Helper()
 
-	relay := &fakeRelay{}
+	relay := &fakeRelay{
+		frames:    make(chan string, 16),
+		done:      make(chan struct{}),
+		connected: make(chan struct{}),
+	}
 	relay.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		relay.record(r.URL.Path)
 		switch r.URL.Path {
 		case "/stream":
 			w.Header().Set("Content-Type", "text/event-stream")
-			_, _ = w.Write([]byte(
-				`data: {"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix memory leak in parser component","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"}` + "\n\n",
-			))
+			w.Header().Set("Cache-Control", "no-cache")
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+				return
+			}
+			flusher.Flush()
+			relay.connectedOnce.Do(func() { close(relay.connected) })
+
+			for {
+				select {
+				case frame := <-relay.frames:
+					if _, err := io.WriteString(w, frame); err != nil {
+						return
+					}
+					flusher.Flush()
+				case <-relay.done:
+					return
+				case <-r.Context().Done():
+					return
+				}
+			}
 		case "/history":
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte("[]\n"))
@@ -44,7 +74,10 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 			http.NotFound(w, r)
 		}
 	}))
-	t.Cleanup(relay.Close)
+	t.Cleanup(func() {
+		relay.doneOnce.Do(func() { close(relay.done) })
+		relay.Close()
+	})
 	return relay
 }
 
@@ -72,14 +105,36 @@ func (f *fakeRelay) hits(path string) int {
 	return hits
 }
 
+// waitConnected blocks until the CLI's stream request has reached the handler,
+// which is the deterministic barrier SSE needs: bytes on the wire mean the
+// subscription exists.
+func (f *fakeRelay) waitConnected(t *testing.T) {
+	t.Helper()
+	select {
+	case <-f.connected:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("the CLI never connected to /stream")
+	}
+}
+
+// send writes one frame into the held-open stream.
+func (f *fakeRelay) send(t *testing.T, frame string) {
+	t.Helper()
+	select {
+	case f.frames <- frame:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("the stream never accepted a frame")
+	}
+}
+
 type result struct {
 	stdout string
 	stderr string
 	code   int
 }
 
-// runFeed crosses the process seam: start the binary, wait for it, and keep
-// everything a developer (or a script) could observe.
+// runFeed is for the one-shot commands: start the binary, wait for it, and
+// keep everything a developer (or a script) could observe.
 func runFeed(t *testing.T, env map[string]string, args ...string) result {
 	t.Helper()
 
@@ -107,6 +162,68 @@ func runFeed(t *testing.T, env map[string]string, args ...string) result {
 	}
 
 	return result{stdout: stdout.String(), stderr: stderr.String(), code: code}
+}
+
+// runningFeed is the held-open counterpart: `watch` does not exit on its own,
+// so a test starts it, observes it, and lets cleanup stop it.
+type runningFeed struct {
+	cmd    *exec.Cmd
+	cancel context.CancelFunc
+	stdout *syncBuffer
+	stderr *syncBuffer
+
+	mu      sync.Mutex
+	stopped bool
+}
+
+func startFeed(t *testing.T, env map[string]string, args ...string) *runningFeed {
+	t.Helper()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, feedBinary, args...)
+	cmd.Env = environment(env)
+	feed := &runningFeed{cmd: cmd, cancel: cancel, stdout: &syncBuffer{}, stderr: &syncBuffer{}}
+	cmd.Stdout = feed.stdout
+	cmd.Stderr = feed.stderr
+
+	if err := cmd.Start(); err != nil {
+		cancel()
+		t.Fatalf("starting feed %s: %v", strings.Join(args, " "), err)
+	}
+	t.Cleanup(feed.stop)
+	return feed
+}
+
+func (f *runningFeed) stop() {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.stopped {
+		return
+	}
+	f.stopped = true
+	f.cancel()
+	_ = f.cmd.Wait()
+}
+
+func (f *runningFeed) waitStdout(t *testing.T, want string) {
+	t.Helper()
+	f.waitFor(t, "stdout", want, f.stdout.String)
+}
+
+func (f *runningFeed) waitStderr(t *testing.T, want string) {
+	t.Helper()
+	f.waitFor(t, "stderr", want, f.stderr.String)
+}
+
+func (f *runningFeed) waitFor(t *testing.T, stream, want string, read func() string) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for !strings.Contains(read(), want) {
+		if time.Now().After(deadline) {
+			t.Fatalf("%s never contained %q\nstdout: %q\nstderr: %q", stream, want, f.stdout.String(), f.stderr.String())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }
 
 // firstWatchBanner starts `feed watch` with no relay override and returns the

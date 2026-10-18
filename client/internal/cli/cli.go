@@ -11,6 +11,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/AG2904/github-activity-feed/client/internal/activity"
+	"github.com/AG2904/github-activity-feed/client/internal/render"
+	"github.com/AG2904/github-activity-feed/client/internal/sse"
 )
 
 const defaultRelay = "http://localhost:3000"
@@ -46,7 +51,7 @@ func Run(args []string, stdout, stderr io.Writer, version string) int {
 
 	switch rest[0] {
 	case "watch":
-		return watch(rest[1:], stderr)
+		return watch(rest[1:], stdout, stderr)
 	case "history":
 		return history(rest[1:], stderr)
 	default:
@@ -60,7 +65,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintf(w, `feed shows the GitHub activity relay's critical events in the terminal.
 
 Usage:
-  feed watch   [--relay <url>]
+  feed watch   [--relay <url>] [--no-color]
   feed history [--relay <url>]
   feed --version
 
@@ -68,16 +73,20 @@ The relay resolves as --relay, then $RELAY_URL, then %s.
 `, defaultRelay)
 }
 
-// watch holds the relay's stream open. This ticket only proves the seam: the
-// SSE parser and the renderer arrive with ticket 02, and reconnect behaviour
-// with ticket 04.
-func watch(args []string, stderr io.Writer) int {
-	relay, ok, code := relayFor("watch", args, stderr)
-	if !ok {
+// watch holds the relay's stream open and paints each frame as it arrives. A
+// frame that does not parse is discarded, not fatal - the same stance the relay
+// takes on a hook it does not understand. Reconnection arrives with ticket 04.
+func watch(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("watch", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	fs.Usage = func() { fmt.Fprintf(stderr, "usage: feed watch [--relay <url>] [--no-color]\n") }
+	relay := fs.String("relay", relayFallback(), "relay base URL")
+	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
+	if code, ok := parseFlags(fs, args); !ok {
 		return code
 	}
 
-	target := endpoint(relay, "/stream")
+	target := endpoint(strings.TrimRight(*relay, "/"), "/stream")
 	fmt.Fprintf(stderr, "watching %s\n", target)
 
 	resp, err := http.Get(target)
@@ -92,23 +101,41 @@ func watch(args []string, stderr io.Writer) int {
 		return 1
 	}
 
-	// The frames are discarded until ticket 02 gives them a parser.
-	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-		fmt.Fprintf(stderr, "watch: %v\n", err)
-		return 1
+	palette := render.Palette{Color: colorEnabled(stdout, *noColor)}
+	frames := sse.NewReader(resp.Body)
+	for {
+		payload, err := frames.Next()
+		if errors.Is(err, io.EOF) {
+			return 0
+		}
+		if err != nil {
+			fmt.Fprintf(stderr, "watch: %v\n", err)
+			return 1
+		}
+
+		event, err := activity.Parse([]byte(payload))
+		if err != nil {
+			continue
+		}
+		if err := palette.Event(stdout, event, time.Now()); err != nil {
+			fmt.Fprintf(stderr, "watch: %v\n", err)
+			return 1
+		}
 	}
-	return 0
 }
 
 // history fetches the audit history once. This ticket only proves the seam;
 // ticket 07 gives the response its shape.
 func history(args []string, stderr io.Writer) int {
-	relay, ok, code := relayFor("history", args, stderr)
-	if !ok {
+	fs := flag.NewFlagSet("history", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	fs.Usage = func() { fmt.Fprintf(stderr, "usage: feed history [--relay <url>]\n") }
+	relay := fs.String("relay", relayFallback(), "relay base URL")
+	if code, ok := parseFlags(fs, args); !ok {
 		return code
 	}
 
-	target := endpoint(relay, "/history")
+	target := endpoint(strings.TrimRight(*relay, "/"), "/history")
 	resp, err := http.Get(target)
 	if err != nil {
 		fmt.Fprintf(stderr, "history: %v\n", err)
@@ -128,33 +155,46 @@ func history(args []string, stderr io.Writer) int {
 	return 0
 }
 
-// relayFor resolves the relay as flag over environment over default. The flag's
-// own default already carries the environment and the fallback, so a flag that
-// is present wins without a second lookup.
-func relayFor(name string, args []string, stderr io.Writer) (relay string, ok bool, code int) {
-	fallback := os.Getenv("RELAY_URL")
-	if fallback == "" {
-		fallback = defaultRelay
+// relayFallback is the flag's default, so a flag that is present wins over the
+// environment without a second lookup.
+func relayFallback() string {
+	if relay := os.Getenv("RELAY_URL"); relay != "" {
+		return relay
 	}
+	return defaultRelay
+}
 
-	fs := flag.NewFlagSet(name, flag.ContinueOnError)
-	fs.SetOutput(stderr)
-	fs.Usage = func() { fmt.Fprintf(stderr, "usage: feed %s [--relay <url>]\n", name) }
-	resolved := fs.String("relay", fallback, "relay base URL")
-
+func parseFlags(fs *flag.FlagSet, args []string) (code int, ok bool) {
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			return "", false, 0
+			return 0, false
 		}
-		return "", false, 2
+		return 2, false
 	}
 	if fs.NArg() > 0 {
-		fmt.Fprintf(stderr, "feed %s: unexpected argument %q\n\n", name, fs.Arg(0))
+		fmt.Fprintf(fs.Output(), "feed %s: unexpected argument %q\n\n", fs.Name(), fs.Arg(0))
 		fs.Usage()
-		return "", false, 2
+		return 2, false
 	}
+	return 0, true
+}
 
-	return strings.TrimRight(*resolved, "/"), true, 0
+// colorEnabled is the single rule for escapes: never by --no-color or
+// NO_COLOR, and only when stdout is a terminal. A pipe gets plain text, which
+// is what makes `feed watch | tee` and `feed watch | jq` safe.
+func colorEnabled(stdout io.Writer, noColor bool) bool {
+	if noColor || os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	file, ok := stdout.(*os.File)
+	if !ok {
+		return false
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeCharDevice != 0
 }
 
 func endpoint(relay, path string) string {
