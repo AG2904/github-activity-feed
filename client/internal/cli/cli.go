@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 )
 
 const defaultRelay = "http://localhost:3000"
@@ -62,59 +61,11 @@ func printUsage(w io.Writer) {
 
 Usage:
   feed watch   [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json]
-  feed history [--relay <url>] [--json | --group-by-repo]
+  feed history [--relay <url>] [--user <login>] [--repo <owner/name>] [--no-color] [--json | --group-by-repo]
   feed --version
 
 The relay resolves as --relay, then $RELAY_URL, then %s.
 `, defaultRelay)
-}
-
-// history fetches the audit history once. This ticket proves the seam and the
-// raw mode; ticket 07 gives the rendered response its shape.
-func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>] [--json | --group-by-repo]")
-	relay := fs.String("relay", relayFallback(), "relay base URL")
-	jsonOut := fs.Bool("json", false, "write the relay's response verbatim")
-	groupByRepo := fs.Bool("group-by-repo", false, "group the history by repository")
-	if code, ok := parseFlags(fs, args); !ok {
-		return code
-	}
-
-	if *jsonOut && *groupByRepo {
-		fmt.Fprintln(stderr, "history: --json and --group-by-repo cannot be combined: grouping is presentation, and raw output has none")
-		return 2
-	}
-
-	target := endpoint(strings.TrimRight(*relay, "/"), "/history")
-	resp, err := fetch(ctx, target)
-	if err != nil {
-		if ctx.Err() != nil {
-			return 0
-		}
-		fmt.Fprintf(stderr, "history: %v\n", err)
-		return 1
-	}
-	defer resp.Body.Close()
-
-	if *jsonOut {
-		if _, err := io.Copy(stdout, resp.Body); err != nil {
-			if ctx.Err() != nil {
-				return 0
-			}
-			fmt.Fprintf(stderr, "history: %v\n", err)
-			return 1
-		}
-		return 0
-	}
-
-	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
-		if ctx.Err() != nil {
-			return 0
-		}
-		fmt.Fprintf(stderr, "history: %v\n", err)
-		return 1
-	}
-	return 0
 }
 
 // relayFallback is the flag's default, so a flag that is present wins over the

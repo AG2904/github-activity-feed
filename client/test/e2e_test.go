@@ -708,6 +708,205 @@ func TestWatchJSONBackfillsOnePayloadPerLine(t *testing.T) {
 	}
 }
 
+func TestHistoryListsTheStoredEventsNewestFirst(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	// Newest first, the order the relay serves; the report keeps it.
+	relay.setHistory(historyOf(payloadOf(assignedFrame(when)), payloadOf(mergedFrame(when))))
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--no-color")
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	want := assignedOutput + mergedOutput
+	if got.stdout != want {
+		t.Errorf("stdout = %q, want the relay's own order %q", got.stdout, want)
+	}
+	if got.stderr != "" {
+		t.Errorf("stderr = %q, want empty", got.stderr)
+	}
+	relay.wantHits(t, "/history", 1, "the report is one query")
+}
+
+func TestHistoryFiltersByInvolvement(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.setHistory(historyOf(
+		payloadOf(eventFrame(when, "pr.merged", "AG2904/github-activity-feed", "someone.else", "Not maria's merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/8")),
+		payloadOf(assignedFrame(when)),
+		payloadOf(mergedFrame(when)),
+	))
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--no-color", "--user", "maria.perez")
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	// Maria is the actor of both — she merged, and she assigned — and she has
+	// nothing to do with someone else's merge.
+	want := assignedOutput + mergedOutput
+	if got.stdout != want {
+		t.Errorf("stdout = %q, want only maria's involvement %q", got.stdout, want)
+	}
+}
+
+func TestHistoryFiltersByRepository(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.setHistory(historyOf(
+		payloadOf(eventFrame(when, "pr.merged", "other/repo", "maria.perez", "Merge elsewhere", nil, "[]", "https://github.com/other/repo/pull/9")),
+		payloadOf(mergedFrame(when)),
+		// A row stored before the repository column existed (ADR-0010).
+		payloadOf(eventFrame(when, "pr.merged", "", "maria.perez", "Legacy merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/1")),
+	))
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--no-color", "--repo", "AG2904/github-activity-feed")
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	// A row with no repository matches no repository filter.
+	want := mergedOutput
+	if got.stdout != want {
+		t.Errorf("stdout = %q, want only the events in that repository %q", got.stdout, want)
+	}
+}
+
+func TestHistoryFiltersCombineAsConjunction(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.setHistory(historyOf(
+		payloadOf(assignedFrame(when)),
+		payloadOf(eventFrame(when, "issue.assigned", "other/repo", "someone.else", "Other repo assignment", ptr("lucia.gomez"), `["bug"]`, "https://github.com/other/repo/issues/9")),
+	))
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--no-color",
+		"--user", "lucia.gomez", "--repo", "other/repo")
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	want := "[issue.assigned] lucia.gomez Other repo assignment\n" +
+		"other/repo · someone.else · 2h ago · https://github.com/other/repo/issues/9\n"
+	if got.stdout != want {
+		t.Errorf("stdout = %q, want user and repository to combine as a conjunction %q", got.stdout, want)
+	}
+}
+
+func TestHistoryGroupsByRepository(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	// Interleaved in the relay's order, so grouping has to reorder and the
+	// order inside each group still has to survive.
+	relay.setHistory(historyOf(
+		payloadOf(mergedFrame(when)),
+		payloadOf(eventFrame(when, "pr.merged", "other/repo", "someone.else", "Other repo merge", nil, "[]", "https://github.com/other/repo/pull/9")),
+		payloadOf(assignedFrame(when)),
+	))
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--no-color", "--group-by-repo")
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	// Alphabetical, the relay's order inside each group, and no repository
+	// repeated on the per-event lines.
+	want := "AG2904/github-activity-feed\n" +
+		"[pr.merged] Fix memory leak in parser component\n" +
+		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n" +
+		"[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
+		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n" +
+		"\n" +
+		"other/repo\n" +
+		"[pr.merged] Other repo merge\n" +
+		"someone.else · 2h ago · https://github.com/other/repo/pull/9\n"
+	if got.stdout != want {
+		t.Errorf("stdout = %q, want the grouped report %q", got.stdout, want)
+	}
+}
+
+func TestHistoryGroupsTheEventsWithoutARepositoryLast(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.setHistory(historyOf(
+		// A row stored before the column existed (ADR-0010).
+		payloadOf(eventFrame(when, "pr.merged", "", "maria.perez", "Legacy merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/1")),
+		payloadOf(mergedFrame(when)),
+	))
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--no-color", "--group-by-repo")
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	// Nothing to group it under and no name worth inventing, so it is written
+	// last without a header.
+	want := "AG2904/github-activity-feed\n" +
+		"[pr.merged] Fix memory leak in parser component\n" +
+		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n" +
+		"\n" +
+		"[pr.merged] Legacy merge\n" +
+		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/1\n"
+	if got.stdout != want {
+		t.Errorf("stdout = %q, want the ungrouped event last and without a header %q", got.stdout, want)
+	}
+}
+
+func TestHistoryPrintsNothingForAnEmptyHistory(t *testing.T) {
+	relay := newFakeRelay(t)
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL)
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	if got.stdout != "" {
+		t.Errorf("stdout = %q, want nothing", got.stdout)
+	}
+	if got.stderr != "" {
+		t.Errorf("stderr = %q, want empty", got.stderr)
+	}
+}
+
+func TestHistoryFailsOnAnUnreachableRelay(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserving a closed port: %v", err)
+	}
+	relay := "http://" + listener.Addr().String()
+	listener.Close()
+
+	got := runFeed(t, nil, "history", "--relay", relay)
+
+	if got.code != 1 {
+		t.Fatalf("exit code = %d, want 1 (stderr: %q)", got.code, got.stderr)
+	}
+	if !strings.Contains(got.stderr, "history: ") {
+		t.Errorf("stderr = %q, want it to name what failed", got.stderr)
+	}
+	if got.stdout != "" {
+		t.Errorf("stdout = %q, want empty", got.stdout)
+	}
+}
+
+func TestHistoryFailsOnAResponseItCannotRead(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.setHistory("this is not the history the relay promised")
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL)
+
+	if got.code != 1 {
+		t.Fatalf("exit code = %d, want 1 (stderr: %q)", got.code, got.stderr)
+	}
+	if !strings.Contains(got.stderr, "history: ") {
+		t.Errorf("stderr = %q, want it to name what failed", got.stderr)
+	}
+	if got.stdout != "" {
+		t.Errorf("stdout = %q, want empty", got.stdout)
+	}
+}
+
 // rawPayload is the relay's own bytes, with an ampersand that Go's encoder
 // would escape as \u0026 if the CLI re-marshalled instead of passing it through.
 const rawPayload = `{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"}`
