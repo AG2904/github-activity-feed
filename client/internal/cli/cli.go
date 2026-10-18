@@ -66,7 +66,7 @@ func printUsage(w io.Writer) {
 
 Usage:
   feed watch   [--relay <url>] [--no-color] [--json]
-  feed history [--relay <url>] [--json] [--group-by-repo]
+  feed history [--relay <url>] [--json | --group-by-repo]
   feed --version
 
 The relay resolves as --relay, then $RELAY_URL, then %s.
@@ -112,32 +112,36 @@ func watch(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 
-		event, err := activity.Parse([]byte(payload))
-		if err != nil {
-			continue
-		}
-
-		if *jsonOut {
-			// The relay's bytes go out untouched: re-marshalling would reorder
-			// keys and could reshape null or the millisecond timestamp.
-			if _, err := io.WriteString(stdout, payload+"\n"); err != nil {
-				fmt.Fprintf(stderr, "watch: %v\n", err)
-				return 1
-			}
-			continue
-		}
-
-		if err := palette.Event(stdout, event, time.Now()); err != nil {
+		if err := emit(stdout, palette, *jsonOut, payload); err != nil {
 			fmt.Fprintf(stderr, "watch: %v\n", err)
 			return 1
 		}
 	}
 }
 
+// emit validates one frame's payload and writes it in the selected mode. A
+// payload that does not parse is discarded even with --json: raw output passes
+// the relay's bytes through untouched, but it still only passes events.
+func emit(stdout io.Writer, palette render.Palette, jsonOut bool, payload string) error {
+	event, err := activity.Parse([]byte(payload))
+	if err != nil {
+		return nil
+	}
+
+	if jsonOut {
+		// Re-marshalling would reorder keys and could reshape null or the
+		// millisecond timestamp.
+		_, err := io.WriteString(stdout, payload+"\n")
+		return err
+	}
+
+	return palette.Event(stdout, event, time.Now())
+}
+
 // history fetches the audit history once. This ticket proves the seam and the
 // raw mode; ticket 07 gives the rendered response its shape.
 func history(args []string, stdout, stderr io.Writer) int {
-	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>] [--json] [--group-by-repo]")
+	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>] [--json | --group-by-repo]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
 	jsonOut := fs.Bool("json", false, "write the relay's response verbatim")
 	groupByRepo := fs.Bool("group-by-repo", false, "group the history by repository")

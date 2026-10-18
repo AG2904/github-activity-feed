@@ -71,7 +71,7 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 			}
 		case "/history":
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(relay.historyBody))
+			_, _ = w.Write([]byte(relay.history()))
 		default:
 			http.NotFound(w, r)
 		}
@@ -95,6 +95,18 @@ func (f *fakeRelay) requests() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]string(nil), f.request...)
+}
+
+func (f *fakeRelay) setHistory(body string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.historyBody = body
+}
+
+func (f *fakeRelay) history() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.historyBody
 }
 
 func (f *fakeRelay) hits(path string) int {

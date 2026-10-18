@@ -178,9 +178,15 @@ func TestWatchJSONWritesTheFramePayloadVerbatim(t *testing.T) {
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--json")
 	relay.waitConnected(t)
 
-	// The malformed frame must still be discarded: --json changes the shape of
-	// the output, not the rule about what counts as an event.
-	relay.send(t, "data: this is not json\n\n")
+	// The junk frames must still be discarded: --json changes the shape of the
+	// output, not the rule about what counts as an event.
+	junk := "id: 1\n" +
+		": heartbeat\n\n" +
+		"event: pr.merged\n\n" +
+		"retry: 1500\n\n" +
+		`data: {"type":"pr.merged"` + "\n\n" +
+		"data: this is not json\n\n"
+	relay.send(t, junk)
 	relay.send(t, "data: "+rawPayload+"\n\n")
 
 	feed.waitStdout(t, rawPayload+"\n")
@@ -195,7 +201,7 @@ func TestWatchJSONWritesTheFramePayloadVerbatim(t *testing.T) {
 
 func TestHistoryJSONWritesTheResponseBodyVerbatim(t *testing.T) {
 	relay := newFakeRelay(t)
-	relay.historyBody = historyBody
+	relay.setHistory(historyBody)
 
 	got := runFeed(t, nil, "history", "--relay", relay.URL, "--json")
 
