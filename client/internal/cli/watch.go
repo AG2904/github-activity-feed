@@ -77,23 +77,28 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	filled := false
 
 	for {
-		// A connection after the first attempt is a recovery: the notices above
-		// already said why it dropped, and naming the reopening is what tells
-		// silence from a dead relay.
-		recovered := attempts > 0
-		eventSeen, err := stream(ctx, target, out, func() error {
-			if recovered {
+		// The history is read before the stream opens, so an event that arrives
+		// during the read is not printed twice — the reprint the relay's own
+		// dedupe exists to prevent — at the cost of a hole the size of two
+		// requests, which is the hole a reconnect leaves and `feed history`
+		// recovers. filled stays false until a relay answers with a history, so
+		// a CLI started before its relay still fills the terminal, and a history
+		// that was read is never asked for twice.
+		if !filled {
+			var err error
+			filled, err = backfill(ctx, historyURL, out, *backfillFlag)
+			if err != nil {
+				fmt.Fprintf(stderr, "watch: %v\n", err)
+				return 1
+			}
+		}
+
+		eventSeen, err := stream(ctx, target, out, func() {
+			// The first connection is the banner's job; every later one is a
+			// recovery worth naming, so silence and a dead relay differ.
+			if attempts > 0 {
 				fmt.Fprintln(stderr, "watch: reconnected")
 			}
-			// The first connection fills the terminal from the stored history,
-			// so a developer can tell the CLI works before the next critical
-			// event happens. Only the first: backfilling again on a reconnect
-			// would reprint history and undo the dedupe the relay guarantees.
-			if filled {
-				return nil
-			}
-			filled = true
-			return backfill(ctx, historyURL, out, *backfillFlag)
 		})
 		if ctx.Err() != nil {
 			return 0
@@ -127,11 +132,9 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 // stream holds one connection until it ends, the relay goes silent, or the
 // context is cancelled. It reports whether a valid event arrived, which is
-// what resets the backoff even when the filter discards it, and calls opened
-// once the response is accepted — that is where the first connection backfills
-// the feed, so the history is read while the stream is already subscribed and
-// nothing that happens during it is missed.
-func stream(ctx context.Context, target string, out emitter, opened func() error) (eventSeen bool, err error) {
+// what resets the backoff even when the filter discards it, and calls connected
+// once the response is accepted.
+func stream(ctx context.Context, target string, out emitter, connected func()) (eventSeen bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
 		return false, &fatalError{err}
@@ -145,12 +148,8 @@ func stream(ctx context.Context, target string, out emitter, opened func() error
 	if resp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf("%s answered %s", target, resp.Status)
 	}
-	if opened != nil {
-		// A failure to write the feed is fatal, the same as anywhere else
-		// stdout is written: there is nothing to retry.
-		if err := opened(); err != nil {
-			return false, &fatalError{err}
-		}
+	if connected != nil {
+		connected()
 	}
 
 	reader := newIdleReader(resp.Body, idleTimeout())
@@ -172,20 +171,23 @@ func stream(ctx context.Context, target string, out emitter, opened func() error
 			}
 		}
 
-		valid, err := out.emit(payload)
-		if err != nil {
-			return eventSeen, &fatalError{err}
-		}
+		event, valid, shown := out.accept(payload)
 		if valid {
 			// A valid event proves the connection is healthy even when the
 			// filter discards it, so it still resets the backoff.
 			eventSeen = true
 		}
+		if !shown {
+			continue
+		}
+		if err := out.paint(payload, event); err != nil {
+			return eventSeen, &fatalError{err}
+		}
 	}
 }
 
-// emitter is the output policy in one value: rendered events, raw payloads, or
-// nothing at all when the frame is not an event.
+// emitter is the output policy in one value: what this client shows, and how it
+// is written. It never decides what the relay sends; only what reaches stdout.
 type emitter struct {
 	out     io.Writer
 	palette render.Palette
@@ -193,22 +195,22 @@ type emitter struct {
 	filter  activity.Filter
 }
 
-// emit reports whether the payload was a valid event, not whether it was
-// written: a filtered-out event still proves the connection is alive.
-func (e emitter) emit(payload string) (valid bool, err error) {
+// accept parses one payload and answers what it is to this client: valid when
+// the CLI could read it as an event at all — an event the filter drops is still
+// valid, and that is what resets the backoff — and shown when this client shows
+// it. It is the one place the acceptance rule is written down, so the live
+// stream and the backfill cannot disagree about it.
+func (e emitter) accept(payload string) (event activity.Event, valid, shown bool) {
 	event, err := activity.Parse([]byte(payload))
 	if err != nil {
-		return false, nil
+		return activity.Event{}, false, false
 	}
-	if !e.filter.Match(event) {
-		return true, nil
-	}
-	return true, e.paint(payload, event)
+	return event, true, e.filter.Match(event)
 }
 
-// paint writes one event the filter has already accepted. It is the only place
-// the output policy lives, so the backfill and the live stream cannot disagree
-// about --json, about colour, or about the rendered form.
+// paint writes one event this client shows. It is the only place an event
+// reaches stdout, so the backfill and the live stream cannot disagree about
+// --json, about colour, or about the rendered form.
 func (e emitter) paint(payload string, event activity.Event) error {
 	if e.json {
 		// Re-marshalling would reorder keys and could reshape null or the

@@ -16,35 +16,38 @@ type storedEvent struct {
 	event   activity.Event
 }
 
-// backfill fills the terminal from the audit history on the first connection,
+// backfill fills the terminal from the audit history, before the stream opens,
 // so a developer can tell the CLI works before the next critical event happens.
 // A limit of zero or less disables it and asks the relay nothing.
 //
-// It is quiet about its own failures. The stream is what a `watch` was asked
-// for, so a history the relay will not serve is a duller terminal and not a
-// broken watch — the same reason an empty history prints nothing and follows
-// the stream. The one error it reports is a failure to write the feed, because
-// a closed stdout ends the watch wherever it happens.
-func backfill(ctx context.Context, url string, out emitter, limit int) error {
+// It reports whether a history was read. A relay that will not answer is not a
+// broken watch: the terminal stays as it is and the next connection asks again,
+// which is how a CLI started before its relay still gets a backfill, and a
+// history that was read is never asked for a second time. The one error it
+// returns is a failure to write the feed, because a closed stdout ends the
+// watch wherever it happens.
+func backfill(ctx context.Context, url string, out emitter, limit int) (filled bool, err error) {
 	if limit <= 0 {
-		return nil
+		return true, nil
 	}
 
 	payloads, err := storedHistory(ctx, url)
 	if err != nil {
-		return nil
+		// The stream is what a `watch` was asked for; a history the relay will
+		// not serve is a duller terminal, not a broken watch.
+		return false, nil
 	}
 
-	recent := mostRecent(payloads, out.filter, limit)
-	// The relay serves the history newest first, and this is the head of a
+	head := out.head(payloads, limit)
+	// The relay serves its history newest first, and this is the head of a
 	// stream: printed oldest first, the live events carry on below it.
-	slices.Reverse(recent)
-	for _, stored := range recent {
+	slices.Reverse(head)
+	for _, stored := range head {
 		if err := out.paint(stored.payload, stored.event); err != nil {
-			return err
+			return true, err
 		}
 	}
-	return nil
+	return true, nil
 }
 
 // storedHistory reads the audit history once. The request carries no filter:
@@ -67,22 +70,25 @@ func storedHistory(ctx context.Context, url string) ([]json.RawMessage, error) {
 	return payloads, nil
 }
 
-// mostRecent keeps the newest rows that pass the filter, newest first, up to
-// limit. The filter runs before the limit, so `--backfill 10 --user me` shows
-// the ten most recent events of mine rather than whatever of everyone's last
-// ten happened to be mine. A row the relay stored but the CLI cannot read is
+// head keeps the newest stored rows this client shows, newest first, up to
+// limit. It is the emitter's acceptance rule asked over rows instead of frames,
+// so it lives beside the backfill that reads them.
+//
+// The filter runs before the limit, so `--backfill 10 --user me` shows the ten
+// most recent events of mine rather than whichever of everyone's last ten
+// happened to be mine. A row the relay stored but the CLI cannot read is
 // dropped, the same stance the stream takes on a frame it cannot use.
-func mostRecent(payloads []json.RawMessage, filter activity.Filter, limit int) []storedEvent {
-	recent := make([]storedEvent, 0, min(limit, len(payloads)))
+func (e emitter) head(payloads []json.RawMessage, limit int) []storedEvent {
+	head := make([]storedEvent, 0, min(limit, len(payloads)))
 	for _, payload := range payloads {
-		event, err := activity.Parse(payload)
-		if err != nil || !filter.Match(event) {
+		event, _, shown := e.accept(string(payload))
+		if !shown {
 			continue
 		}
-		recent = append(recent, storedEvent{payload: string(payload), event: event})
-		if len(recent) == limit {
+		head = append(head, storedEvent{payload: string(payload), event: event})
+		if len(head) == limit {
 			break
 		}
 	}
-	return recent
+	return head
 }

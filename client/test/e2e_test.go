@@ -3,7 +3,6 @@ package test
 import (
 	"fmt"
 	"net"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -490,9 +489,7 @@ func TestWatchBackfillsTheFirstConnection(t *testing.T) {
 	if got := feed.stdout.String(); got != want {
 		t.Errorf("stdout = %q, want the backfill oldest first %q", got, want)
 	}
-	if hits := relay.hits("/history"); hits != 1 {
-		t.Errorf("relay saw %d /history requests, want 1", hits)
-	}
+	relay.wantHits(t, "/history", 1, "the first connection reads it once")
 }
 
 func TestWatchBackfillLimitsToTheMostRecentEvents(t *testing.T) {
@@ -530,9 +527,7 @@ func TestWatchBackfillZeroStartsBlank(t *testing.T) {
 	if got := feed.stdout.String(); got != want {
 		t.Errorf("stdout = %q, want nothing until a live event arrives %q", got, want)
 	}
-	if hits := relay.hits("/history"); hits != 0 {
-		t.Errorf("relay saw %d /history requests, want 0: a disabled backfill asks nothing", hits)
-	}
+	relay.wantHits(t, "/history", 0, "a disabled backfill asks nothing")
 }
 
 func TestWatchBackfillHonoursTheFiltersBeforeTheLimit(t *testing.T) {
@@ -555,11 +550,11 @@ func TestWatchBackfillHonoursTheFiltersBeforeTheLimit(t *testing.T) {
 	if got := feed.stdout.String(); got != want {
 		t.Errorf("stdout = %q, want the most recent event of mine %q", got, want)
 	}
-	// Filtering never narrows what the relay sends, and it is asked for after
-	// the stream is already subscribed, so nothing that happens during the read
-	// is missed.
-	if got := strings.Join(relay.requests(), " "); got != "/stream /history" {
-		t.Errorf("relay saw %q, want the stream first and an unfiltered history", got)
+	// Filtering never narrows what the relay sends, and the history is read
+	// before the stream opens, so an event that arrives during the read is not
+	// printed twice.
+	if got := strings.Join(relay.requests(), " "); got != "/history /stream" {
+		t.Errorf("relay saw %q, want an unfiltered history first", got)
 	}
 }
 
@@ -613,9 +608,7 @@ func TestReconnectNeverRepeatsTheBackfill(t *testing.T) {
 	relay.waitConnected(t)
 	feed.waitStderr(t, "watch: reconnected")
 
-	if hits := relay.hits("/history"); hits != 1 {
-		t.Errorf("relay saw %d /history requests, want the backfill to run on the first connection only", hits)
-	}
+	relay.wantHits(t, "/history", 1, "the backfill runs on the first connection only")
 	if got := feed.stdout.String(); got != mergedOutput {
 		t.Errorf("stdout = %q, want the backfilled event exactly once %q", got, mergedOutput)
 	}
@@ -632,9 +625,7 @@ func TestWatchBackfillsNothingFromAnEmptyHistory(t *testing.T) {
 	if got := feed.stdout.String(); got != mergedOutput {
 		t.Errorf("stdout = %q, want an empty history to print nothing and follow the stream", got)
 	}
-	if hits := relay.hits("/history"); hits != 1 {
-		t.Errorf("relay saw %d /history requests, want the empty history to have been asked for", hits)
-	}
+	relay.wantHits(t, "/history", 1, "the empty history was asked for")
 }
 
 func TestWatchFollowsTheStreamWhenTheHistoryIsUnreadable(t *testing.T) {
@@ -655,7 +646,7 @@ func TestWatchFollowsTheStreamWhenTheHistoryIsUnreadable(t *testing.T) {
 
 func TestWatchFollowsTheStreamWhenTheHistoryAnswersBadly(t *testing.T) {
 	relay := newFakeRelay(t)
-	relay.setHistoryStatus(http.StatusInternalServerError)
+	relay.failHistory(true)
 
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
 	relay.waitConnected(t)
@@ -665,9 +656,33 @@ func TestWatchFollowsTheStreamWhenTheHistoryAnswersBadly(t *testing.T) {
 	if got := feed.stdout.String(); got != mergedOutput {
 		t.Errorf("stdout = %q, want the live feed despite the failing history", got)
 	}
-	if got := strings.Join(relay.requests(), " "); got != "/stream /history" {
-		t.Errorf("relay saw %q, want the history asked for once and not retried", got)
+	if got := strings.Join(relay.requests(), " "); got != "/history /stream" {
+		t.Errorf("relay saw %q, want the failing history asked for once, before the stream", got)
 	}
+}
+
+func TestWatchRetriesTheBackfillUntilTheHistoryIsRead(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.setHistory(historyOf(payloadOf(mergedFrame(time.Now().Add(-2*time.Hour - 30*time.Minute)))))
+	relay.failHistory(true)
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+	relay.wantHits(t, "/history", 1, "the first connection asked and was refused")
+
+	// The relay recovers and the stream drops: the next connection fills the
+	// terminal, because a history that was never read is not a backfill that
+	// happened.
+	relay.failHistory(false)
+	relay.dropStream(t)
+	feed.waitReconnects(t, 1)
+	relay.waitConnected(t)
+	feed.waitStdout(t, mergedOutput)
+
+	if got := feed.stdout.String(); got != mergedOutput {
+		t.Errorf("stdout = %q, want the refused history backfilled once the relay answered", got)
+	}
+	relay.wantHits(t, "/history", 2, "a refused history is asked again")
 }
 
 func TestWatchJSONBackfillsOnePayloadPerLine(t *testing.T) {

@@ -23,15 +23,15 @@ import (
 type fakeRelay struct {
 	*httptest.Server
 
-	mu            sync.Mutex
-	request       []string
-	lastEventID   []string
-	frames        chan string
-	drop          chan struct{}
-	historyBody   string
-	historyStatus int
-	done          chan struct{}
-	doneOnce      sync.Once
+	mu             sync.Mutex
+	request        []string
+	lastEventID    []string
+	frames         chan string
+	drop           chan struct{}
+	historyBody    string
+	historyFailing bool
+	done           chan struct{}
+	doneOnce       sync.Once
 
 	connected chan struct{}
 }
@@ -83,8 +83,8 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 				}
 			}
 		case "/history":
-			if code := relay.status(); code != 0 {
-				http.Error(w, "the relay is having a bad day", code)
+			if relay.historyFails() {
+				http.Error(w, "the relay is having a bad day", http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -142,18 +142,18 @@ func (f *fakeRelay) history() string {
 	return f.historyBody
 }
 
-// setHistoryStatus makes /history fail the way a relay that is up but unhappy
-// would. Zero, the default, answers 200 with the stored body.
-func (f *fakeRelay) setHistoryStatus(code int) {
+// failHistory makes /history answer 500, the way a relay that is up but unhappy
+// would, until it is called again with false.
+func (f *fakeRelay) failHistory(failing bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.historyStatus = code
+	f.historyFailing = failing
 }
 
-func (f *fakeRelay) status() int {
+func (f *fakeRelay) historyFails() bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return f.historyStatus
+	return f.historyFailing
 }
 
 func (f *fakeRelay) hits(path string) int {
@@ -164,6 +164,15 @@ func (f *fakeRelay) hits(path string) int {
 		}
 	}
 	return hits
+}
+
+// wantHits asserts how many times the relay saw one request line. The count is
+// never the point on its own, so every call says what it means.
+func (f *fakeRelay) wantHits(t *testing.T, request string, want int, meaning string) {
+	t.Helper()
+	if got := f.hits(request); got != want {
+		t.Errorf("relay saw %d %s requests, want %d: %s", got, request, want, meaning)
+	}
 }
 
 // waitConnected blocks until the CLI's stream request has reached the handler,
