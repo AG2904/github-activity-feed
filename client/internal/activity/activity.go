@@ -25,6 +25,32 @@ type Event struct {
 	When       time.Time
 }
 
+// Filter narrows the relay's broadcast for one client. The relay sends every
+// event to everyone (ADR-0001), so this is where a developer's own events are
+// separated from the rest.
+type Filter struct {
+	User       string
+	Repository string
+}
+
+// Match applies the same rule the relay's /history?user= applies: involvement
+// is actor or assignee, so the two never disagree about what a user's events
+// are. The match is exact and case-sensitive, and a nil repository matches no
+// repository filter (ADR-0010).
+func (f Filter) Match(event Event) bool {
+	if f.User != "" && event.Actor != f.User {
+		if event.Assignee == nil || *event.Assignee != f.User {
+			return false
+		}
+	}
+	if f.Repository != "" {
+		if event.Repository == nil || *event.Repository != f.Repository {
+			return false
+		}
+	}
+	return true
+}
+
 // Parse turns one frame's data payload into an Event. A payload that is not
 // JSON, or that is missing a field the contract always carries, is rejected
 // rather than rendered as a half event.

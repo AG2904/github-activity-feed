@@ -50,8 +50,10 @@ func (e *fatalError) Unwrap() error { return e.err }
 // at startup is retried indefinitely: this is a watch, and dying because the
 // relay was restarting is worse than waiting.
 func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--no-color] [--json]")
+	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--no-color] [--json]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
+	user := fs.String("user", "", "only events where this login is the actor or the assignee")
+	repository := fs.String("repo", "", "only events in this owner/name repository")
 	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
 	jsonOut := fs.Bool("json", false, "write each event's payload verbatim")
 	if code, ok := parseFlags(fs, args); !ok {
@@ -65,6 +67,7 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		out:     stdout,
 		palette: render.Palette{Color: colorEnabled(stdout, *noColor)},
 		json:    *jsonOut,
+		filter:  activity.Filter{User: *user, Repository: *repository},
 	}
 	backoff := &backoff{}
 	attempts := 0
@@ -147,11 +150,13 @@ func stream(ctx context.Context, target string, out emitter, connected func()) (
 			}
 		}
 
-		wrote, err := out.emit(payload)
+		seen, err := out.emit(payload)
 		if err != nil {
 			return sawEvent, &fatalError{err}
 		}
-		if wrote {
+		if seen {
+			// A valid event proves the connection is healthy even when the
+			// filter discards it, so it still resets the backoff.
 			sawEvent = true
 		}
 	}
@@ -163,25 +168,31 @@ type emitter struct {
 	out     io.Writer
 	palette render.Palette
 	json    bool
+	filter  activity.Filter
 }
 
-func (e emitter) emit(payload string) (wrote bool, err error) {
+// emit reports whether the payload was a valid event, not whether it was
+// written: a filtered-out event still proves the connection is alive.
+func (e emitter) emit(payload string) (seen bool, err error) {
 	event, err := activity.Parse([]byte(payload))
 	if err != nil {
 		return false, nil
+	}
+	if !e.filter.Match(event) {
+		return true, nil
 	}
 
 	if e.json {
 		// Re-marshalling would reorder keys and could reshape null or the
 		// millisecond timestamp.
 		if _, err := io.WriteString(e.out, payload+"\n"); err != nil {
-			return false, err
+			return true, err
 		}
 		return true, nil
 	}
 
 	if err := e.palette.Event(e.out, event, time.Now()); err != nil {
-		return false, err
+		return true, err
 	}
 	return true, nil
 }
