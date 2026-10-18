@@ -25,15 +25,18 @@ const distributed = [
 ];
 
 const platforms = { win32: 'windows', linux: 'linux', darwin: 'darwin' };
-const architectures = { x64: 'amd64', arm64: 'arm64', ia32: '386' };
+const architectures = { x64: 'amd64', arm64: 'arm64' };
 
-const host = { goos: platforms[process.platform], goarch: architectures[process.arch] };
 const targets = process.argv.includes('--dist')
   ? distributed
-  : distributed.filter((target) => target.goos === host.goos && target.goarch === host.goarch);
+  : distributed.filter(
+      (target) =>
+        target.goos === platforms[process.platform] && target.goarch === architectures[process.arch],
+    );
 
 if (targets.length === 0) {
-  console.error(`feed: no target for ${host.goos}/${host.goarch}`);
+  const known = distributed.map((target) => `${target.goos}/${target.goarch}`).join(', ');
+  console.error(`feed: no target for ${process.platform}/${process.arch}. The four are: ${known}`);
   process.exit(1);
 }
 
@@ -41,9 +44,9 @@ if (targets.length === 0) {
 // it was built from when there is a repository to ask. A tarball without git
 // still builds; it just cannot say more than the package version.
 const version = () => {
-  const { version } = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
+  const { version: packageVersion } = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
   const described = git(['describe', '--always', '--dirty', '--abbrev=7']);
-  return described ? `${version}+${described}` : version;
+  return described ? `${packageVersion}+${described}` : packageVersion;
 };
 
 const git = (args) => {

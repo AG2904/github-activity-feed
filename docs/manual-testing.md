@@ -1,7 +1,7 @@
 # Probar el relay a mano
 
 Guía para levantar el relay y verificar con las manos lo que los tickets 01 a 07
-construyeron. La suite e2e prueba lo mismo de forma automatizada (48 casos sobre la
+construyeron. La suite e2e prueba lo mismo de forma automatizada (54 casos sobre la
 misma seam HTTP); esto es para cuando querés ver el cable, probar un payload propio o
 mostrarle el sistema a alguien.
 
@@ -220,29 +220,32 @@ cliente prueba en 46 casos sobre el límite del proceso.
 ## Paso 1 — Construir el binario
 
 ```bash
-npm run cli:build     # tu plataforma, en client/dist/
+npm run cli:build     # la tuya, si está entre las cuatro
 npm run cli:dist      # las cuatro: windows/amd64, linux/amd64, darwin/amd64, darwin/arm64
 ```
 
 ```text
-feed: dist/feed-windows-amd64.exe  windows/amd64  1.0.0+88bb654
-feed: dist/feed-linux-amd64  linux/amd64  1.0.0+88bb654
-feed: dist/feed-darwin-amd64  darwin/amd64  1.0.0+88bb654
-feed: dist/feed-darwin-arm64  darwin/arm64  1.0.0+88bb654
+feed: dist/feed-windows-amd64.exe  windows/amd64  1.0.0+<commit>
+feed: dist/feed-linux-amd64  linux/amd64  1.0.0+<commit>
+feed: dist/feed-darwin-amd64  darwin/amd64  1.0.0+<commit>
+feed: dist/feed-darwin-arm64  darwin/arm64  1.0.0+<commit>
 ```
 
-La versión sale del `package.json` más el commit del que se construyó, con `-dirty`
-si el árbol tenía cambios sin commitear. El binario la contesta:
+El `<commit>` es el hash corto del árbol desde el que construiste, con `-dirty` al
+final si tenías cambios sin commitear: la versión dice de dónde salió el binario, no
+sólo qué número es. El binario la contesta:
 
 ```bash
-client/dist/feed-windows-amd64.exe --version     # 1.0.0+88bb654
+client/dist/feed-windows-amd64.exe --version     # 1.0.0+<commit>
 ```
+
+Una plataforma que no esté entre las cuatro (un host linux/arm64, por ejemplo) no
+tiene binario que construir, y `cli:build` lo dice y sale 1 en vez de armar otra cosa.
 
 Los cuatro salen con `CGO_ENABLED=0` y `-trimpath`: son estáticos, no dependen de
 nada instalado en la máquina del que los recibe, y no llevan rutas de tu disco
 adentro. El build pasa por `client/tools/build.mjs` porque hay que fijar variables de
-entorno por target, y `CGO_ENABLED=0 GOOS=linux go build` no es un comando que
-entienda ninguna shell de Windows.
+entorno por target, y eso no se escribe igual en cmd, en PowerShell y en sh.
 
 Las otras dos entradas son la suite y el vet, cada una entrando ella misma en
 `client/`:
@@ -319,8 +322,13 @@ El caso de la tubería, que es la razón por la que stdout está limpio:
 ```bash
 feed watch | tee feed.log                            # queda el registro, sin color
 feed watch --json | jq -c '.subject'                 # un JSON por línea, sin re-serializar
-feed watch --json --user lucia.gomez | jq '.[0].assignee'
+feed watch --json --user lucia.gomez | jq -c '.assignee'
+feed watch --backfill 0 --json | jq -r '.url'        # sólo lo que llegue en vivo
 ```
+
+Con `--json` cada evento es un objeto en su propia línea, así que `jq` filtra por
+línea (`.` es el evento) y no por array: `.assignee` da `"lucia.gomez"` o `null`.
+`feed history --json` es distinto: ahí el array es uno solo, y se navega con `.[]`.
 
 Con la salida por un pipe no hay color y el asunto lleva la URL cruda en vez del
 hipervínculo; `--no-color` o `NO_COLOR` hacen lo mismo en una terminal. `--json` no

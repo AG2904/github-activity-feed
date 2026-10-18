@@ -52,8 +52,10 @@ binarios de prueba desde cero.
   filtros, los casos de tubería (`| tee`, `--json | jq`) y la consulta retrospectiva
   con `--group-by-repo`.
 - **Paso 7, la tabla**: qué probás / cómo / qué esperar, con el ticket de cada
-  comportamiento, igual que la tabla del relay. Los números de la suite (46 casos) y
-  las líneas de `feed --version` son los de estas corridas.
+  comportamiento, igual que la tabla del relay. Los números de la suite (46 casos de
+  la CLI, 54 del relay) y la forma de la estampa de versión son los de estas
+  corridas; el `<commit>` es el del árbol desde el que construiste, así que cambia
+  con cada build y por eso va como plantilla y no como un hash literal.
 - La introducción aclara que el documento tiene dos mitades: el relay primero, el
   binario después.
 
@@ -150,7 +152,8 @@ Tests       54 passed (54)
 - **La versión es paquete + commit**, no un número a mano ni un tag inventado. El
   repo todavía no tiene tags, así que `git describe --always` da el commit corto, que
   es literalmente "de dónde vino". Sin git el build no se cae: sale la versión del
-  paquete y punto.
+  paquete y punto. El runbook lo muestra como plantilla (`1.0.0+<commit>`) porque el
+  hash cambia con cada commit: un literal ahí estaría viejo en el commit siguiente.
 - **Los binarios viven en `client/dist/`**, que ya estaba ignorado por la regla
   `dist/` del `.gitignore` (la que usa el build de Nest). No hizo falta tocarlo, y
   nada construido se commitea.
@@ -169,3 +172,42 @@ Tests       54 passed (54)
   relay que ya estaba. Es la convención del documento.
 - **Deuda que queda para la Fase 3:** CI en GitHub Actions, publicación de los
   binarios y el README del repositorio, que sigue sin existir.
+
+## Revisión
+
+Dos ejes, y esta vez encontraron sobre todo documentación que mentía.
+
+**Lo que se arregló.**
+
+1. **Un comando inventado en el runbook.** `feed watch --json | jq '.[0].assignee'`
+   no funciona: `watch --json` escribe un objeto por línea, no un array, así que
+   `.[0]` es un error de jq. El ejemplo ahora es `.assignee` por línea, con una línea
+   explicando la diferencia con `feed history --json`, que sí es un array solo.
+2. **La estampa de versión del runbook era de otro commit** (`1.0.0+88bb654`, del
+   ticket 07) y encima sin `-dirty` en un árbol que estaba sucio, lo que contradecía
+   la regla que el propio documento explica. Ahora es plantilla (`1.0.0+<commit>`)
+   con la explicación: el hash cambia con cada build, así que un literal está viejo en
+   el commit siguiente. El registro sí cita la corrida real.
+3. **El conteo del relay decía 48** en un archivo que este ticket tocó; son 54 desde
+   los tickets 08 y 09 del relay.
+4. **El árbol citaba mal los ADR.** Le colgaba ADR-0008 a `cmd/feed/main.go` por la
+   inyección de versión y el Ctrl-C, que ADR-0008 no dice; y ADR-0009 a
+   `internal/cli/`, cuando ADR-0009 es sólo el módulo anidado. Ahora 0009 está en
+   `client/` y 0008 en `internal/cli/`, que es donde el ticket 02 dice que va.
+5. **`feed --user` no es un comando** en tres lugares del documento; es
+   `feed history --user`, como dice el glosario.
+6. **`cli:build` prometía más de lo que hace**: dice "tu plataforma, si está entre
+   las cuatro", y el documento aclara qué pasa con un host que no lo esté (una línea
+   y salida 1, no otro binario).
+7. **En `build.mjs`:** el `const { version }` de adentro tapaba al `version()` de
+   afuera, y el mapa de arquitecturas traía `ia32: '386'` para un target que no
+   existe entre los cuatro. El mensaje de "no hay target" ahora nombra la plataforma
+   del host y las cuatro que sí existen.
+8. **§9 del documento de arquitectura** no mencionaba la Fase 2 mientras el
+   encabezado la daba por hecha: ahora tiene su item.
+
+**Lo que se mantuvo.** La racionalidad de "npm al frente, Node adentro" aparece en el
+script, en el ticket y en el registro; es el mismo motivo contado para tres lectores
+distintos, y en el runbook se recortó a una línea. Y las dos frases de §1 que pasaron
+de futuro a presente siguen ahí: es más de lo que pide el AC5, pero es el mismo hecho
+—el cliente llegó— y el registro lo dice.

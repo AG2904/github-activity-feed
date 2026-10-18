@@ -19,7 +19,7 @@ El proyecto es principalmente un **portafolio técnico** — demuestra arquitect
 - **Cero Slack / Teams como destino final:** Evaluados y descartados (§2.3). Las notificaciones llegan a la terminal, sin ruido de chat.
 - **Cero Docker:** El relay es un proceso **NestJS (TypeScript)** nativo con **SQLite** embebido — sin contenedores ni servidores de base de datos. Trivial de correr en una demo; admisible por TI si algún día se despliega en la empresa.
 - **Autonomía del CLI:** Desarrollado 100% en **Go** y distribuido como un **único binario estático** por plataforma (sin dependencias en la máquina del dev).
-- **Privacidad y Auditoría:** Sin payloads hacia servicios de terceros; el relay es dueño del dato: **SQLite** para persistencia y soporte del comando analítico `feed --user`.
+- **Privacidad y Auditoría:** Sin payloads hacia servicios de terceros; el relay es dueño del dato: **SQLite** para persistencia y soporte del comando analítico `feed history --user`.
 - **Autenticación:** webhooks de GitHub firmados con **HMAC SHA-256** (`X-Hub-Signature-256`) y verificación en tiempo constante. El secreto vive solo en variables de entorno, nunca en código commiteado.
 
 ---
@@ -43,7 +43,7 @@ GitHub cuenta con notificaciones nativas (inbox web, correo, móvil), GitHub Act
 Ambos eventos **se pueden expresar** en Actions (`pull_request: types: [closed]` con `merged == true` y `branches: [main]`; `issues: types: [assigned]` con `if:` sobre labels), y una acción puede publicar a Slack/Teams/webhook. Se descarta porque:
 
 - Requiere aprobar **egress SaaS** y entrega la información a un canal de chat — se pierde la terminal como destino.
-- No produce **historial de auditoría** persistente ni consultable (`feed --user`); el "registro" queda vivir en el historial efímero del chat.
+- No produce **historial de auditoría** persistente ni consultable (`feed history --user`); el "registro" queda vivir en el historial efímero del chat.
 - GitHub Apps tampoco escapa al problema: su código "necesita correr en algún servidor" con un webhook propio — exactamente la misma pieza que estamos construyendo.
 
 ### 2.4. ¿Por qué un CLI/Relay propio en lugar de un Bot de Chat?
@@ -51,7 +51,7 @@ Ambos eventos **se pueden expresar** en Actions (`pull_request: types: [closed]`
 - **Soberanía y Cero Dependencias de Terceros:** Un bot de chat depende de APIs externas y de la aprobación de red de la empresa. Un relay propio en NestJS y un CLI en Go garantizan autonomía y privacidad de los metadatos (*NIST SP 800-122*).
 - **Ergonomía (*Non-Intrusive DX*):** Las apps de chat generan ruido social y pop-ups disruptivos. La terminal es un canal privado, asíncrono y enfocado.
 - **Programabilidad Local:** Un mensaje de chat es texto estático. El evento en el CLI es programable: automatizaciones locales desde la consola (atajos para interactuar con Git, etc.).
-- **Historial Estructurado y Auditoría:** El relay almacena los eventos en **SQLite** — de forma indefinida y compartida por el equipo — habilitando consultas retroactivas como `feed --user <nombre>`.
+- **Historial Estructurado y Auditoría:** El relay almacena los eventos en **SQLite** - de forma indefinida y compartida por el equipo - habilitando consultas retroactivas como `feed history --user <nombre>`.
 
 ---
 
@@ -127,12 +127,12 @@ github-activity-feed/
 ├── .scratch/relay/            # spec + tickets
 ├── .scratch/cli/              # spec + tickets del cliente
 ├── GLOSSARY.md                # lenguaje de dominio compartido
-└── client/                    # CLI en Go — Fase 2 completa
-    ├── cmd/feed/main.go       # el binario: inyecta la versión y traduce Ctrl-C (ADR-0008)
+└── client/                    # CLI en Go — Fase 2 completa, módulo anidado (ADR-0009)
+    ├── cmd/feed/main.go       # el binario: arranca el proceso y traduce Ctrl-C
     ├── internal/activity/     # el shape normalizado y el filtro por Involvement
     ├── internal/sse/          # el parser SSE a mano (ADR-0007)
     ├── internal/render/       # las dos líneas del feed y el reporte agrupado
-    ├── internal/cli/          # dispatch, política de salida, watch y history (ADR-0009)
+    ├── internal/cli/          # dispatch, política de salida, watch y history (ADR-0008)
     ├── tools/build.mjs        # binarios estáticos y versión (`npm run cli:*`)
     ├── test/                  # e2e sobre el límite del proceso
     └── go.mod
@@ -207,5 +207,6 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
 - [x] Autenticación migrada a HMAC `X-Hub-Signature-256` (PR #3).
 - [x] `GLOSSARY.md` actualizado a la terminología de GitHub. Los ADRs también: ADR-0002 y ADR-0005 reescritos, ADR-0003 corregido.
 - [x] Los tres tickets del filtro están en `main`: merge a `main` (ticket 02, PR #4), asignación crítica (ticket 03) y el barrido negativo con el fix del ingress (ticket 04). El 03 y el 04 aterrizaron directo en `main`, sin rama de feature: es un proyecto personal y el PR no aportaba.
+- [x] **Fase 2 (el CLI en Go) implementada y en `main`**: los ocho tickets de `.scratch/cli/`, con la suite del cliente en 46 casos sobre el límite del proceso y los cuatro binarios estáticos construibles con `npm run cli:dist`. Con esto la Fase 2 queda cerrada; lo que sigue es CI, publicación y demo (§7).
 - [ ] README del repositorio — **no existe todavía**. Este item lo daba por pendiente de actualizar, pero nunca hubo un README que actualizar; o se escribe uno, o el §6 de este documento sigue siendo la referencia pública del contrato.
 - [ ] CI (GitHub Actions) configurado.
