@@ -1,7 +1,7 @@
 # Documento de Arquitectura y Diseño: GitHub Activity Feed CLI & Relay
 
-> **Estado:** Diseño actualizado tras la migración de plataforma a GitHub (§2 y §9). El walking skeleton del Relay está implementado (ticket 01).
-> **Fecha original:** 11 de Octubre, 2026. **Actualizado:** 15 de Octubre, 2026.
+> **Estado:** Diseño actualizado tras la migración de plataforma a GitHub (§2 y §9). El Relay (Fase 1) y la CLI (Fase 2) están implementados y en `main`; la Fase 3 (CI y demo) queda pendiente.
+> **Fecha original:** 11 de Octubre, 2026. **Actualizado:** 18 de Octubre, 2026.
 
 ---
 
@@ -18,8 +18,8 @@ El proyecto es principalmente un **portafolio técnico** — demuestra arquitect
 
 - **Cero Slack / Teams como destino final:** Evaluados y descartados (§2.3). Las notificaciones llegan a la terminal, sin ruido de chat.
 - **Cero Docker:** El relay es un proceso **NestJS (TypeScript)** nativo con **SQLite** embebido — sin contenedores ni servidores de base de datos. Trivial de correr en una demo; admisible por TI si algún día se despliega en la empresa.
-- **Autonomía del CLI:** El CLI será desarrollado 100% en **Go** y distribuido como un **único binario estático** por plataforma (sin dependencias en la máquina del dev).
-- **Privacidad y Auditoría:** Sin payloads hacia servicios de terceros; el relay es dueño del dato: **SQLite** para persistencia y soporte del futuro comando analítico `feed --user`.
+- **Autonomía del CLI:** Desarrollado 100% en **Go** y distribuido como un **único binario estático** por plataforma (sin dependencias en la máquina del dev).
+- **Privacidad y Auditoría:** Sin payloads hacia servicios de terceros; el relay es dueño del dato: **SQLite** para persistencia y soporte del comando analítico `feed --user`.
 - **Autenticación:** webhooks de GitHub firmados con **HMAC SHA-256** (`X-Hub-Signature-256`) y verificación en tiempo constante. El secreto vive solo en variables de entorno, nunca en código commiteado.
 
 ---
@@ -90,7 +90,7 @@ Ambos eventos **se pueden expresar** en Actions (`pull_request: types: [closed]`
 
 ---
 
-## 5. Estructura Actual del Repositorio (monorepo: el Relay hoy, el cliente Go en Fase 2)
+## 5. Estructura Actual del Repositorio (monorepo: el Relay y la CLI)
 
 ```text
 github-activity-feed/
@@ -119,13 +119,23 @@ github-activity-feed/
 │   ├── adr/                   # registro de decisiones (ADR)
 │   ├── agents/                # convenciones del tracker de issues
 │   ├── research/              # feasibility research (GitHub vs relay)
-│   ├── manual-testing.md      # cómo probar el relay a mano, paso a paso
+│   ├── manual-testing.md      # cómo probar el relay y la CLI a mano, paso a paso
 │   ├── relay-flow.md          # el flujo del relay, archivo por archivo
-│   └── tickets/relay/         # registros de evidencia por ticket completado
+│   ├── tickets/relay/         # registros de evidencia por ticket completado
+│   └── tickets/cli/           # lo mismo para la CLI
 ├── .archify/                  # diagramas versionados (el HTML y su candidato)
 ├── .scratch/relay/            # spec + tickets
+├── .scratch/cli/              # spec + tickets del cliente
 ├── GLOSSARY.md                # lenguaje de dominio compartido
-└── client/                    # CLI en Go — Fase 2 (pendiente)
+└── client/                    # CLI en Go — Fase 2 completa
+    ├── cmd/feed/main.go       # el binario: inyecta la versión y traduce Ctrl-C (ADR-0008)
+    ├── internal/activity/     # el shape normalizado y el filtro por Involvement
+    ├── internal/sse/          # el parser SSE a mano (ADR-0007)
+    ├── internal/render/       # las dos líneas del feed y el reporte agrupado
+    ├── internal/cli/          # dispatch, política de salida, watch y history (ADR-0009)
+    ├── tools/build.mjs        # binarios estáticos y versión (`npm run cli:*`)
+    ├── test/                  # e2e sobre el límite del proceso
+    └── go.mod
 ```
 
 ---
@@ -164,11 +174,11 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
    - [x] Canal SSE que sostiene la conexión y emite cada evento almacenado a todos los clientes conectados (ticket 06).
    - [x] Historial filtrable por usuario (ticket 07). Con esto la Fase 1 queda cerrada.
 
-2. **Fase 2: El CLI (Go)**
-   - Estructurar el binario con manejo de flags (conexión al relay, filtrado local).
-   - Cliente de recepción en tiempo real (SSE) desde el Relay.
-   - Interfaz visual en terminal (formato legible, timestamps relativos).
-   - Compilar binarios estáticos multiplataforma (`go build`).
+2. **Fase 2: El CLI (Go)** — *completa*
+   - [x] Estructurar el binario con manejo de flags (conexión al relay, filtrado local): `watch` y `history`, con `--relay`/`$RELAY_URL`/default y el filtro local por Involvement (`--user`) y repositorio (`--repo`) — tickets 01, 05 y 07.
+   - [x] Cliente de recepción en tiempo real (SSE) desde el Relay: parser a mano (ADR-0007), reconexión con backoff, timeout de inactividad como red de seguridad y backfill en la primera conexión — tickets 02, 04 y 06.
+   - [x] Interfaz visual en terminal (formato legible, timestamps relativos): dos líneas por evento, badges con color, hipervínculos OSC 8 y reporte agrupado por repositorio — tickets 02 y 07.
+   - [x] Compilar binarios estáticos multiplataforma: `npm run cli:dist` para windows/amd64, linux/amd64, darwin/amd64 y darwin/arm64, con `CGO_ENABLED=0` y `-trimpath`, y la versión inyectada por `-ldflags` — ticket 08. Con esto la Fase 2 queda cerrada.
 
 3. **Fase 3: Validación y Demo**
    - CI con **GitHub Actions** (typecheck, lint, suite e2e en cada PR).

@@ -14,7 +14,11 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "test": "vitest run --config ./vitest.config.e2e.ts"
+    "test": "vitest run --config ./vitest.config.e2e.ts",
+    "cli:build": "cd client && node tools/build.mjs",
+    "cli:dist": "cd client && node tools/build.mjs --dist",
+    "cli:test": "cd client && go test -count=1 ./...",
+    "cli:lint": "cd client && go vet ./..."
   },
   "repository": {
     "type": "git",
