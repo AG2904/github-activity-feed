@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -232,6 +233,100 @@ func TestHistoryJSONRejectsGrouping(t *testing.T) {
 	}
 	if hits := relay.hits("/history"); hits != 0 {
 		t.Errorf("relay saw %d /history requests, want 0: the conflict is a flag error", hits)
+	}
+}
+
+func TestWatchRetriesAnUnreachableRelay(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserving a closed port: %v", err)
+	}
+	relay := "http://" + listener.Addr().String()
+	listener.Close()
+
+	feed := startFeed(t, nil, "watch", "--relay", relay)
+	delays := feed.waitReconnects(t, 2)
+
+	if len(delays) != 2 {
+		t.Fatalf("reconnect notices = %d, want exactly 2", len(delays))
+	}
+	if n := strings.Count(feed.stderr.String(), "watch: reconnecting in"); n != 2 {
+		t.Errorf("reconnect lines = %d, want one per attempt (2)", n)
+	}
+}
+
+func TestReconnectBackoffGrowsAndResetsAfterAnEvent(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL)
+	relay.waitConnected(t)
+
+	relay.dropStream(t)
+	feed.waitReconnects(t, 1)
+	relay.waitConnected(t)
+
+	relay.dropStream(t)
+	delays := feed.waitReconnects(t, 2)
+	relay.waitConnected(t)
+
+	// The event is what resets the backoff; the drop comes after the event.
+	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+	feed.waitStdout(t, "Fix memory leak in parser component")
+
+	relay.dropStream(t)
+	delays = feed.waitReconnects(t, 3)
+	relay.waitConnected(t)
+
+	if !(delays[1] > delays[0]) {
+		t.Errorf("delays = %v, want the second attempt to wait longer than the first", delays)
+	}
+	if !(delays[2] < delays[1]) {
+		t.Errorf("delays = %v, want the event to reset the backoff before the third attempt", delays)
+	}
+	if delays[2] > time.Second {
+		t.Errorf("third delay = %s, want it back at the one-second base", delays[2])
+	}
+}
+
+func TestReconnectDoesNotReplayPrintedEvents(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL)
+	relay.waitConnected(t)
+
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.send(t, mergedFrame(when))
+	feed.waitStdout(t, "Fix memory leak in parser component")
+
+	relay.dropStream(t)
+	feed.waitReconnects(t, 1)
+	relay.waitConnected(t)
+
+	relay.send(t, assignedFrame(when))
+	want := "[pr.merged] Fix memory leak in parser component\n" +
+		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n" +
+		"[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
+		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n"
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want each event exactly once %q", got, want)
+	}
+}
+
+func TestWatchReopensAStreamThatGoesSilent(t *testing.T) {
+	relay := newFakeRelay(t)
+	// This build carries a 300ms idle timeout through -ldflags; the shipped
+	// default stays at five minutes.
+	feed := startBinary(t, idleFeedBinary, nil, "watch", "--relay", relay.URL)
+	relay.waitConnected(t)
+
+	feed.waitReconnects(t, 1)
+	relay.waitConnected(t)
+
+	if !strings.Contains(feed.stderr.String(), "no bytes") {
+		t.Errorf("stderr = %q, want the idle timeout named as the reason", feed.stderr.String())
+	}
+	if hits := relay.hits("/stream"); hits < 2 {
+		t.Errorf("relay saw %d /stream requests, want the silent stream reopened", hits)
 	}
 }
 

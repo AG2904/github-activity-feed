@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -18,19 +19,19 @@ import (
 // fakeRelay is the test harness's counterpart at the process seam: a real HTTP
 // server that answers the relay's two read endpoints, holds the stream open,
 // and records what the binary asked for. A test writes frames into the stream
-// after the CLI connected, so the stream is exercised rather than inspected.
+// after the CLI connected, and can drop the connection to exercise reconnect.
 type fakeRelay struct {
 	*httptest.Server
 
 	mu          sync.Mutex
 	request     []string
 	frames      chan string
+	drop        chan struct{}
 	historyBody string
 	done        chan struct{}
 	doneOnce    sync.Once
 
-	connected     chan struct{}
-	connectedOnce sync.Once
+	connected chan struct{}
 }
 
 func newFakeRelay(t *testing.T) *fakeRelay {
@@ -38,9 +39,10 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 
 	relay := &fakeRelay{
 		frames:      make(chan string, 16),
+		drop:        make(chan struct{}, 1),
 		historyBody: "[]\n",
 		done:        make(chan struct{}),
-		connected:   make(chan struct{}),
+		connected:   make(chan struct{}, 8),
 	}
 	relay.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		relay.record(r.URL.Path)
@@ -54,7 +56,10 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 				return
 			}
 			flusher.Flush()
-			relay.connectedOnce.Do(func() { close(relay.connected) })
+			select {
+			case relay.connected <- struct{}{}:
+			default:
+			}
 
 			for {
 				select {
@@ -63,6 +68,8 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 						return
 					}
 					flusher.Flush()
+				case <-relay.drop:
+					return
 				case <-relay.done:
 					return
 				case <-r.Context().Done():
@@ -121,7 +128,8 @@ func (f *fakeRelay) hits(path string) int {
 
 // waitConnected blocks until the CLI's stream request has reached the handler,
 // which is the deterministic barrier SSE needs: bytes on the wire mean the
-// subscription exists.
+// subscription exists. It is called once per connection, so reconnects consume
+// another signal.
 func (f *fakeRelay) waitConnected(t *testing.T) {
 	t.Helper()
 	select {
@@ -138,6 +146,17 @@ func (f *fakeRelay) send(t *testing.T, frame string) {
 	case f.frames <- frame:
 	case <-time.After(5 * time.Second):
 		t.Fatalf("the stream never accepted a frame")
+	}
+}
+
+// dropStream closes the current stream from the server side, which is what a
+// relay restart or a killed connection looks like to the client.
+func (f *fakeRelay) dropStream(t *testing.T) {
+	t.Helper()
+	select {
+	case f.drop <- struct{}{}:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("there was no open stream to drop")
 	}
 }
 
@@ -192,9 +211,14 @@ type runningFeed struct {
 
 func startFeed(t *testing.T, env map[string]string, args ...string) *runningFeed {
 	t.Helper()
+	return startBinary(t, feedBinary, env, args...)
+}
+
+func startBinary(t *testing.T, binary string, env map[string]string, args ...string) *runningFeed {
+	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, feedBinary, args...)
+	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Env = environment(env)
 	feed := &runningFeed{cmd: cmd, cancel: cancel, stdout: &syncBuffer{}, stderr: &syncBuffer{}}
 	cmd.Stdout = feed.stdout
@@ -238,6 +262,38 @@ func (f *runningFeed) waitFor(t *testing.T, stream, want string, read func() str
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+// reconnectPattern pulls the delay out of each reconnect notice. The line is
+// the only thing an attempt writes, so its count is also the attempt count.
+var reconnectPattern = regexp.MustCompile(`watch: reconnecting in ([0-9.]+(?:ns|µs|ms|s))`)
+
+func (f *runningFeed) waitReconnects(t *testing.T, want int) []time.Duration {
+	t.Helper()
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		delays := parseReconnects(f.stderr.String())
+		if len(delays) >= want {
+			return delays
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("wanted %d reconnect notices, got %d\nstderr: %q", want, len(delays), f.stderr.String())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func parseReconnects(stderr string) []time.Duration {
+	matches := reconnectPattern.FindAllStringSubmatch(stderr, -1)
+	delays := make([]time.Duration, 0, len(matches))
+	for _, match := range matches {
+		delay, err := time.ParseDuration(match[1])
+		if err != nil {
+			continue
+		}
+		delays = append(delays, delay)
+	}
+	return delays
 }
 
 // firstWatchBanner starts `feed watch` with no relay override and returns the

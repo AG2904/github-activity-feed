@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,11 +12,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
-
-	"github.com/AG2904/github-activity-feed/client/internal/activity"
-	"github.com/AG2904/github-activity-feed/client/internal/render"
-	"github.com/AG2904/github-activity-feed/client/internal/sse"
 )
 
 const defaultRelay = "http://localhost:3000"
@@ -23,7 +19,7 @@ const defaultRelay = "http://localhost:3000"
 // Run is the whole process contract: it returns the exit code the binary hands
 // to the operating system. stdout carries events and nothing else; stderr
 // carries the connection banner, notices, and errors.
-func Run(args []string, stdout, stderr io.Writer, version string) int {
+func Run(ctx context.Context, args []string, stdout, stderr io.Writer, version string) int {
 	root := flag.NewFlagSet("feed", flag.ContinueOnError)
 	root.SetOutput(stderr)
 	showVersion := root.Bool("version", false, "print the version and exit")
@@ -51,9 +47,9 @@ func Run(args []string, stdout, stderr io.Writer, version string) int {
 
 	switch rest[0] {
 	case "watch":
-		return watch(rest[1:], stdout, stderr)
+		return watch(ctx, rest[1:], stdout, stderr)
 	case "history":
-		return history(rest[1:], stdout, stderr)
+		return history(ctx, rest[1:], stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "feed: unknown command %q\n\n", rest[0])
 		printUsage(stderr)
@@ -73,74 +69,9 @@ The relay resolves as --relay, then $RELAY_URL, then %s.
 `, defaultRelay)
 }
 
-// watch holds the relay's stream open and paints each frame as it arrives. A
-// frame that does not parse is discarded, not fatal - the same stance the relay
-// takes on a hook it does not understand. Reconnection arrives with ticket 04.
-func watch(args []string, stdout, stderr io.Writer) int {
-	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--no-color] [--json]")
-	relay := fs.String("relay", relayFallback(), "relay base URL")
-	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
-	jsonOut := fs.Bool("json", false, "write each event's payload verbatim")
-	if code, ok := parseFlags(fs, args); !ok {
-		return code
-	}
-
-	target := endpoint(strings.TrimRight(*relay, "/"), "/stream")
-	fmt.Fprintf(stderr, "watching %s\n", target)
-
-	resp, err := http.Get(target)
-	if err != nil {
-		fmt.Fprintf(stderr, "watch: %v\n", err)
-		return 1
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Fprintf(stderr, "watch: %s answered %s\n", target, resp.Status)
-		return 1
-	}
-
-	palette := render.Palette{Color: colorEnabled(stdout, *noColor)}
-	frames := sse.NewReader(resp.Body)
-	for {
-		payload, err := frames.Next()
-		if errors.Is(err, io.EOF) {
-			return 0
-		}
-		if err != nil {
-			fmt.Fprintf(stderr, "watch: %v\n", err)
-			return 1
-		}
-
-		if err := emit(stdout, palette, *jsonOut, payload); err != nil {
-			fmt.Fprintf(stderr, "watch: %v\n", err)
-			return 1
-		}
-	}
-}
-
-// emit validates one frame's payload and writes it in the selected mode. A
-// payload that does not parse is discarded even with --json: raw output passes
-// the relay's bytes through untouched, but it still only passes events.
-func emit(stdout io.Writer, palette render.Palette, jsonOut bool, payload string) error {
-	event, err := activity.Parse([]byte(payload))
-	if err != nil {
-		return nil
-	}
-
-	if jsonOut {
-		// Re-marshalling would reorder keys and could reshape null or the
-		// millisecond timestamp.
-		_, err := io.WriteString(stdout, payload+"\n")
-		return err
-	}
-
-	return palette.Event(stdout, event, time.Now())
-}
-
 // history fetches the audit history once. This ticket proves the seam and the
 // raw mode; ticket 07 gives the rendered response its shape.
-func history(args []string, stdout, stderr io.Writer) int {
+func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>] [--json | --group-by-repo]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
 	jsonOut := fs.Bool("json", false, "write the relay's response verbatim")
@@ -155,8 +86,16 @@ func history(args []string, stdout, stderr io.Writer) int {
 	}
 
 	target := endpoint(strings.TrimRight(*relay, "/"), "/history")
-	resp, err := http.Get(target)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
+		fmt.Fprintf(stderr, "history: %v\n", err)
+		return 1
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		if ctx.Err() != nil {
+			return 0
+		}
 		fmt.Fprintf(stderr, "history: %v\n", err)
 		return 1
 	}
@@ -169,6 +108,9 @@ func history(args []string, stdout, stderr io.Writer) int {
 
 	if *jsonOut {
 		if _, err := io.Copy(stdout, resp.Body); err != nil {
+			if ctx.Err() != nil {
+				return 0
+			}
 			fmt.Fprintf(stderr, "history: %v\n", err)
 			return 1
 		}
@@ -176,6 +118,9 @@ func history(args []string, stdout, stderr io.Writer) int {
 	}
 
 	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		if ctx.Err() != nil {
+			return 0
+		}
 		fmt.Fprintf(stderr, "history: %v\n", err)
 		return 1
 	}

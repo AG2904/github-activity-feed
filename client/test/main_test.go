@@ -13,9 +13,13 @@ import (
 // injects its own, so the version test exercises the real injection path.
 const testVersion = "v9.9.9-test"
 
-// feedBinary is the one binary the whole suite runs; TestMain compiles it once
-// from the module root, because the process boundary is the only seam.
-var feedBinary string
+// The whole suite runs compiled binaries: the process boundary is the only
+// seam. idleFeedBinary is the same code built with a 300ms idle timeout, so
+// the five-minute rule can be exercised without waiting five minutes.
+var (
+	feedBinary     string
+	idleFeedBinary string
+)
 
 func TestMain(m *testing.M) {
 	dir, err := os.MkdirTemp("", "feed-e2e-")
@@ -24,28 +28,30 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	name := "feed"
-	if runtime.GOOS == "windows" {
-		name += ".exe"
-	}
-	feedBinary = filepath.Join(dir, name)
-
-	build := exec.Command(
-		"go", "build", "-trimpath",
-		"-ldflags", "-X main.version="+testVersion,
-		"-o", feedBinary,
-		"./cmd/feed",
-	)
-	build.Dir = ".."
-	build.Stdout = os.Stdout
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "building feed: %v\n", err)
-		os.RemoveAll(dir)
-		os.Exit(1)
-	}
+	base := "-X main.version=" + testVersion
+	feedBinary = buildBinary(dir, "feed", base)
+	idleFeedBinary = buildBinary(dir, "feed-idle", base+
+		" -X github.com/AG2904/github-activity-feed/client/internal/cli.idleTimeoutSetting=300ms")
 
 	code := m.Run()
 	os.RemoveAll(dir)
 	os.Exit(code)
+}
+
+func buildBinary(dir, name, ldflags string) string {
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	binary := filepath.Join(dir, name)
+
+	build := exec.Command("go", "build", "-trimpath", "-ldflags", ldflags, "-o", binary, "./cmd/feed")
+	build.Dir = ".."
+	build.Stdout = os.Stdout
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "building %s: %v\n", name, err)
+		os.RemoveAll(dir)
+		os.Exit(1)
+	}
+	return binary
 }

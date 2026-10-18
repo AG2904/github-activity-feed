@@ -6,7 +6,9 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
 
 	"github.com/AG2904/github-activity-feed/client/internal/cli"
 )
@@ -17,5 +19,10 @@ import (
 var version = "dev"
 
 func main() {
-	os.Exit(cli.Run(os.Args[1:], os.Stdout, os.Stderr, version))
+	// Ctrl-C cancels the request or the backoff sleep; Run returns 0 and the
+	// shell sees a clean exit.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	code := cli.Run(ctx, os.Args[1:], os.Stdout, os.Stderr, version)
+	stop()
+	os.Exit(code)
 }
