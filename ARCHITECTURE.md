@@ -121,6 +121,7 @@ github-activity-feed/
 │   ├── research/              # feasibility research (GitHub vs relay)
 │   ├── manual-testing.md      # cómo probar el relay y la CLI a mano, paso a paso
 │   ├── relay-flow.md          # el flujo del relay, archivo por archivo
+│   ├── cli-flow.md            # el flujo de la CLI, archivo por archivo
 │   ├── tickets/relay/         # registros de evidencia por ticket completado
 │   └── tickets/cli/           # lo mismo para la CLI
 ├── .archify/                  # diagramas versionados (el HTML y su candidato)

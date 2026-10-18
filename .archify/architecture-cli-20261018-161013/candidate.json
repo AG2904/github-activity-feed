@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CLI: arquitectura actual (Fase 2)",
+    "locale": "es",
+    "output": ".archify/architecture-cli-20261018-161013/cli.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AG2904/github-activity-feed.git",
+      "provider": "github",
+      "revision": "a8e89fb219470d62a34b1292997455217bc5eddd"
+    }
+  },
+  "components": [
+    {
+      "id": "dev",
+      "type": "external",
+      "label": "Desarrollador",
+      "sublabel": "su terminal, sin runtime",
+      "pos": [40, 40],
+      "size": [180, 64],
+      "sources": [
+        { "path": ".scratch/cli/spec.md", "line": 19 },
+        { "path": ".scratch/cli/spec.md", "line": 38, "end_line": 39 }
+      ]
+    },
+    {
+      "id": "shell",
+      "type": "backend",
+      "label": "Entrada y configuración",
+      "sublabel": "feed watch · feed history",
+      "tag": "flag y net/http, sin framework",
+      "pos": [420, 40],
+      "size": [190, 64],
+      "sources": [
+        { "path": "client/internal/cli/cli.go", "line": 21, "end_line": 57 },
+        { "path": "client/internal/cli/cli.go", "line": 73, "end_line": 78 },
+        { "path": "docs/adr/0008-stdlib-only-and-flag-over-cobra.md", "line": 1, "end_line": 3 }
+      ]
+    },
+    {
+      "id": "live",
+      "type": "backend",
+      "label": "El camino en vivo",
+      "sublabel": "watch + backfill",
+      "tag": "backoff, idle de 5 m",
+      "pos": [320, 185],
+      "size": [190, 64],
+      "sources": [
+        { "path": "client/internal/cli/watch.go", "line": 52, "end_line": 133 },
+        { "path": "client/internal/cli/watch.go", "line": 246, "end_line": 283 },
+        { "path": "client/internal/cli/backfill.go", "line": 18, "end_line": 43 }
+      ]
+    },
+    {
+      "id": "report",
+      "type": "backend",
+      "label": "El camino retrospectivo",
+      "sublabel": "history",
+      "tag": "una lectura y sale",
+      "pos": [560, 185],
+      "size": [190, 64],
+      "sources": [
+        { "path": "client/internal/cli/history.go", "line": 17, "end_line": 84 },
+        { "path": "client/internal/cli/history.go", "line": 86, "end_line": 93 }
+      ]
+    },
+    {
+      "id": "readers",
+      "type": "backend",
+      "label": "Los dos lectores",
+      "sublabel": "SSE a mano · filas guardadas",
+      "tag": "sólo data: · RawMessage",
+      "pos": [420, 330],
+      "size": [190, 64],
+      "sources": [
+        { "path": "client/internal/sse/sse.go", "line": 19, "end_line": 65 },
+        { "path": "client/internal/cli/stored.go", "line": 22, "end_line": 57 }
+      ]
+    },
+    {
+      "id": "shape",
+      "type": "backend",
+      "label": "El contrato y el filtro",
+      "sublabel": "activity: ocho campos",
+      "tag": "Involvement: actor o assignee",
+      "pos": [420, 460],
+      "size": [190, 64],
+      "sources": [
+        { "path": "client/internal/activity/activity.go", "line": 17, "end_line": 26 },
+        { "path": "client/internal/activity/activity.go", "line": 31, "end_line": 52 },
+        { "path": "client/internal/activity/activity.go", "line": 57, "end_line": 89 }
+      ]
+    },
+    {
+      "id": "policy",
+      "type": "backend",
+      "label": "La política de salida",
+      "sublabel": "emitter: accept + paint",
+      "tag": "filtro · --json · color",
+      "pos": [420, 590],
+      "size": [190, 64],
+      "sources": [
+        { "path": "client/internal/cli/watch.go", "line": 189, "end_line": 244 },
+        { "path": "client/internal/cli/stored.go", "line": 48, "end_line": 57 }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "backend",
+      "label": "La forma de dos líneas",
+      "sublabel": "render: feed y reporte",
+      "tag": "badge · OSC 8 · agrupado",
+      "pos": [420, 720],
+      "size": [190, 64],
+      "sources": [
+        { "path": "client/internal/render/render.go", "line": 39, "end_line": 72 },
+        { "path": "client/internal/render/render.go", "line": 96, "end_line": 114 },
+        { "path": "client/internal/render/grouped.go", "line": 22, "end_line": 50 }
+      ]
+    },
+    {
+      "id": "out",
+      "type": "external",
+      "label": "La terminal",
+      "sublabel": "stdout y stderr",
+      "tag": "eventos por un lado, avisos por el otro",
+      "pos": [40, 720],
+      "size": [180, 64],
+      "sources": [{ "path": ".scratch/cli/spec.md", "line": 52 }]
+    },
+    {
+      "id": "relay",
+      "type": "external",
+      "label": "Relay",
+      "sublabel": "el otro proceso, ya construido",
+      "tag": "GET /stream · GET /history",
+      "pos": [820, 330],
+      "size": [190, 64],
+      "sources": [
+        { "path": "src/relay/stream.controller.ts", "line": 30, "end_line": 38 },
+        { "path": "src/relay/history.controller.ts", "line": 17, "end_line": 23 }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "El binario feed · un proceso, sin dependencias",
+      "wraps": ["shell", "live", "report", "readers", "shape", "policy", "render"]
+    }
+  ],
+  "connections": [
+    { "id": "runs", "from": "dev", "to": "shell", "label": "feed watch · feed history" },
+    { "id": "live-command", "from": "shell", "to": "live", "label": "watch" },
+    { "id": "report-command", "from": "shell", "to": "report", "label": "history" },
+    { "id": "live-reads", "from": "live", "to": "readers", "label": "stream y backfill", "variant": "emphasis" },
+    { "id": "report-reads", "from": "report", "to": "readers", "label": "una lectura" },
+    { "id": "relay-input", "from": "relay", "to": "readers", "label": "SSE y JSON", "variant": "emphasis" },
+    { "id": "to-shape", "from": "readers", "to": "shape", "label": "frame o fila → evento" },
+    { "id": "accepted", "from": "shape", "to": "policy", "label": "el filtro decide" },
+    { "id": "painted", "from": "policy", "to": "render", "label": "paint", "variant": "emphasis" },
+    { "id": "printed", "from": "render", "to": "out", "label": "dos líneas por evento", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "El contrato de proceso",
+      "items": [
+        "stdout lleva eventos y nada más; stderr lleva el banner, los avisos de reconexión y los errores",
+        "Ctrl-C sale 0 después de vaciar lo escrito, así compone con la shell",
+        "Un relay inalcanzable sale 1 en `history` y se reintenta indefinidamente en `watch`",
+        "Un flag mal usado sale 2, como ya lo hace la librería estándar"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Una sola regla de aceptación",
+      "items": [
+        "`accept` responde (evento, válido, mostrado): el stream y el backfill le preguntan lo mismo, así no pueden discrepar en --user ni --repo",
+        "Un evento que el filtro descarta igual prueba que la conexión está viva, y resetea el backoff",
+        "`paint` es el único camino del feed a stdout: el mismo que usa el backfill y el reporte plano"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Nada propio que deduplicar",
+      "items": [
+        "La CLI no guarda cursor ni estado entre corridas: no tiene nada que deduplicar (ADR-0005)",
+        "El filtrado es local y nunca angosta lo que el relay manda (ADR-0001)",
+        "Una reconexión deja un hueco que el stream no puede llenar; `feed history` es la respuesta"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "La misma forma de los dos lados",
+      "items": [
+        "Un solo ActivityEvent de ocho campos sirve el stream y el historial, así el cliente parsea una cosa",
+        "`--json` entrega los bytes del relay sin re-marshalling: sobreviven el &, el null y los milisegundos",
+        "`repository` es null sólo en una fila anterior a la columna, y no matchea ningún filtro de repo (ADR-0010)"
+      ]
+    }
+  ]
+}
