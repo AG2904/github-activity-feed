@@ -472,6 +472,166 @@ func TestWatchJSONFiltersBeforeWritingRaw(t *testing.T) {
 	}
 }
 
+func TestWatchBackfillsTheFirstConnection(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	// The relay serves the audit history newest first; the backfill is the head
+	// of a stream, so it is printed oldest first and the live feed continues
+	// below it.
+	relay.setHistory(historyOf(payloadOf(mergedFrame(when)), payloadOf(assignedFrame(when))))
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	want := assignedOutput + mergedOutput
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want the backfill oldest first %q", got, want)
+	}
+	if hits := relay.hits("/history"); hits != 1 {
+		t.Errorf("relay saw %d /history requests, want 1", hits)
+	}
+}
+
+func TestWatchBackfillLimitsToTheMostRecentEvents(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.setHistory(historyOf(
+		payloadOf(assignedFrame(when)),
+		payloadOf(mergedFrame(when)),
+		payloadOf(eventFrame(when, "pr.merged", "other/repo", "someone.else", "Oldest merge", nil, "[]", "https://github.com/other/repo/pull/5")),
+	))
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color", "--backfill", "1")
+	relay.waitConnected(t)
+
+	want := assignedOutput
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want only the newest event %q", got, want)
+	}
+}
+
+func TestWatchBackfillZeroStartsBlank(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.setHistory(historyOf(payloadOf(mergedFrame(time.Now().Add(-2 * time.Hour)))))
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color", "--backfill", "0")
+	relay.waitConnected(t)
+
+	relay.send(t, assignedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+
+	want := assignedOutput
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want nothing until a live event arrives %q", got, want)
+	}
+	if hits := relay.hits("/history"); hits != 0 {
+		t.Errorf("relay saw %d /history requests, want 0: a disabled backfill asks nothing", hits)
+	}
+}
+
+func TestWatchBackfillHonoursTheFiltersBeforeTheLimit(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	// The newest stored event is in another repository, so a limit applied
+	// before the filter would print nothing at all.
+	relay.setHistory(historyOf(
+		payloadOf(eventFrame(when, "pr.merged", "other/repo", "maria.perez", "Newer merge elsewhere", nil, "[]", "https://github.com/other/repo/pull/6")),
+		payloadOf(mergedFrame(when)),
+	))
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color",
+		"--user", "maria.perez", "--repo", "AG2904/github-activity-feed", "--backfill", "1")
+	relay.waitConnected(t)
+
+	want := mergedOutput
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want the most recent event of mine %q", got, want)
+	}
+}
+
+func TestReconnectNeverRepeatsTheBackfill(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.setHistory(historyOf(payloadOf(mergedFrame(time.Now().Add(-2*time.Hour - 30*time.Minute)))))
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+	feed.waitStdout(t, mergedOutput)
+
+	relay.dropStream(t)
+	feed.waitReconnects(t, 1)
+	relay.waitConnected(t)
+	feed.waitStderr(t, "watch: reconnected")
+
+	if hits := relay.hits("/history"); hits != 1 {
+		t.Errorf("relay saw %d /history requests, want the backfill to run on the first connection only", hits)
+	}
+	if got := feed.stdout.String(); got != mergedOutput {
+		t.Errorf("stdout = %q, want the backfilled event exactly once %q", got, mergedOutput)
+	}
+}
+
+func TestWatchBackfillsNothingFromAnEmptyHistory(t *testing.T) {
+	relay := newFakeRelay(t)
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+	feed.waitStdout(t, mergedOutput)
+
+	if got := feed.stdout.String(); got != mergedOutput {
+		t.Errorf("stdout = %q, want an empty history to print nothing and follow the stream", got)
+	}
+	if hits := relay.hits("/history"); hits != 1 {
+		t.Errorf("relay saw %d /history requests, want the empty history to have been asked for", hits)
+	}
+}
+
+func TestWatchFollowsTheStreamWhenTheHistoryIsUnreadable(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.setHistory("this is not the history the relay promised")
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+	feed.waitStdout(t, mergedOutput)
+
+	// The stream is what a watch was asked for; a history the CLI cannot read
+	// is a duller terminal, not a broken watch.
+	if got := feed.stdout.String(); got != mergedOutput {
+		t.Errorf("stdout = %q, want the live feed despite the unreadable history", got)
+	}
+}
+
+func TestWatchJSONBackfillsOnePayloadPerLine(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	assigned := payloadOf(assignedFrame(when))
+	// Newest first, as the relay serves it.
+	relay.setHistory(historyOf(assigned, rawPayload))
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--json")
+	relay.waitConnected(t)
+
+	// Oldest first, byte for byte, one event per line: the shape the live
+	// stream continues in, so one parser reads both.
+	want := rawPayload + "\n" + assigned + "\n"
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want the relay's own bytes one event per line %q", got, want)
+	}
+	if strings.ContainsRune(feed.stdout.String(), '\x1b') {
+		t.Errorf("stdout contains an escape sequence in --json mode: %q", feed.stdout.String())
+	}
+}
+
 // rawPayload is the relay's own bytes, with an ampersand that Go's encoder
 // would escape as \u0026 if the CLI re-marshalled instead of passing it through.
 const rawPayload = `{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"}`
@@ -520,6 +680,13 @@ func eventFrame(when time.Time, kind, repository, actor, subject string, assigne
 
 func payloadOf(frame string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(frame, "data: "), "\n\n")
+}
+
+// historyOf builds the relay's /history body out of the payloads a test would
+// otherwise send on the stream: the same shape either way (story 18), so the
+// backfill and the live feed are fed from identical bytes.
+func historyOf(payloads ...string) string {
+	return "[" + strings.Join(payloads, ",") + "]"
 }
 
 func ptr[T any](value T) *T {

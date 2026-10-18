@@ -50,17 +50,20 @@ func (e *fatalError) Unwrap() error { return e.err }
 // at startup is retried indefinitely: this is a watch, and dying because the
 // relay was restarting is worse than waiting.
 func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--no-color] [--json]")
+	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
 	user := fs.String("user", "", "only events where this login is the actor or the assignee")
 	repository := fs.String("repo", "", "only events in this owner/name repository")
+	backfillFlag := fs.Int("backfill", 10, "how many stored events the first connection prints (0 disables)")
 	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
 	jsonOut := fs.Bool("json", false, "write each event's payload verbatim")
 	if code, ok := parseFlags(fs, args); !ok {
 		return code
 	}
 
-	target := endpoint(strings.TrimRight(*relay, "/"), "/stream")
+	base := strings.TrimRight(*relay, "/")
+	target := endpoint(base, "/stream")
+	historyURL := endpoint(base, "/history")
 	fmt.Fprintf(stderr, "watching %s\n", target)
 
 	out := emitter{
@@ -71,14 +74,26 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 	backoff := &backoff{}
 	attempts := 0
+	filled := false
 
 	for {
-		eventSeen, err := stream(ctx, target, out, func() {
-			// The first connection is the banner's job; every later one is a
-			// recovery worth naming, so silence and a dead relay differ.
-			if attempts > 0 {
+		// A connection after the first attempt is a recovery: the notices above
+		// already said why it dropped, and naming the reopening is what tells
+		// silence from a dead relay.
+		recovered := attempts > 0
+		eventSeen, err := stream(ctx, target, out, func() error {
+			if recovered {
 				fmt.Fprintln(stderr, "watch: reconnected")
 			}
+			// The first connection fills the terminal from the stored history,
+			// so a developer can tell the CLI works before the next critical
+			// event happens. Only the first: backfilling again on a reconnect
+			// would reprint history and undo the dedupe the relay guarantees.
+			if filled {
+				return nil
+			}
+			filled = true
+			return backfill(ctx, historyURL, out, *backfillFlag)
 		})
 		if ctx.Err() != nil {
 			return 0
@@ -112,9 +127,11 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 // stream holds one connection until it ends, the relay goes silent, or the
 // context is cancelled. It reports whether a valid event arrived, which is
-// what resets the backoff even when the filter discards it, and calls connected
-// once the response is accepted.
-func stream(ctx context.Context, target string, out emitter, connected func()) (eventSeen bool, err error) {
+// what resets the backoff even when the filter discards it, and calls opened
+// once the response is accepted — that is where the first connection backfills
+// the feed, so the history is read while the stream is already subscribed and
+// nothing that happens during it is missed.
+func stream(ctx context.Context, target string, out emitter, opened func() error) (eventSeen bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
 		return false, &fatalError{err}
@@ -128,8 +145,12 @@ func stream(ctx context.Context, target string, out emitter, connected func()) (
 	if resp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf("%s answered %s", target, resp.Status)
 	}
-	if connected != nil {
-		connected()
+	if opened != nil {
+		// A failure to write the feed is fatal, the same as anywhere else
+		// stdout is written: there is nothing to retry.
+		if err := opened(); err != nil {
+			return false, &fatalError{err}
+		}
 	}
 
 	reader := newIdleReader(resp.Body, idleTimeout())
@@ -182,20 +203,20 @@ func (e emitter) emit(payload string) (valid bool, err error) {
 	if !e.filter.Match(event) {
 		return true, nil
 	}
+	return true, e.paint(payload, event)
+}
 
+// paint writes one event the filter has already accepted. It is the only place
+// the output policy lives, so the backfill and the live stream cannot disagree
+// about --json, about colour, or about the rendered form.
+func (e emitter) paint(payload string, event activity.Event) error {
 	if e.json {
 		// Re-marshalling would reorder keys and could reshape null or the
 		// millisecond timestamp.
-		if _, err := io.WriteString(e.out, payload+"\n"); err != nil {
-			return true, err
-		}
-		return true, nil
+		_, err := io.WriteString(e.out, payload+"\n")
+		return err
 	}
-
-	if err := e.palette.Event(e.out, event, time.Now()); err != nil {
-		return true, err
-	}
-	return true, nil
+	return e.palette.Event(e.out, event, time.Now())
 }
 
 // idleReader treats a read gap longer than the timeout as death. The relay
