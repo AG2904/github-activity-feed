@@ -173,6 +173,70 @@ func TestWatchDiscardsFramesItCannotUseAndKeepsReading(t *testing.T) {
 	}
 }
 
+func TestWatchJSONWritesTheFramePayloadVerbatim(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--json")
+	relay.waitConnected(t)
+
+	// The malformed frame must still be discarded: --json changes the shape of
+	// the output, not the rule about what counts as an event.
+	relay.send(t, "data: this is not json\n\n")
+	relay.send(t, "data: "+rawPayload+"\n\n")
+
+	feed.waitStdout(t, rawPayload+"\n")
+
+	if got := feed.stdout.String(); got != rawPayload+"\n" {
+		t.Errorf("stdout = %q, want the payload byte for byte plus one newline", got)
+	}
+	if strings.ContainsRune(feed.stdout.String(), '\x1b') {
+		t.Errorf("stdout contains an escape sequence in --json mode: %q", feed.stdout.String())
+	}
+}
+
+func TestHistoryJSONWritesTheResponseBodyVerbatim(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.historyBody = historyBody
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--json")
+
+	if got.code != 0 {
+		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
+	}
+	if got.stdout != historyBody {
+		t.Errorf("stdout = %q, want the relay's body byte for byte %q", got.stdout, historyBody)
+	}
+	if got.stderr != "" {
+		t.Errorf("stderr = %q, want empty", got.stderr)
+	}
+}
+
+func TestHistoryJSONRejectsGrouping(t *testing.T) {
+	relay := newFakeRelay(t)
+
+	got := runFeed(t, nil, "history", "--relay", relay.URL, "--json", "--group-by-repo")
+
+	if got.code != 2 {
+		t.Fatalf("exit code = %d, want 2", got.code)
+	}
+	if !strings.Contains(got.stderr, "grouping is presentation") {
+		t.Errorf("stderr = %q, want it to explain why grouping and --json cannot combine", got.stderr)
+	}
+	if got.stdout != "" {
+		t.Errorf("stdout = %q, want empty", got.stdout)
+	}
+	if hits := relay.hits("/history"); hits != 0 {
+		t.Errorf("relay saw %d /history requests, want 0: the conflict is a flag error", hits)
+	}
+}
+
+// rawPayload is the relay's own bytes, with an ampersand that Go's encoder
+// would escape as \u0026 if the CLI re-marshalled instead of passing it through.
+const rawPayload = `{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"}`
+
+// historyBody is an audit-history array with both event shapes, again carrying
+// an ampersand to make re-serialization visible.
+const historyBody = `[{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"},{"type":"issue.assigned","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Ship the onboarding checklist","assignee":"lucia.gomez","labels":["bug"],"url":"https://github.com/AG2904/github-activity-feed/issues/7","when":"2026-10-11T14:00:00.000Z"}]`
+
 func mergedFrame(when time.Time) string {
 	return "data: " + fmt.Sprintf(
 		`{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix memory leak in parser component","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"%s"}`,

@@ -53,7 +53,7 @@ func Run(args []string, stdout, stderr io.Writer, version string) int {
 	case "watch":
 		return watch(rest[1:], stdout, stderr)
 	case "history":
-		return history(rest[1:], stderr)
+		return history(rest[1:], stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "feed: unknown command %q\n\n", rest[0])
 		printUsage(stderr)
@@ -65,8 +65,8 @@ func printUsage(w io.Writer) {
 	fmt.Fprintf(w, `feed shows the GitHub activity relay's critical events in the terminal.
 
 Usage:
-  feed watch   [--relay <url>] [--no-color]
-  feed history [--relay <url>]
+  feed watch   [--relay <url>] [--no-color] [--json]
+  feed history [--relay <url>] [--json] [--group-by-repo]
   feed --version
 
 The relay resolves as --relay, then $RELAY_URL, then %s.
@@ -77,9 +77,10 @@ The relay resolves as --relay, then $RELAY_URL, then %s.
 // frame that does not parse is discarded, not fatal - the same stance the relay
 // takes on a hook it does not understand. Reconnection arrives with ticket 04.
 func watch(args []string, stdout, stderr io.Writer) int {
-	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--no-color]")
+	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--no-color] [--json]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
 	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
+	jsonOut := fs.Bool("json", false, "write each event's payload verbatim")
 	if code, ok := parseFlags(fs, args); !ok {
 		return code
 	}
@@ -115,6 +116,17 @@ func watch(args []string, stdout, stderr io.Writer) int {
 		if err != nil {
 			continue
 		}
+
+		if *jsonOut {
+			// The relay's bytes go out untouched: re-marshalling would reorder
+			// keys and could reshape null or the millisecond timestamp.
+			if _, err := io.WriteString(stdout, payload+"\n"); err != nil {
+				fmt.Fprintf(stderr, "watch: %v\n", err)
+				return 1
+			}
+			continue
+		}
+
 		if err := palette.Event(stdout, event, time.Now()); err != nil {
 			fmt.Fprintf(stderr, "watch: %v\n", err)
 			return 1
@@ -122,13 +134,20 @@ func watch(args []string, stdout, stderr io.Writer) int {
 	}
 }
 
-// history fetches the audit history once. This ticket only proves the seam;
-// ticket 07 gives the response its shape.
-func history(args []string, stderr io.Writer) int {
-	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>]")
+// history fetches the audit history once. This ticket proves the seam and the
+// raw mode; ticket 07 gives the rendered response its shape.
+func history(args []string, stdout, stderr io.Writer) int {
+	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>] [--json] [--group-by-repo]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
+	jsonOut := fs.Bool("json", false, "write the relay's response verbatim")
+	groupByRepo := fs.Bool("group-by-repo", false, "group the history by repository")
 	if code, ok := parseFlags(fs, args); !ok {
 		return code
+	}
+
+	if *jsonOut && *groupByRepo {
+		fmt.Fprintln(stderr, "history: --json and --group-by-repo cannot be combined: grouping is presentation, and raw output has none")
+		return 2
 	}
 
 	target := endpoint(strings.TrimRight(*relay, "/"), "/history")
@@ -142,6 +161,14 @@ func history(args []string, stderr io.Writer) int {
 	if resp.StatusCode != http.StatusOK {
 		fmt.Fprintf(stderr, "history: %s answered %s\n", target, resp.Status)
 		return 1
+	}
+
+	if *jsonOut {
+		if _, err := io.Copy(stdout, resp.Body); err != nil {
+			fmt.Fprintf(stderr, "history: %v\n", err)
+			return 1
+		}
+		return 0
 	}
 
 	if _, err := io.Copy(io.Discard, resp.Body); err != nil {

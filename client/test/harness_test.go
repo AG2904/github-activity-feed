@@ -22,11 +22,12 @@ import (
 type fakeRelay struct {
 	*httptest.Server
 
-	mu       sync.Mutex
-	request  []string
-	frames   chan string
-	done     chan struct{}
-	doneOnce sync.Once
+	mu          sync.Mutex
+	request     []string
+	frames      chan string
+	historyBody string
+	done        chan struct{}
+	doneOnce    sync.Once
 
 	connected     chan struct{}
 	connectedOnce sync.Once
@@ -36,9 +37,10 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 	t.Helper()
 
 	relay := &fakeRelay{
-		frames:    make(chan string, 16),
-		done:      make(chan struct{}),
-		connected: make(chan struct{}),
+		frames:      make(chan string, 16),
+		historyBody: "[]\n",
+		done:        make(chan struct{}),
+		connected:   make(chan struct{}),
 	}
 	relay.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		relay.record(r.URL.Path)
@@ -69,7 +71,7 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 			}
 		case "/history":
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte("[]\n"))
+			_, _ = w.Write([]byte(relay.historyBody))
 		default:
 			http.NotFound(w, r)
 		}
