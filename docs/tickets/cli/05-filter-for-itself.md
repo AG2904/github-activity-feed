@@ -110,7 +110,9 @@ La suite del cliente tiene 25 casos, todos por el límite del proceso.
   el reset ocurre cuando llega un evento; el filtro decide qué se pinta, no qué
   llegó. Se actualizó el registro del ticket 04 para reflejarlo.
 - **El filtro se aplica sólo a `watch`.** `history --user`/`--repo` son del
-  ticket 07, aunque reutilizarán `activity.Filter`.
+  ticket 07, aunque reutilizarán `activity.Filter`. *(Pagado en el ticket 07:
+  `history` filtra con el mismo `activity.Filter` y la misma regla de aceptación
+  que el stream, incluido `--json`.)*
 - **No hay validación del formato de `--repo`.** Un valor sin `/` simplemente no
   matchea; el spec no pide rechazarlo.
 - **Deuda ajena:** el árbol de `ARCHITECTURE.md` y los scripts npm siguen en el
