@@ -250,8 +250,20 @@ func TestWatchRetriesAnUnreachableRelay(t *testing.T) {
 	if len(delays) != 2 {
 		t.Fatalf("reconnect notices = %d, want exactly 2", len(delays))
 	}
-	if n := strings.Count(feed.stderr.String(), "watch: reconnecting in"); n != 2 {
-		t.Errorf("reconnect lines = %d, want one per attempt (2)", n)
+	// The banner plus one line per attempt: nothing else may reach stderr.
+	if lines := nonEmptyLines(feed.stderr.String()); len(lines) != 3 {
+		t.Errorf("stderr lines = %d, want the banner plus one line per attempt\n%v", len(lines), lines)
+	}
+}
+
+func TestWatchFailsOnAnUnusableRelayURL(t *testing.T) {
+	got := runFeed(t, nil, "watch", "--relay", "://bad")
+
+	if got.code != 1 {
+		t.Fatalf("exit code = %d, want 1 (stderr: %q)", got.code, got.stderr)
+	}
+	if strings.Contains(got.stderr, "reconnecting") {
+		t.Errorf("stderr = %q, want an unusable URL to be fatal, not retried", got.stderr)
 	}
 }
 
@@ -263,6 +275,7 @@ func TestReconnectBackoffGrowsAndResetsAfterAnEvent(t *testing.T) {
 	relay.dropStream(t)
 	feed.waitReconnects(t, 1)
 	relay.waitConnected(t)
+	feed.waitStderr(t, "watch: reconnected")
 
 	relay.dropStream(t)
 	delays := feed.waitReconnects(t, 2)
@@ -276,14 +289,17 @@ func TestReconnectBackoffGrowsAndResetsAfterAnEvent(t *testing.T) {
 	delays = feed.waitReconnects(t, 3)
 	relay.waitConnected(t)
 
-	if !(delays[1] > delays[0]) {
-		t.Errorf("delays = %v, want the second attempt to wait longer than the first", delays)
+	if delays[0] < time.Second || delays[0] >= 1500*time.Millisecond {
+		t.Errorf("first delay = %s, want the one-second base plus its jitter", delays[0])
 	}
-	if !(delays[2] < delays[1]) {
-		t.Errorf("delays = %v, want the event to reset the backoff before the third attempt", delays)
+	if delays[1] < 2*time.Second {
+		t.Errorf("second delay = %s, want the backoff to have grown", delays[1])
 	}
-	if delays[2] > time.Second {
-		t.Errorf("third delay = %s, want it back at the one-second base", delays[2])
+	if delays[2] >= 1500*time.Millisecond {
+		t.Errorf("third delay = %s, want the event to have reset the backoff", delays[2])
+	}
+	if delays[2] >= delays[1] {
+		t.Errorf("delays = %v, want the third shorter than the second", delays)
 	}
 }
 
@@ -299,6 +315,13 @@ func TestReconnectDoesNotReplayPrintedEvents(t *testing.T) {
 	relay.dropStream(t)
 	feed.waitReconnects(t, 1)
 	relay.waitConnected(t)
+	feed.waitStderr(t, "watch: reconnected")
+
+	for _, id := range relay.lastEventIDs() {
+		if id != "" {
+			t.Errorf("a stream request offered Last-Event-ID %q, want none: the relay's counter is not a position", id)
+		}
+	}
 
 	relay.send(t, assignedFrame(when))
 	want := "[pr.merged] Fix memory leak in parser component\n" +
@@ -327,6 +350,26 @@ func TestWatchReopensAStreamThatGoesSilent(t *testing.T) {
 	}
 	if hits := relay.hits("/stream"); hits < 2 {
 		t.Errorf("relay saw %d /stream requests, want the silent stream reopened", hits)
+	}
+}
+
+func TestHeartbeatsKeepASilentStreamOpen(t *testing.T) {
+	relay := newFakeRelay(t)
+	// The idle build's timeout is 300ms, so a comment every 100ms is the
+	// relay's heartbeat and must keep the connection alive.
+	feed := startBinary(t, idleFeedBinary, nil, "watch", "--relay", relay.URL)
+	relay.waitConnected(t)
+
+	for i := 0; i < 6; i++ {
+		relay.send(t, ": heartbeat\n\n")
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if delays := parseReconnects(feed.stderr.String()); len(delays) != 0 {
+		t.Errorf("stderr shows %v, want a heartbeat to keep the stream open", delays)
+	}
+	if hits := relay.hits("/stream"); hits != 1 {
+		t.Errorf("relay saw %d /stream requests, want 1", hits)
 	}
 }
 

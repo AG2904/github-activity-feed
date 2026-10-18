@@ -25,6 +25,7 @@ type fakeRelay struct {
 
 	mu          sync.Mutex
 	request     []string
+	lastEventID []string
 	frames      chan string
 	drop        chan struct{}
 	historyBody string
@@ -39,15 +40,16 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 
 	relay := &fakeRelay{
 		frames:      make(chan string, 16),
-		drop:        make(chan struct{}, 1),
+		drop:        make(chan struct{}),
 		historyBody: "[]\n",
 		done:        make(chan struct{}),
-		connected:   make(chan struct{}, 8),
+		connected:   make(chan struct{}),
 	}
 	relay.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		relay.record(r.URL.Path)
 		switch r.URL.Path {
 		case "/stream":
+			relay.recordEventID(r.Header.Get("Last-Event-ID"))
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.Header().Set("Cache-Control", "no-cache")
 			flusher, ok := w.(http.Flusher)
@@ -56,9 +58,12 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 				return
 			}
 			flusher.Flush()
+			// An unbuffered handshake, so a signal always belongs to this
+			// connection and never to an earlier one.
 			select {
 			case relay.connected <- struct{}{}:
-			default:
+			case <-r.Context().Done():
+				return
 			}
 
 			for {
@@ -102,6 +107,20 @@ func (f *fakeRelay) requests() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]string(nil), f.request...)
+}
+
+func (f *fakeRelay) recordEventID(id string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.lastEventID = append(f.lastEventID, id)
+}
+
+// lastEventIDs is what each stream request offered as a resume position. The
+// relay's `id:` counter restarts at zero, so the client must offer nothing.
+func (f *fakeRelay) lastEventIDs() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]string(nil), f.lastEventID...)
 }
 
 func (f *fakeRelay) setHistory(body string) {
@@ -281,6 +300,16 @@ func (f *runningFeed) waitReconnects(t *testing.T, want int) []time.Duration {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+func nonEmptyLines(text string) []string {
+	var lines []string
+	for _, line := range strings.Split(text, "\n") {
+		if strings.TrimSpace(line) != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
 }
 
 func parseReconnects(stderr string) []time.Duration {

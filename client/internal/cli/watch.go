@@ -38,6 +38,13 @@ func idleTimeout() time.Duration {
 	return timeout
 }
 
+// fatalError marks a failure the CLI cannot retry: an unusable relay URL or a
+// closed stdout. Connection failures are retryable by design; these are not.
+type fatalError struct{ err error }
+
+func (e *fatalError) Error() string { return e.err.Error() }
+func (e *fatalError) Unwrap() error { return e.err }
+
 // watch holds the relay's stream open and paints each frame as it arrives,
 // reopening it whenever it drops or falls silent. A relay that is unreachable
 // at startup is retried indefinitely: this is a watch, and dying because the
@@ -54,16 +61,33 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	target := endpoint(strings.TrimRight(*relay, "/"), "/stream")
 	fmt.Fprintf(stderr, "watching %s\n", target)
 
-	palette := render.Palette{Color: colorEnabled(stdout, *noColor)}
+	out := emitter{
+		out:     stdout,
+		palette: render.Palette{Color: colorEnabled(stdout, *noColor)},
+		json:    *jsonOut,
+	}
 	backoff := &backoff{}
+	attempts := 0
 
 	for {
-		sawEvent, err := stream(ctx, target, stdout, palette, *jsonOut)
+		sawEvent, err := stream(ctx, target, out, func() {
+			// The first connection is the banner's job; every later one is a
+			// recovery worth naming, so silence and a dead relay differ.
+			if attempts > 0 {
+				fmt.Fprintln(stderr, "watch: reconnected")
+			}
+		})
 		if ctx.Err() != nil {
 			return 0
 		}
 		if sawEvent {
 			backoff.reset()
+		}
+
+		var fatal *fatalError
+		if errors.As(err, &fatal) {
+			fmt.Fprintf(stderr, "watch: %v\n", fatal.err)
+			return 1
 		}
 		if err == nil {
 			err = errors.New("connection closed")
@@ -71,6 +95,7 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 		delay := backoff.delay()
 		fmt.Fprintf(stderr, "watch: reconnecting in %s: %v\n", delay, err)
+		attempts++
 
 		timer := time.NewTimer(delay)
 		select {
@@ -84,11 +109,11 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 // stream holds one connection until it ends, the relay goes silent, or the
 // context is cancelled. It reports whether an event reached stdout, which is
-// what resets the backoff.
-func stream(ctx context.Context, target string, stdout io.Writer, palette render.Palette, jsonOut bool) (sawEvent bool, err error) {
+// what resets the backoff, and calls connected once the response is accepted.
+func stream(ctx context.Context, target string, out emitter, connected func()) (sawEvent bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
-		return false, err
+		return false, &fatalError{err}
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -98,6 +123,9 @@ func stream(ctx context.Context, target string, stdout io.Writer, palette render
 
 	if resp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf("%s answered %s", target, resp.Status)
+	}
+	if connected != nil {
+		connected()
 	}
 
 	reader := newIdleReader(resp.Body, idleTimeout())
@@ -119,9 +147,9 @@ func stream(ctx context.Context, target string, stdout io.Writer, palette render
 			}
 		}
 
-		wrote, err := emit(stdout, palette, jsonOut, payload)
+		wrote, err := out.emit(payload)
 		if err != nil {
-			return sawEvent, err
+			return sawEvent, &fatalError{err}
 		}
 		if wrote {
 			sawEvent = true
@@ -129,25 +157,30 @@ func stream(ctx context.Context, target string, stdout io.Writer, palette render
 	}
 }
 
-// emit validates one frame's payload and writes it in the selected mode. A
-// payload that does not parse is discarded even with --json: raw output passes
-// the relay's bytes through untouched, but it still only passes events.
-func emit(stdout io.Writer, palette render.Palette, jsonOut bool, payload string) (wrote bool, err error) {
+// emitter is the output policy in one value: rendered events, raw payloads, or
+// nothing at all when the frame is not an event.
+type emitter struct {
+	out     io.Writer
+	palette render.Palette
+	json    bool
+}
+
+func (e emitter) emit(payload string) (wrote bool, err error) {
 	event, err := activity.Parse([]byte(payload))
 	if err != nil {
 		return false, nil
 	}
 
-	if jsonOut {
+	if e.json {
 		// Re-marshalling would reorder keys and could reshape null or the
 		// millisecond timestamp.
-		if _, err := io.WriteString(stdout, payload+"\n"); err != nil {
+		if _, err := io.WriteString(e.out, payload+"\n"); err != nil {
 			return false, err
 		}
 		return true, nil
 	}
 
-	if err := palette.Event(stdout, event, time.Now()); err != nil {
+	if err := e.palette.Event(e.out, event, time.Now()); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -194,9 +227,9 @@ func (r *idleReader) stop() {
 }
 
 // backoff grows exponentially from one second to a thirty-second ceiling. Each
-// delay is jittered in [d/2, d), so a relay restart does not gather every
-// client in the same instant. The ceiling applies to the step; a reset returns
-// to the one-second base.
+// delay is jittered upward by up to a quarter of the step, so a relay restart
+// does not gather every client in the same instant. The ceiling applies to the
+// step; a reset returns to the one-second base.
 type backoff struct {
 	step time.Duration
 }
@@ -211,13 +244,15 @@ func (b *backoff) delay() time.Duration {
 		step = minBackoff
 	}
 
-	half := step / 2
-	jittered := half + time.Duration(rand.Int64N(int64(half)))
+	delay := step + time.Duration(rand.Int64N(int64(step/4)))
+	if delay > maxBackoff {
+		delay = maxBackoff
+	}
 
 	if next := step * 2; next < maxBackoff {
 		b.step = next
 	} else {
 		b.step = maxBackoff
 	}
-	return jittered
+	return delay
 }

@@ -20,8 +20,14 @@ var version = "dev"
 
 func main() {
 	// Ctrl-C cancels the request or the backoff sleep; Run returns 0 and the
-	// shell sees a clean exit.
+	// shell sees a clean exit. Restoring the default handler as soon as the
+	// context is cancelled means a second Ctrl-C can still kill a hung run.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	go func() {
+		<-ctx.Done()
+		stop()
+	}()
+
 	code := cli.Run(ctx, os.Args[1:], os.Stdout, os.Stderr, version)
 	stop()
 	os.Exit(code)
