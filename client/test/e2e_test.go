@@ -437,6 +437,23 @@ func TestWatchFiltersCombineAsConjunction(t *testing.T) {
 	}
 }
 
+func TestWatchFiltersAreCaseSensitive(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--user", "maria.perez")
+	relay.waitConnected(t)
+
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.send(t, eventFrame(when, "pr.merged", "other/repo", "Maria.Perez", "Cased merge", nil, "[]", "https://github.com/other/repo/pull/4"))
+	relay.send(t, mergedFrame(when))
+
+	want := mergedOutput
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want an exact login match, not a case-folded one %q", got, want)
+	}
+}
+
 func TestWatchJSONFiltersBeforeWritingRaw(t *testing.T) {
 	relay := newFakeRelay(t)
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--json", "--user", "lucia.gomez")

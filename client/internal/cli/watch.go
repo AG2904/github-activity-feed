@@ -73,7 +73,7 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	attempts := 0
 
 	for {
-		sawEvent, err := stream(ctx, target, out, func() {
+		eventSeen, err := stream(ctx, target, out, func() {
 			// The first connection is the banner's job; every later one is a
 			// recovery worth naming, so silence and a dead relay differ.
 			if attempts > 0 {
@@ -83,7 +83,7 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		if ctx.Err() != nil {
 			return 0
 		}
-		if sawEvent {
+		if eventSeen {
 			backoff.reset()
 		}
 
@@ -111,9 +111,10 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 }
 
 // stream holds one connection until it ends, the relay goes silent, or the
-// context is cancelled. It reports whether an event reached stdout, which is
-// what resets the backoff, and calls connected once the response is accepted.
-func stream(ctx context.Context, target string, out emitter, connected func()) (sawEvent bool, err error) {
+// context is cancelled. It reports whether a valid event arrived, which is
+// what resets the backoff even when the filter discards it, and calls connected
+// once the response is accepted.
+func stream(ctx context.Context, target string, out emitter, connected func()) (eventSeen bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
 		return false, &fatalError{err}
@@ -140,24 +141,24 @@ func stream(ctx context.Context, target string, out emitter, connected func()) (
 		if err != nil {
 			switch {
 			case reader.expired():
-				return sawEvent, fmt.Errorf("no bytes for %s", reader.timeout)
+				return eventSeen, fmt.Errorf("no bytes for %s", reader.timeout)
 			case ctx.Err() != nil:
-				return sawEvent, ctx.Err()
+				return eventSeen, ctx.Err()
 			case errors.Is(err, io.EOF):
-				return sawEvent, nil
+				return eventSeen, nil
 			default:
-				return sawEvent, err
+				return eventSeen, err
 			}
 		}
 
-		seen, err := out.emit(payload)
+		valid, err := out.emit(payload)
 		if err != nil {
-			return sawEvent, &fatalError{err}
+			return eventSeen, &fatalError{err}
 		}
-		if seen {
+		if valid {
 			// A valid event proves the connection is healthy even when the
 			// filter discards it, so it still resets the backoff.
-			sawEvent = true
+			eventSeen = true
 		}
 	}
 }
@@ -173,7 +174,7 @@ type emitter struct {
 
 // emit reports whether the payload was a valid event, not whether it was
 // written: a filtered-out event still proves the connection is alive.
-func (e emitter) emit(payload string) (seen bool, err error) {
+func (e emitter) emit(payload string) (valid bool, err error) {
 	event, err := activity.Parse([]byte(payload))
 	if err != nil {
 		return false, nil

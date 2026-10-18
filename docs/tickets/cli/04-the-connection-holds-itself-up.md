@@ -27,7 +27,9 @@ fatal (ticket 04)`, el segundo con las correcciones de la revisión de dos ejes.
   loop pueda anunciar la recuperación en el momento en que ocurre.
 - **`backoff`.** Escalones de 1, 2, 4, 8, 16 y 30 segundos. Cada espera suma un
   jitter de hasta un cuarto del escalón y se recorta al techo de 30s; un evento
-  emitido llama a `reset()` antes de calcular la espera siguiente.
+  válido llama a `reset()` antes de calcular la espera siguiente. El ticket 05
+  extendió ese reset a un evento que el filtro descarta: llegó, aunque no se
+  pinte.
 - **`idleReader`.** Resetea un `time.Timer` en cada `Read` que devuelve bytes,
   no en cada evento. A los cinco minutos sin bytes cierra el cuerpo, la lectura
   se desbloquea y el loop reconecta con el motivo `no bytes for 5m0s`. Los
