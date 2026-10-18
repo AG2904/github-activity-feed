@@ -349,6 +349,10 @@ agrupa.
 
 ## Paso 7 — Los casos que demuestran cada comportamiento
 
+Los paréntesis citan el ticket de la CLI (`.scratch/cli/issues/`) o, cuando dicen
+`story`, el user story del spec de la fase (`.scratch/cli/spec.md`). Los números de
+arriba, los del relay, son otro listado.
+
 | Qué probás | Cómo | Qué esperar |
 | --- | --- | --- |
 | Binario suelto (08) | copiar `client/dist/feed-*` a otra máquina sin Go | corre igual: es estático |
@@ -363,13 +367,13 @@ agrupa.
 | Filtro por assignee (05) | `--user tomas.ferreira` con la asignación | pasa |
 | Filtro que no matchea (05) | `--user nadie` | nada, y el stream sigue vivo |
 | Filtro por repositorio (05) | `--repo otro/repo` | nada de este repo |
-| Pipe limpio (10) | `feed watch \| tee feed.log` | sin color ni escapes en el archivo |
-| JSON crudo (17) | `feed watch --json \| jq -c .type` | `"pr.merged"`, payload sin reformatear |
+| Pipe limpio (story 12) | `feed watch \| tee feed.log` | sin color ni escapes en el archivo |
+| JSON crudo (story 17) | `feed watch --json \| jq -c .type` | `"pr.merged"`, payload sin reformatear |
 | Historial (07) | `feed history --user maria.perez` | lo de maria, más nuevo primero |
-| Historial agrupado (16) | `feed history --group-by-repo` | un bloque por repo, alfabético |
+| Historial agrupado (story 16) | `feed history --group-by-repo` | un bloque por repo, alfabético |
 | Historial vacío (07) | `feed history` contra una base recién creada | nada, salida 0 |
 | Relay caído (07) | `feed history` con el relay apagado | `history: ...` en stderr y salida 1 |
-| Ctrl-C (21) | `Ctrl-C` con el `watch` abierto | sale limpio, la shell sigue usable |
+| Ctrl-C (story 21) | `Ctrl-C` con el `watch` abierto | sale limpio, la shell sigue usable |
 
 ## Paso 8 — Empezar de cero
 
