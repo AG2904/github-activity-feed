@@ -63,7 +63,7 @@ func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		for _, row := range rows {
 			events = append(events, row.event)
 		}
-		if err := out.palette.Grouped(stdout, events, time.Now()); err != nil {
+		if err := out.group(events, time.Now()); err != nil {
 			fmt.Fprintf(stderr, "history: %v\n", err)
 			return 1
 		}

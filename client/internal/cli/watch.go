@@ -219,9 +219,7 @@ func (e emitter) accept(payload string) (event activity.Event, valid, shown bool
 
 // paint writes one event of the feed. It is the only place the feed reaches
 // stdout as feed lines, so the backfill and the live stream cannot disagree
-// about --json, about colour, or about the rendered form. The report shapes —
-// the raw array and the grouped report — are their own, because neither is a
-// line of the feed.
+// about --json, about colour, or about the rendered form.
 func (e emitter) paint(payload string, event activity.Event) error {
 	if e.json {
 		// Re-marshalling would reorder keys and could reshape null or the
@@ -230,6 +228,14 @@ func (e emitter) paint(payload string, event activity.Event) error {
 		return err
 	}
 	return e.palette.Event(e.out, event, time.Now())
+}
+
+// group writes the report shape: the same events, one section per repository.
+// Raw output has no grouped form — the flags refuse the combination — so there
+// is nothing to decide here, only to hand over, the same way paint hands over a
+// feed line. Every byte the CLI puts on stdout starts here.
+func (e emitter) group(events []activity.Event, now time.Time) error {
+	return e.palette.Grouped(e.out, events, now)
 }
 
 // idleReader treats a read gap longer than the timeout as death. The relay
