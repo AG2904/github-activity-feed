@@ -9,10 +9,14 @@ con un repositorio real; el recorrido de punta a punta está en
 ## Camino corto
 
 1. Levantá el relay como siempre (`GITHUB_WEBHOOK_SECRET` + `npm.cmd start`).
-2. En otra terminal: `cloudflared tunnel --url http://localhost:3000`.
+2. En otra terminal: `cloudflared tunnel --url http://localhost:3000`. No hace falta
+   cuenta ni permisos de administrador: se baja el `.exe` del release oficial y se
+   ejecuta.
 3. Copiá la URL `https://…trycloudflare.com` y usala como **Payload URL** del webhook,
    con la barra final.
-4. Hacé un merge a `main` en el repo de prueba y mirá tu `feed watch`.
+4. Hacé un merge a `main` en el repo de prueba y mirá tu `feed watch`, que sigue
+   apuntando a `http://localhost:3000` y no a la URL del túnel: ver
+   [el límite conocido](#un-límite-conocido-el-stream-en-vivo).
 5. Cerrá el túnel (`Ctrl-C`) cuando termines.
 
 ## El problema que resuelve
@@ -54,10 +58,43 @@ Dos aclaraciones que evitan confusiones:
 - **No es un deploy.** El relay sigue siendo tu proceso local, con tu SQLite local, y
   lo apagás cuando querés.
 
-Y una consecuencia del diseño del relay: los túneles y los proxies cortan conexiones
-ociosas. El stream aguanta porque el relay escribe un comentario SSE cada 15 segundos
-(ticket 08 del relay). Sin ese heartbeat, el túnel cerraría el stream cada pocos
-minutos y verías reconexiones sin motivo aparente.
+Los proxies cortan conexiones ociosas, y por eso el relay escribe un comentario SSE cada
+15 segundos (ticket 08): ésa es la liveness que cualquier proxy necesita, y sin ella el
+stream moriría en el primer minuto. Con los Quick Tunnels de Cloudflare, además, hay un
+límite propio que no tiene que ver con eso.
+
+## Un límite conocido: el stream en vivo
+
+Medido en esta máquina en octubre de 2026 contra un Quick Tunnel (`cloudflared`
+2026.10.1, `protocol=quic`, sin cuenta y sin administrador):
+
+| Ruta por la URL pública | Resultado |
+| --- | --- |
+| `POST /` firmado | `200 {"received":true}` y la fila aparece en `/history` |
+| `GET /history` | `200` con el body correcto |
+| `GET /stream` | cabeceras en ~0,4 s y después **cero bytes, indefinidamente** |
+
+Se reprodujo con `curl` y con el binario del CLI, con una ráfaga de 40 eventos (unos
+12 KB) y con `STREAM_HEARTBEAT_MS=1000` para descartar un problema de silencio inicial.
+En local, el mismo `/stream` manda cabeceras en 0,02 s y el heartbeat de 15 s llega.
+
+No es una limitación genérica de SSE en Cloudflare: un servidor Node que imita las
+cabeceras del relay y su formato de frame (`\n` inicial incluido) **sí** streamea por el
+mismo túnel, con el primer byte a 1,4 s. La diferencia está en cómo Nest/Express escribe
+el `@Sse` cuando cloudflared está en el medio; la causa raíz no está identificada.
+
+Qué hacer con eso:
+
+- **El CLI no necesita el túnel.** Dejalo apuntando a `http://localhost:3000`: el túnel
+  existe sólo para GitHub → relay, y así el sistema completo funciona. Es el modo que
+  esta guía recomienda y el que está verificado de punta a punta hasta `/history`.
+- **Si necesitás el CLI remoto**, un túnel con nombre u otro proveedor queda por
+  verificar; con Quick Tunnels, hoy no.
+
+Dos medidas del mismo día que conviene tener presentes: la URL tarda **56–64 segundos**
+en ser alcanzable después de aparecer (si disparás antes, falla en silencio), y un
+túnel de cinco ni siquiera resolvió DNS. Los quick tunnels no tienen garantía de
+disponibilidad, y eso está en sus términos.
 
 ## Efímero o con nombre
 
@@ -135,7 +172,8 @@ por repo es de lectura (`/history?repository=`, `feed watch --repo`).
 | `401` | el secret del webhook no es el `GITHUB_WEBHOOK_SECRET` |
 | `200` pero no hay fila | el evento no era crítico: rama distinta de `main`, sin label `bug`/`feedback`, o acción que no asigna |
 | `200` y fila, pero el CLI no imprime | el CLI se conectó tarde (el stream no repite) o el filtro local lo descartó |
-| el CLI muestra reconexiones cada tanto | el proxy cerró el stream ocioso; el heartbeat de 15 s debería evitarlo, revisá que el relay esté actualizado |
+| el CLI apunta a la URL del túnel y no muestra nada | el stream no atraviesa los Quick Tunnels (ver [el límite conocido](#un-límite-conocido-el-stream-en-vivo)); apuntá el CLI a `localhost:3000` |
+| el CLI muestra reconexiones cada tanto | un proxy intermedio cerró el stream ocioso; el heartbeat de 15 s del relay está pensado para evitarlo |
 | la entrega nunca llega desde una instancia corporativa | el hostname del túnel no es alcanzable desde esa red; con github.com funciona siempre |
 
 ## Alternativas
@@ -149,10 +187,14 @@ por repo es de lectura (`/history?repository=`, `feed watch --repo`).
 
 ## Qué se verificó acá
 
-El relay local, el webhook firmado, el stream y el CLI están verificados en esta
-máquina y documentados en [`docs/manual-testing.md`](manual-testing.md) y
-[`docs/end-to-end-testing.md`](end-to-end-testing.md).
+**Verificado en esta máquina**: el relay local, el webhook firmado, el stream y el CLI,
+documentados en [`docs/manual-testing.md`](manual-testing.md) y
+[`docs/end-to-end-testing.md`](end-to-end-testing.md). Con `cloudflared` 2026.10.1
+bajado al temporal y sin permisos de administrador: creación del Quick Tunnel sin
+cuenta, `protocol=quic`, `POST /` firmado por la URL pública con `200` y su fila en
+`/history`, y `GET /history` público. El límite del stream de la sección anterior
+también se midió acá, no se copió de ningún lado.
 
-Los pasos con túnel **no** se ejecutaron acá: ni `cloudflared` ni `ngrok` están
-instalados. El comando y el comportamiento son los documentados por cada proveedor, y
-el resto del recorrido —lo que pasa una vez que el request entra— sí está probado.
+**No verificado acá**: `ngrok` (no está instalado y su free tier pide cuenta), los
+túneles con nombre, y el comportamiento desde una instancia corporativa. Para esas
+filas, el documento repite lo que publica cada proveedor, con fecha.
