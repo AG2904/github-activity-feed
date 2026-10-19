@@ -245,9 +245,8 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 
 ## 7. Qué no está en este mapa
 
-- **El cliente CLI en Go**: es el otro proceso, y tiene su propio mapa en
-  [`docs/cli-flow.md`](cli-flow.md). Los clientes de este relay siguen siendo `curl`
-  y el binario `feed`.
+- **El CLI en Go** (Fase 2): tiene su propio mapa en
+  [`docs/cli-flow.md`](cli-flow.md).
 - **CI, README y distribución de binarios** (Fase 3).
 - **La elección de qué repositorios escucha el relay**: se configura del lado de
   GitHub, no acá.

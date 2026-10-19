@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CLI en Go: arquitectura actual (Fase 2)",
+    "locale": "es",
+    "output": ".archify/architecture-cli-20261019-141819/cli.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AG2904/Gitlab-notifier.git",
+      "provider": "github",
+      "revision": "4feaa3efe5c5a48fcd62635edc17bfb2b8e63949"
+    }
+  },
+  "components": [
+    {
+      "id": "dev",
+      "type": "external",
+      "label": "Desarrollador",
+      "sublabel": "terminal del dev",
+      "pos": [40, 40],
+      "size": [170, 60],
+      "sources": [{ "path": "ARCHITECTURE.md", "line": 86 }]
+    },
+    {
+      "id": "feed",
+      "type": "backend",
+      "label": "proceso feed",
+      "sublabel": "cmd/feed/main.go · señales",
+      "tag": "Ctrl-C = salida 0",
+      "pos": [40, 160],
+      "size": [200, 64],
+      "sources": [{ "path": "client/cmd/feed/main.go", "line": 21, "end_line": 33 }]
+    },
+    {
+      "id": "dispatch",
+      "type": "backend",
+      "label": "cli.Run",
+      "sublabel": "subcomando + flags",
+      "tag": "uso inválido = 2",
+      "pos": [40, 300],
+      "size": [200, 64],
+      "sources": [
+        { "path": "client/internal/cli/cli.go", "line": 22, "end_line": 58 },
+        { "path": "client/internal/cli/cli.go", "line": 60, "end_line": 72 }
+      ]
+    },
+    {
+      "id": "watch",
+      "type": "backend",
+      "label": "watch",
+      "sublabel": "conexión sostenida",
+      "tag": "idle 5 min · backoff 1 → 30 s",
+      "pos": [40, 440],
+      "size": [210, 70],
+      "sources": [
+        { "path": "client/internal/cli/watch.go", "line": 52, "end_line": 111 },
+        { "path": "client/internal/cli/watch.go", "line": 245, "end_line": 270 }
+      ]
+    },
+    {
+      "id": "sse",
+      "type": "backend",
+      "label": "sse.Reader",
+      "sublabel": "frames a payloads",
+      "tag": "sólo data: · ignora id/event",
+      "pos": [40, 590],
+      "size": [200, 70],
+      "sources": [{ "path": "client/internal/sse/sse.go", "line": 30, "end_line": 66 }]
+    },
+    {
+      "id": "activity",
+      "type": "backend",
+      "label": "activity",
+      "sublabel": "Event · Parse · Filter.Match",
+      "tag": "8 campos · filtro local",
+      "pos": [40, 740],
+      "size": [210, 70],
+      "sources": [
+        { "path": "client/internal/activity/activity.go", "line": 17, "end_line": 26 },
+        { "path": "client/internal/activity/activity.go", "line": 40, "end_line": 52 },
+        { "path": "client/internal/activity/activity.go", "line": 57, "end_line": 90 }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "backend",
+      "label": "render.Palette",
+      "sublabel": "dos líneas · ANSI/OSC 8",
+      "pos": [40, 890],
+      "size": [190, 70],
+      "sources": [
+        { "path": "client/internal/render/render.go", "line": 30, "end_line": 54 },
+        { "path": "client/internal/render/render.go", "line": 56, "end_line": 79 }
+      ]
+    },
+    {
+      "id": "stdout",
+      "type": "external",
+      "label": "stdout",
+      "sublabel": "eventos y nada más",
+      "tag": "ANSI sólo si es consola",
+      "pos": [40, 1040],
+      "size": [190, 56],
+      "sources": [{ "path": "client/internal/cli/cli.go", "line": 19, "end_line": 21 }]
+    },
+    {
+      "id": "history",
+      "type": "backend",
+      "label": "feed history",
+      "sublabel": "GET /history · --json",
+      "tag": "hoy sólo --json imprime",
+      "pos": [340, 300],
+      "size": [230, 70],
+      "sources": [{ "path": "client/internal/cli/cli.go", "line": 74, "end_line": 130 }]
+    },
+    {
+      "id": "relay",
+      "type": "external",
+      "label": "relay",
+      "sublabel": "GET /stream · GET /history",
+      "tag": "broadcast: manda todo",
+      "pos": [360, 440],
+      "size": [190, 64],
+      "sources": [
+        { "path": "src/relay/stream.controller.ts", "line": 30, "end_line": 38 },
+        { "path": "src/relay/history.controller.ts", "line": 17, "end_line": 23 }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "dev-runs-feed", "from": "dev", "to": "feed", "label": "feed watch", "variant": "emphasis" },
+    { "id": "main-calls-run", "from": "feed", "to": "dispatch", "label": "cli.Run(os.Args[1:])", "variant": "emphasis" },
+    { "id": "dispatch-watch", "from": "dispatch", "to": "watch", "label": "watch()" },
+    { "id": "dispatch-history", "from": "dispatch", "to": "history", "label": "history()" },
+    { "id": "watch-reads", "from": "watch", "to": "sse", "label": "frames.Next()" },
+    { "id": "sse-payload", "from": "sse", "to": "activity", "label": "payload (data:)", "variant": "emphasis" },
+    { "id": "activity-renders", "from": "activity", "to": "render", "label": "Event()" },
+    { "id": "render-writes", "from": "render", "to": "stdout", "label": "dos líneas", "variant": "emphasis" },
+    { "id": "history-writes", "from": "history", "to": "stdout", "label": "JSON crudo" },
+    { "id": "relay-stream", "from": "relay", "to": "watch", "label": "SSE · data:", "variant": "emphasis" },
+    { "id": "history-requests", "from": "history", "to": "relay", "label": "GET /history" }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Contrato de proceso",
+      "items": [
+        "stdout lleva eventos y nada más; banner, avisos y errores van a stderr (cli.go 19-21)",
+        "El interior nunca toca os.Args ni os.Exit: cli.Run recibe args y writers y devuelve el código",
+        "Salidas: 0 éxito o Ctrl-C, 1 error de runtime, 2 error de uso"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "La conexión la sostiene el cliente",
+      "items": [
+        "El parser SSE es propio: sólo data:, multilínea unida con salto de línea (ADR-0007)",
+        "El id: de Nest se ignora: arranca en 0 y no es una posición de reanudación",
+        "El heartbeat del relay es un comentario SSE, y el parser ya los salteaba",
+        "Silencio de 5 min = conexión muerta; backoff 1 → 30 s con jitter y reset por evento válido"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Qué se filtra y qué se escribe",
+      "items": [
+        "Un payload que no parsea se descarta en silencio; un error de stdout sí es fatal",
+        "El filtro local es actor o assignee, la misma regla que /history?user= (ADR-0001)",
+        "--json escribe el payload crudo: re-serializar cambiaría claves, nulls y milisegundos",
+        "El color exige consola real: --no-color, NO_COLOR o un pipe lo apagan"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Todavía falta",
+      "items": [
+        "history sin --json consume el body y no imprime: ticket 07 del CLI",
+        "--group-by-repo se acepta y no tiene efecto todavía",
+        "Sin CI ni binarios publicados: la versión entra por -ldflags y por defecto es dev"
+      ]
+    }
+  ]
+}

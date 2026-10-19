@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 3.1.0">
   <meta name="archify-reader-contract" content="declared-wide-v1">
-  <title>Relay: arquitectura actual (Fase 1) · Diagrama</title>
+  <title>Llamadas entre archivos — CLI en Go · Diagrama</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -5150,17 +5150,17 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
            data-preset-badge-blueprint="PLANO / REV 01"
            data-preset-badge-editorial="EDITORIAL / NOTA DE CAMPO">
         <div class="pulse-dot"></div>
-        <h1>Relay: arquitectura actual (Fase 1)</h1>
+        <h1>Llamadas entre archivos — CLI en Go</h1>
       </div>
     </div>
 
-    <script id="archify-source-evidence-data" type="application/json">{"schemaVersion":1,"verified":true,"repository":{"url":"https://github.com/AG2904/Gitlab-notifier","revision":"5a0a6fba120112afe59bc8348583e7a755061216","shortRevision":"5a0a6fb","label":"AG2904/Gitlab-notifier","href":"https://github.com/AG2904/Gitlab-notifier/tree/5a0a6fba120112afe59bc8348583e7a755061216"},"referenceCount":15,"nodes":{"github":[{"path":".scratch/relay/spec.md","line":7,"endLine":11,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/.scratch/relay/spec.md#L7-L11"}],"ingress":[{"path":"src/relay/ingress.ts","line":4,"endLine":28,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/ingress.ts#L4-L28"},{"path":"src/relay/webhook.controller.ts","line":17,"endLine":31,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/webhook.controller.ts#L17-L31"},{"path":"src/relay/webhook.controller.ts","line":61,"endLine":84,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/webhook.controller.ts#L61-L84"}],"adapter":[{"path":"src/relay/github/to-activity-event.ts","line":5,"endLine":26,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/github/to-activity-event.ts#L5-L26"},{"path":"src/relay/domain/critical.ts","line":12,"endLine":24,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/domain/critical.ts#L12-L24"}],"events":[{"path":"src/relay/activity-events.service.ts","line":49,"endLine":73,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/activity-events.service.ts#L49-L73"},{"path":"src/relay/activity-events.service.ts","line":75,"endLine":91,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/activity-events.service.ts#L75-L91"},{"path":"src/relay/activity-events.service.ts","line":31,"endLine":40,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/activity-events.service.ts#L31-L40"}],"db":[{"path":"src/relay/activity-event.entity.ts","line":4,"endLine":38,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/activity-event.entity.ts#L4-L38"},{"path":"src/app.module.ts","line":9,"endLine":18,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/app.module.ts#L9-L18"}],"live":[{"path":"src/relay/activity-stream.ts","line":5,"endLine":31,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/activity-stream.ts#L5-L31"},{"path":"src/relay/stream.controller.ts","line":24,"endLine":27,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/stream.controller.ts#L24-L27"}],"history":[{"path":"src/relay/history.controller.ts","line":17,"endLine":20,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/src/relay/history.controller.ts#L17-L20"}],"cli":[{"path":"gitlab_feed_architecture.md","line":163,"endLine":167,"href":"https://github.com/AG2904/Gitlab-notifier/blob/5a0a6fba120112afe59bc8348583e7a755061216/gitlab_feed_architecture.md#L163-L167"}]}}</script>
+    <script id="archify-source-evidence-data" type="application/json">{"schemaVersion":1,"verified":true,"repository":{"url":"https://github.com/AG2904/Gitlab-notifier","revision":"4feaa3efe5c5a48fcd62635edc17bfb2b8e63949","shortRevision":"4feaa3e","label":"AG2904/Gitlab-notifier","href":"https://github.com/AG2904/Gitlab-notifier/tree/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949"},"referenceCount":20,"nodes":{"main":[{"path":"client/cmd/feed/main.go","line":19,"endLine":33,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/cmd/feed/main.go#L19-L33"}],"cli":[{"path":"client/internal/cli/cli.go","line":22,"endLine":58,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/cli/cli.go#L22-L58"},{"path":"client/internal/cli/cli.go","line":74,"endLine":130,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/cli/cli.go#L74-L130"},{"path":"client/internal/cli/cli.go","line":164,"endLine":173,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/cli/cli.go#L164-L173"}],"watch":[{"path":"client/internal/cli/watch.go","line":117,"endLine":164,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/cli/watch.go#L117-L164"},{"path":"client/internal/cli/watch.go","line":177,"endLine":199,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/cli/watch.go#L177-L199"},{"path":"client/internal/cli/watch.go","line":213,"endLine":239,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/cli/watch.go#L213-L239"}],"terminal":[{"path":"client/internal/cli/terminal_windows.go","line":18,"endLine":29,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/cli/terminal_windows.go#L18-L29"},{"path":"client/internal/cli/terminal_other.go","line":9,"endLine":12,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/cli/terminal_other.go#L9-L12"}],"sse":[{"path":"client/internal/sse/sse.go","line":23,"endLine":30,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/sse/sse.go#L23-L30"},{"path":"client/internal/sse/sse.go","line":30,"endLine":66,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/sse/sse.go#L30-L66"}],"activity":[{"path":"client/internal/activity/activity.go","line":17,"endLine":26,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/activity/activity.go#L17-L26"},{"path":"client/internal/activity/activity.go","line":40,"endLine":52,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/activity/activity.go#L40-L52"},{"path":"client/internal/activity/activity.go","line":57,"endLine":90,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/activity/activity.go#L57-L90"}],"render":[{"path":"client/internal/render/render.go","line":30,"endLine":54,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/render/render.go#L30-L54"},{"path":"client/internal/render/render.go","line":56,"endLine":79,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/internal/render/render.go#L56-L79"}],"test":[{"path":"client/test/main_test.go","line":24,"endLine":52,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/test/main_test.go#L24-L52"},{"path":"client/test/harness_test.go","line":38,"endLine":96,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/client/test/harness_test.go#L38-L96"}],"relay":[{"path":"src/relay/stream.controller.ts","line":30,"endLine":38,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/src/relay/stream.controller.ts#L30-L38"},{"path":"src/relay/history.controller.ts","line":17,"endLine":23,"href":"https://github.com/AG2904/Gitlab-notifier/blob/4feaa3efe5c5a48fcd62635edc17bfb2b8e63949/src/relay/history.controller.ts#L17-L23"}]}}</script>
     <script id="archify-i18n-data" type="application/json">{"locale":"es","messages":{"viewer.kind.frontend":"Frontend","viewer.kind.backend":"Backend","viewer.kind.database":"Base de datos","viewer.kind.cloud":"Nube","viewer.kind.security":"Seguridad","viewer.kind.messagebus":"Bus de mensajes","viewer.kind.external":"Externo","viewer.kind.neutral":"Neutral","viewer.kind.node":"Nodo","viewer.kind.start":"Inicio","viewer.kind.active":"Activo","viewer.kind.waiting":"En espera","viewer.kind.decision":"Decisión","viewer.kind.success":"Éxito","viewer.kind.failure":"Fallo","viewer.toolbar.actions":"Acciones del diagrama","viewer.theme.toggle.title":"Cambiar tema (T)","viewer.theme.toggle":"Cambiar tema de color","viewer.theme.dark":"Oscuro","viewer.theme.light":"Claro","viewer.preset.choose.title":"Elegir estilo visual (S alterna)","viewer.preset.choose":"Elegir estilo visual","viewer.preset.style":"Estilo","viewer.preset.menu":"Estilo visual","viewer.preset.identity":"Identidad visual","viewer.preset.cycles":"alterna","viewer.preset.classic":"Clásico","viewer.preset.classic.short":"Clásico","viewer.preset.classic.hint":"Predeterminado técnico estable","viewer.preset.flow":"Flujo de señal","viewer.preset.flow.short":"Flujo","viewer.preset.flow.hint":"Presentación con énfasis en el movimiento","viewer.preset.blueprint":"Plano","viewer.preset.blueprint.hint":"Revisión de ingeniería","viewer.preset.editorial":"Editorial","viewer.preset.editorial.hint":"Notas de publicación y lanzamiento","viewer.preset.badge.signalFlow":"FLUJO DE SEÑAL","viewer.preset.badge.blueprint":"PLANO / REV 01","viewer.preset.badge.editorial":"EDITORIAL / NOTA DE CAMPO","viewer.preset.badge.editorialPlate":"ARCHIFY / LÁMINA 04","viewer.preset.current":"Estilo visual: {style}. Elegir estilo visual","viewer.motion.live":"Activa","viewer.motion.still":"Fija","viewer.motion.pause":"Pausar animación","viewer.motion.resume":"Reanudar animación","viewer.motion.reduced":"Animación pausada por la preferencia de movimiento reducido","viewer.motion.hidden":"Animación pausada mientras esta página está oculta","viewer.motion.yielding":"Pausar animación; cediendo a {owner}","viewer.motion.yielding.title":"Vista previa en vivo activada · cediendo a {owner}","viewer.owner.route":"Sonda de ruta","viewer.owner.lens":"Lente semántico","viewer.owner.relationship":"Vista previa de relación","viewer.owner.intent":"Traza de intención","viewer.owner.focus":"enfoque semántico","viewer.owner.legend":"vista previa de la leyenda","viewer.owner.reader":"interacción del lector","viewer.present.enter":"Entrar al modo presentación","viewer.present.enter.title":"Modo presentación (F)","viewer.present.exit":"Salir del modo presentación","viewer.present.exit.title":"Salir del modo presentación (F o Escape)","viewer.present.present":"Presentar","viewer.present.exit.label":"Salir","viewer.export.button":"Exportar","viewer.export.button.title":"Exportar diagrama (E)","viewer.export.diagram":"Exportar diagrama","viewer.export.menu":"Exportar","viewer.export.subtitle":"Salidas portables y limpias","viewer.export.share":"Compartir","viewer.export.shareCard":"Tarjeta para compartir","viewer.export.routeShareCard":"Tarjeta de ruta para compartir","viewer.export.reachShareCard":"Tarjeta de alcance para compartir","viewer.export.copyDiagram":"Copiar diagrama","viewer.export.clipboardPng":"PNG al portapapeles","viewer.export.raster":"Imágenes rasterizadas","viewer.export.image":"Imagen","viewer.export.lossless":"Imagen sin pérdida","viewer.export.compact":"Imagen compacta","viewer.export.modern":"Imagen moderna","viewer.export.vectorMotion":"Vector y movimiento","viewer.export.vectorMotion.heading":"Vector y movimiento","viewer.export.editable":"Vector editable","viewer.export.svg.auto":"SVG · Auto","viewer.export.svg.auto.hint":"Coincide con el tema del host","viewer.export.svg.light":"SVG · Claro","viewer.export.svg.light.hint":"Siempre claro","viewer.export.svg.dark":"SVG · Oscuro","viewer.export.svg.dark.hint":"Siempre oscuro","viewer.export.motion6s":"Movimiento de 6 s","viewer.export.unsupported":"No compatible con este navegador","viewer.export.clipboardUnsupported":"Este navegador no admite escribir imágenes en el portapapeles","viewer.export.clipboardUnsupported.short":"Escritura de imágenes en el portapapeles no admitida en este navegador.","viewer.export.motionUnavailable":"Captura de movimiento no disponible en este navegador","viewer.export.webmUnavailable":"WebM no disponible en este navegador","viewer.export.failed":"Falló la exportación: {message}","viewer.export.unknownVariant":"Variante de tarjeta para compartir desconocida: {variant}","viewer.export.routeRequired":"Traza una ruta antes de exportar una tarjeta de ruta para compartir","viewer.export.reachRequired":"Traza el alcance definido antes de exportar una tarjeta de alcance para compartir","viewer.export.unknown":"desconocido","viewer.export.routeFailed":"Falló la exportación de la tarjeta de ruta para compartir: {message}","viewer.export.reachFailed":"Falló la exportación de la tarjeta de alcance para compartir: {message}","viewer.export.copyFailed":"Error al copiar: {message}","viewer.export.copiedPng":"PNG copiado al portapapeles","viewer.export.downloadedRoute":"Tarjeta de ruta para compartir descargada","viewer.export.downloadedReach":"Tarjeta de alcance para compartir descargada","viewer.export.downloadedWebm":"WebM descargado","viewer.export.recording":"Grabando 6 segundos de movimiento…","viewer.export.card.routeSummary.one":"Ruta: {source} → {target} · {count} paso","viewer.export.card.routeSummary.other":"Ruta: {source} → {target} · {count} pasos","viewer.export.card.reachSummary":"Alcance definido {direction} desde {origin} · {nodes} · {links} · máx {hops}","viewer.export.card.node.one":"{count} nodo","viewer.export.card.node.other":"{count} nodos","viewer.export.card.link.one":"{count} enlace","viewer.export.card.link.other":"{count} enlaces","viewer.export.card.hop.one":"{count} salto","viewer.export.card.hop.other":"{count} saltos","viewer.export.card.routeBadge":"ARCHIFY · RUTA · {hops}","viewer.export.card.reachBadge":"ARCHIFY · ALCANCE {direction}","viewer.export.direction.upstream":"Ascendente","viewer.export.direction.downstream":"Descendente","viewer.export.error.canvasUnavailable":"Lienzo no disponible para {label}","viewer.export.error.contextUnavailable":"Contexto de lienzo 2D no disponible para {label}","viewer.export.error.toBlobUnavailable":"canvas.toBlob no disponible para {label}","viewer.export.error.toBlobNull":"canvas.toBlob no devolvió datos para {label}","viewer.export.error.variantsCombined":"Las variantes de tarjeta para compartir no se pueden combinar","viewer.export.error.viewerState":"La exportación de la tarjeta para compartir no pudo quitar el estado temporal del visor","viewer.export.error.routeState":"La exportación de la tarjeta de ruta no pudo preservar la ruta resuelta de forma segura","viewer.export.error.reachState":"La exportación de la tarjeta de alcance no pudo preservar el alcance definido de forma segura","viewer.export.error.webmRequirements":"La exportación de movimiento WebM requiere una animación de traza y compatibilidad del navegador con MediaRecorder","viewer.export.error.mediaRecorder":"MediaRecorder falló","viewer.export.error.emptyWebm":"MediaRecorder produjo un WebM vacío","viewer.export.error.webmBackground":"No se pudo cargar el fondo SVG para la exportación WebM","viewer.guide.title":"Explorar este sistema","viewer.focus.selectedNodes":"{count} nodos seleccionados","viewer.guide.eyebrow":"Guía del diagrama","viewer.guide.close":"Cerrar la guía del diagrama","viewer.guide.inspecting":"Inspeccionando la semántica compilada","viewer.guide.actions":"Acciones de exploración del diagrama","viewer.guide.find":"Buscar cualquier nodo","viewer.guide.find.hint":"Busca por etiquetas, responsabilidades, tipos e IDs estables.","viewer.guide.route":"Trazar una ruta","viewer.guide.route.aria":"Trazar una ruta dirigida","viewer.guide.route.hint":"Pregunta cómo se conectan dos nodos semánticos en el sentido definido.","viewer.guide.map":"Ver todo el sistema","viewer.guide.map.hint":"Abre el Radar semántico con un viewport en vivo y nodos estables.","viewer.guide.lens":"Comparar tipos semánticos","viewer.guide.lens.hint":"Cuenta roles, revela su tráfico y compara enlaces directos definidos.","viewer.guide.present":"Entrar al modo presentación","viewer.guide.present.hint":"Dale al diagrama en vivo todo el viewport sin cambiar la exportación.","viewer.guide.shortcuts":"Atajos de teclado adicionales","viewer.guide.shortcut.export":"Exportar","viewer.guide.shortcut.theme":"Tema","viewer.guide.shortcut.style":"Estilo","viewer.guide.shortcut.reset":"Restablecer","viewer.guide.shortcut.zoomIn":"Acercar","viewer.guide.shortcut.zoomOut":"Alejar","viewer.guide.shortcut.close":"Cerrar","viewer.guide.credit":"¿Te resulta útil Archify? Una estrella en GitHub ayuda","viewer.guide.star":"Star","viewer.guide.facts":"{nodes} · {relationships}","viewer.guide.fact.node.one":"{count} nodo semántico","viewer.guide.fact.node.other":"{count} nodos semánticos","viewer.guide.fact.relationship.one":"{count} relación","viewer.guide.fact.relationship.other":"{count} relaciones","viewer.guide.open":"Abrir la guía del diagrama","viewer.finder.title":"Buscar un nodo","viewer.finder.close":"Cerrar el buscador de nodos","viewer.finder.placeholder":"Buscar etiquetas o IDs","viewer.finder.search":"Buscar nodos del diagrama","viewer.finder.results":"Nodos del diagrama","viewer.finder.empty":"No hay nodos coincidentes","viewer.finder.result.focus":"Enfocar {label}","viewer.finder.result.routeStart":"Elegir {label} como inicio de la ruta","viewer.finder.result.routeTarget":"Elegir {label} como destino de la ruta, {links}","viewer.finder.status.empty":"No hay nodos coincidentes","viewer.finder.status.count.one":"{count} nodo coincidente","viewer.finder.status.count.other":"{count} nodos coincidentes","viewer.finder.noun.nodes":"nodos","viewer.finder.link.one":"{count} enlace","viewer.finder.link.other":"{count} enlaces","viewer.finder.result.focus.one":"Enfocar {label}, {count} conexión relacionada","viewer.finder.result.focus.other":"Enfocar {label}, {count} conexiones relacionadas","viewer.finder.status.filtered":"{visible} de {available} {noun}","viewer.finder.status.all":"{available} {noun}","viewer.passport.eyebrow":"Pasaporte semántico","viewer.passport.metadata":"Metadatos del nodo","viewer.passport.evidence":"Evidencia de fuente verificada","viewer.passport.verified":"Fuente verificada","viewer.passport.verificationScope":"Verificado contra el Git local en la revisión fijada. No se ha comprobado el acceso remoto.","viewer.passport.reach":"Alcance definido","viewer.passport.reach.trace":"Trazar la alcanzabilidad definida","viewer.passport.upstream":"Ascendente","viewer.passport.downstream":"Descendente","viewer.passport.upstream.trace":"Trazar la alcanzabilidad definida ascendente","viewer.passport.downstream.trace":"Trazar la alcanzabilidad definida descendente","viewer.passport.close":"Cerrar el pasaporte semántico","viewer.passport.move":"Mover el pasaporte semántico. Arrastra, usa las flechas o pulsa Inicio para restablecer.","viewer.passport.copy":"Copiar enlace","viewer.passport.copy.focus":"Copiar enlace al nodo enfocado","viewer.passport.relations":"Relaciones","viewer.passport.relations.show":"Mostrar relaciones conectadas","viewer.passport.relations.hide":"Ocultar relaciones conectadas","viewer.passport.relations.list":"Relaciones conectadas","viewer.passport.copyRelation":"Copiar relación","viewer.passport.copyNode":"Copiar nodo","viewer.passport.copyPinned":"Copiar enlace a la relación fijada","viewer.passport.copySource":"Copiar enlace al nodo de origen","viewer.passport.copy.focused.success":"Enlace del nodo enfocado copiado","viewer.passport.copy.pinned.success":"Enlace de la relación fijada copiado","viewer.passport.copy.focused.failed":"No se pudo copiar el enlace del nodo enfocado","viewer.passport.copy.pinned.failed":"No se pudo copiar el enlace de la relación fijada","viewer.passport.relationship.none":"No hay relaciones conectadas","viewer.passport.relationship.count.one":"{count} relación","viewer.passport.relationship.count.other":"{count} relaciones","viewer.passport.relationship.show.one":"Mostrar {count} relación conectada","viewer.passport.relationship.show.other":"Mostrar {count} relaciones conectadas","viewer.passport.relationship.summary":"{out} salientes · {in} entrantes{loops}","viewer.passport.relationship.loops":" · {count} bucle","viewer.passport.relationship.explorer":"Explorador de relaciones directas","viewer.passport.relationship.help":"Usa las flechas para explorar las relaciones. Pulsa Enter o Espacio para fijar detalles; Escape las borra.","viewer.passport.relationship.loopsBack":"vuelve sobre sí mismo","viewer.passport.relationship.connectsTo":"conecta a","viewer.passport.relationship.connectsFrom":"conecta desde","viewer.passport.relationship.pinned":"Relación fijada · {from} → {to} · {label}","viewer.passport.relationship.inspect":"Inspeccionar relación {index} de {total}: {from} a {to}, {label}. Pulsa Enter para ver detalles.","viewer.passport.relationship.group.out":"Salientes","viewer.passport.relationship.group.in":"Entrantes","viewer.passport.relationship.group.loop":"Bucles propios","viewer.passport.relationship.row":"{group}: {relationship}, {neighbor}","viewer.passport.relationship.direction.out":"SAL →","viewer.passport.relationship.direction.in":"← ENT","viewer.passport.relationship.direction.loop":"BUCLE","viewer.passport.sourceCount.one":"{count} referencia de fuente verificada","viewer.passport.sourceCount.other":"{count} referencias de fuente verificadas","viewer.passport.repository.open":"Abrir la revisión verificada del repositorio {revision}","viewer.passport.source.open":"Abrir la fuente verificada {path} en la revisión {revision}","viewer.passport.source.openLink":"Abrir ↗","viewer.passport.reach.upstream.one":"Trazar {count} nodo definido ascendente","viewer.passport.reach.upstream.other":"Trazar {count} nodos definidos ascendentes","viewer.passport.reach.downstream.one":"Trazar {count} nodo definido descendente","viewer.passport.reach.downstream.other":"Trazar {count} nodos definidos descendentes","viewer.passport.reach.noUpstream":"No hay nodos definidos ascendentes","viewer.passport.reach.noDownstream":"No hay nodos definidos descendentes","viewer.passport.reach.status":"{direction} · {nodes} nodos · {links} enlaces · máx {hops} saltos","viewer.route.eyebrow":"Ruta","viewer.route.start":"Haz clic donde empieza la ruta","viewer.route.start.find":"Buscar inicio","viewer.route.start.find.aria":"Buscar un inicio de ruta","viewer.route.copy":"Copiar enlace","viewer.route.copy.aria":"Copiar enlace a la ruta trazada","viewer.route.clear":"Borrar","viewer.route.clear.aria":"Borrar la sonda de ruta","viewer.route.traced":"Ruta","viewer.route.pickTwo":"Haz clic en dos nodos del diagrama","viewer.route.pickOne":"Haz clic en un nodo del diagrama","viewer.route.controls":"Controles del recorrido de la ruta","viewer.route.previous":"Posición anterior de la ruta","viewer.route.play":"Reproducir el recorrido de la ruta","viewer.route.pause":"Pausar el recorrido de la ruta","viewer.route.replay":"Repetir el recorrido de la ruta","viewer.route.next":"Posición siguiente de la ruta","viewer.route.journey":"Recorrido","viewer.route.pause.label":"Pausar","viewer.route.replay.label":"Repetir","viewer.route.overview":"Vista general","viewer.route.overview.aria":"Mostrar la vista general completa de la ruta","viewer.route.instructions":"Haz clic en un inicio y luego en un final. La ruta sigue las flechas.","viewer.route.destination":"¿Dónde termina la ruta desde {label}?","viewer.route.destination.find":"Buscar destino","viewer.route.destination.find.aria":"Buscar un destino de ruta alcanzable","viewer.route.differentDestination":"Elige un destino diferente","viewer.route.distinct":"Elige dos nodos distintos.","viewer.route.unreachable":"No se llega a {label} desde aquí","viewer.route.unreachable.detail":"No se llega a {target} desde {source} siguiendo las flechas. Elige un nodo resaltado.","viewer.route.start.instructions":"Luego elige el final. Solo se iluminan los nodos alcanzables.","viewer.route.copy.success":"Enlace de la ruta trazada copiado","viewer.route.copy.failed":"No se pudo copiar el enlace de la ruta trazada","viewer.route.position":"Posición de la ruta {index} de {total}: {label}","viewer.route.step":"Paso {index} de {total} · {phase} · {label}","viewer.route.motionRequired":"El recorrido automático requiere la animación Activa","viewer.route.trigger.clear":"Borrar la ruta trazada","viewer.route.overview.status":"{nodes} · {hops} · ruta más corta","viewer.route.overview.node.one":"{count} nodo","viewer.route.overview.node.other":"{count} nodos","viewer.route.overview.hop.one":"{count} paso","viewer.route.overview.hop.other":"{count} pasos","viewer.route.phase.playing":"Reproduciendo","viewer.route.phase.complete":"Completo","viewer.route.phase.inspecting":"Inspeccionando","viewer.route.destination.count.one":"{count} nodo alcanzable está resaltado. Haz clic en él.","viewer.route.destination.count.other":"{count} nodos alcanzables están resaltados. Haz clic en uno.","viewer.route.noOutgoing":"Ninguna flecha sale de este nodo. Bórralo y elige otro inicio.","viewer.route.result.title":"{source} a {target}","viewer.route.finder.source.title":"Elegir el inicio de la ruta","viewer.route.finder.source.placeholder":"Buscar orígenes de ruta","viewer.route.finder.source.empty":"No hay orígenes de ruta coincidentes","viewer.route.finder.source.results":"Nodos que pueden iniciar una ruta","viewer.route.finder.source.noun":"orígenes de ruta","viewer.route.finder.source.badge":"inicio","viewer.route.finder.target.title":"Destino desde {label}","viewer.route.finder.target.placeholder":"Buscar destinos alcanzables","viewer.route.finder.target.empty":"No hay destinos alcanzables coincidentes","viewer.route.finder.target.results":"Destinos de ruta alcanzables","viewer.route.finder.target.noun":"destinos alcanzables","viewer.route.hop.one":"{count} salto","viewer.route.hop.other":"{count} saltos","viewer.lens.eyebrow":"Lente semántico","viewer.lens.title":"Comparar roles del sistema","viewer.lens.close":"Cerrar el lente semántico","viewer.lens.instruction":"Elige hasta dos tipos semánticos. Uno revela su tráfico real; dos comparan solo las relaciones directas definidas.","viewer.lens.kinds":"Tipos semánticos","viewer.lens.choose":"Elige un tipo para inspeccionar sus nodos y las relaciones que lo tocan.","viewer.lens.copy":"Copiar enlace al lente semántico","viewer.lens.clear":"Borrar el lente semántico","viewer.lens.open":"Abrir el lente semántico","viewer.lens.openActive":"Abrir el lente semántico activo","viewer.lens.legend":"Leyenda semántica","viewer.lens.legend.inspect.one":"Inspeccionar {label}, {count} nodo","viewer.lens.legend.inspect.other":"Inspeccionar {label}, {count} nodos","viewer.lens.kind.count.one":"{label}, {count} nodo","viewer.lens.kind.count.other":"{label}, {count} nodos","viewer.lens.compare.one":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} relación directa","viewer.lens.compare.other":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} relaciones directas","viewer.lens.single":"{nodes} · {relationships} · los pares conectados permanecen visibles","viewer.lens.node.one":"{count} nodo {label}","viewer.lens.node.other":"{count} nodos {label}","viewer.lens.relationship.one":"{count} relación en contacto","viewer.lens.relationship.other":"{count} relaciones en contacto","viewer.radar.title":"Radar semántico","viewer.radar.building":"Construyendo la vista general","viewer.radar.openFull":"Abrir el radar semántico completo","viewer.radar.open":"Abrir el radar","viewer.radar.close":"Cerrar el radar semántico","viewer.radar.surface":"Vista general del diagrama. Haz clic en un nodo para enfocarlo, o usa las flechas para desplazarte.","viewer.radar.click":"Clic en el nodo","viewer.radar.drag":"Arrastra para desplazar","viewer.radar.space":"El radar semántico necesita más espacio de MAPA.","viewer.radar.nodes":"Nodos del radar del diagrama semántico","viewer.radar.focus":"Enfocar {label} desde el Radar semántico","viewer.radar.status":"{count} nodos · {viewport}","viewer.radar.fullMap":"{count} nodos · mapa completo","viewer.radar.compacted":"Radar compactado para no tapar el Pasaporte semántico ni los controles de MAPA.","viewer.radar.cancelWaiting":"Cancelar la espera del radar semántico por más espacio de MAPA","viewer.radar.needsSpace":"El radar semántico necesita más espacio de MAPA visible","viewer.radar.viewport.full":"mapa completo","viewer.radar.viewport.width":"{percent}% de ancho","viewer.radar.viewport.scale":"{percent}% del viewport","viewer.nav.controls":"Controles de vista del diagrama","viewer.nav.route":"Trazar una ruta dirigida","viewer.nav.route.title":"Trazar ruta (R)","viewer.nav.route.short":"RUTA","viewer.nav.radar":"Abrir el radar semántico","viewer.nav.radar.title":"Radar semántico (M)","viewer.nav.radar.short":"MAPA","viewer.nav.lens":"Abrir el lente semántico","viewer.nav.lens.title":"Lente semántico (L)","viewer.nav.lens.short":"LENTE","viewer.nav.find":"Buscar un nodo","viewer.nav.find.title":"Buscar un nodo (/)","viewer.outline.title":"Índice de nodos","viewer.rail.show":"Notas e índice","viewer.rail.controls":"Panel lateral","viewer.rail.collapse":"Contraer panel lateral","viewer.rail.bottom":"Mover el panel debajo","viewer.rail.right":"Mover el panel al lado","viewer.nav.guide":"Abrir la guía del diagrama","viewer.nav.guide.title":"Guía del diagrama (?)","viewer.nav.zoomOut":"Alejar","viewer.nav.zoomOut.title":"Alejar (-)","viewer.nav.reset":"Restablecer la vista del diagrama","viewer.nav.reset.title":"Restablecer vista (0)","viewer.nav.read":"LEER","viewer.nav.zoomIn":"Acercar","viewer.nav.zoomIn.title":"Acercar (+)","viewer.nav.camera":"{hint}. Restablecer la vista del diagrama","viewer.nav.camera.title":"{semantic}{hint} · restablecer vista (0)","viewer.nav.camera.semantic":"Cámara semántica activa · ","viewer.nav.level.map":"MAPA","viewer.nav.level.read":"LEER","viewer.nav.level.full":"COMPLETO","viewer.nav.level.auto":"AUTO","viewer.nav.detail.map":"Acerca para revelar las etiquetas de relación y el contexto de los nodos","viewer.nav.detail.read":"Acerca de nuevo para revelar etiquetas y anotaciones","viewer.nav.detail.full":"Detalle completo del diagrama","viewer.intent.summary":"{label}. {out} salientes, {in} entrantes{loops}. {total} conexiones. Pulsa Enter para ver detalles.","viewer.intent.loops":", {count} bucle propio","viewer.common.copied":"Copiado","viewer.common.copyFailed":"Error al copiar","viewer.common.copyLink":"Copiar enlace","viewer.common.clear":"Borrar","viewer.common.close":"Cerrar"}}</script>
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / LÁMINA 04">
-      <svg viewBox="0 0 910 724" role="img" lang="es" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase" data-node-ui="" data-reader-fit="intrinsic-height" data-reader-min-text="7.5" data-reader-primary-text="14">
-        <title id="archify-diagram-title">Relay: arquitectura actual (Fase 1)</title>
+      <svg viewBox="0 0 1040 781" role="img" lang="es" aria-labelledby="archify-diagram-title archify-diagram-description" data-animation="trace" data-preset="classic" data-quality-profile="showcase" data-node-ui="" data-reader-fit="intrinsic-height" data-reader-min-text="7.5" data-reader-primary-text="14">
+        <title id="archify-diagram-title">Llamadas entre archivos — CLI en Go</title>
         <desc id="archify-diagram-description">Un diagrama de arquitectura generado por Archify.</desc>
         <!-- Definitions -->
         <defs>
@@ -5210,171 +5210,202 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <!-- Connection paths (before components for correct z-order) -->
         <g data-graph-role="automatic-crossover" style="--step:0">
-          <path data-graph-role="automatic-crossover-underlay" d="M 125 104 L 125 178" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="github" data-edge-to="ingress" data-edge-label="webhook" data-edge-key="0" data-edge-id="webhook-post" data-composition-points="125,104;125,178" data-composition-crossover="halo" data-composition-independent="true" d="M 125 104 L 125 178" class="a-emphasis" data-animate="edge" style="--step:0" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+          <path data-graph-role="automatic-crossover-underlay" d="M 140 102 L 140 180" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="main" data-edge-to="cli" data-edge-label="cli.Run()" data-edge-key="0" data-edge-id="main-run" data-composition-points="140,102;140,180" data-composition-crossover="halo" data-composition-independent="true" d="M 140 102 L 140 180" class="a-emphasis" data-animate="edge" style="--step:0" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         </g>
         <g data-graph-role="automatic-crossover" style="--step:1">
-          <path data-graph-role="automatic-crossover-underlay" d="M 125 242 L 125 316" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="ingress" data-edge-to="adapter" data-edge-label="payload" data-edge-key="1" data-edge-id="payload-to-adapter" data-composition-points="125,242;125,316" data-composition-crossover="halo" data-composition-independent="true" d="M 125 242 L 125 316" class="a-emphasis" data-animate="edge" style="--step:1" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+          <path data-graph-role="automatic-crossover-underlay" d="M 145 246 L 145 360" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="cli" data-edge-to="watch" data-edge-label="watch()" data-edge-key="1" data-edge-id="run-watch" data-composition-points="145,246;145,360" data-composition-crossover="halo" data-composition-independent="true" d="M 145 246 L 145 360" class="a-emphasis" data-animate="edge" style="--step:1" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         </g>
         <g data-graph-role="automatic-crossover" style="--step:2">
-          <path data-graph-role="automatic-crossover-underlay" d="M 125 380 L 125 454" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="adapter" data-edge-to="events" data-edge-label="evento" data-edge-key="2" data-edge-id="event-out" data-composition-points="125,380;125,454" data-composition-crossover="halo" data-composition-independent="true" d="M 125 380 L 125 454" class="a-emphasis" data-animate="edge" style="--step:2" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+          <path data-graph-role="automatic-crossover-underlay" d="M 234 246 L 234 308 Q 234 316 242 316 L 760 316" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="cli" data-edge-to="relay" data-edge-label="GET /history (net/http)" data-edge-key="2" data-edge-id="run-history" data-composition-points="234,246;234,316;760,316" data-composition-crossover="halo" data-composition-independent="true" d="M 234 246 L 234 308 Q 234 316 242 316 L 760 316" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         </g>
         <g data-graph-role="automatic-crossover" style="--step:3">
-          <path data-graph-role="automatic-crossover-underlay" d="M 125 518 L 125 592" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="events" data-edge-to="db" data-edge-label="INSERT" data-edge-key="3" data-edge-id="insert-row" data-composition-points="125,518;125,592" data-composition-crossover="halo" data-composition-independent="true" d="M 125 518 L 125 592" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+          <path data-graph-role="automatic-crossover-underlay" d="M 250 213 L 420 213" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="cli" data-edge-to="terminal" data-edge-label="colorEnabled()" data-edge-key="3" data-edge-id="run-is-terminal" data-composition-points="250,213;420,213" data-composition-crossover="halo" data-composition-independent="true" d="M 250 213 L 420 213" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         </g>
         <g data-graph-role="automatic-crossover" style="--step:4">
-          <path data-graph-role="automatic-crossover-underlay" d="M 194 454 L 194 406 Q 194 398 202 398 L 360 398" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="events" data-edge-to="live" data-edge-label="si se guardó" data-edge-key="4" data-edge-id="deliver-stored" data-composition-points="194,454;194,398;360,398" data-composition-crossover="halo" data-composition-independent="true" d="M 194 454 L 194 406 Q 194 398 202 398 L 360 398" class="a-emphasis" data-animate="edge" style="--step:4" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+          <path data-graph-role="automatic-crossover-underlay" d="M 250 384.95 L 420 384.95" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="watch" data-edge-to="sse" data-edge-label="NewReader() · Next()" data-edge-key="4" data-edge-id="stream-reads" data-composition-points="250,384.95;420,384.95" data-composition-crossover="halo" data-composition-independent="true" d="M 250 384.95 L 420 384.95" class="a-emphasis" data-animate="edge" style="--step:4" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         </g>
         <g data-graph-role="automatic-crossover" style="--step:5">
-          <path data-graph-role="automatic-crossover-underlay" d="M 194 518 L 194 568 Q 194 576 202 576 L 360 576" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="events" data-edge-to="history" data-edge-label="consulta" data-edge-key="5" data-edge-id="query-history" data-composition-points="194,518;194,576;360,576" data-composition-crossover="halo" data-composition-independent="true" d="M 194 518 L 194 568 Q 194 576 202 576 L 360 576" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+          <path data-graph-role="automatic-crossover-underlay" d="M 234 440 L 234 515 Q 234 523 242 523 L 420 523" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="watch" data-edge-to="activity" data-edge-label="Parse() · Filter.Match()" data-edge-key="5" data-edge-id="stream-parses" data-composition-points="234,440;234,523;420,523" data-composition-crossover="halo" data-composition-independent="true" d="M 234 440 L 234 515 Q 234 523 242 523 L 420 523" class="a-default" data-animate="edge" style="--step:5" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         </g>
         <g data-graph-role="automatic-crossover" style="--step:6">
-          <path data-graph-role="automatic-crossover-underlay" d="M 514 414 L 514 463 Q 514 471 522 471 L 700 471" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="live" data-edge-to="cli" data-edge-label="SSE" data-edge-key="6" data-edge-id="sse-frames" data-composition-points="514,414;514,471;700,471" data-composition-crossover="halo" data-composition-independent="true" d="M 514 414 L 514 463 Q 514 471 522 471 L 700 471" class="a-emphasis" data-animate="edge" style="--step:6" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+          <path data-graph-role="automatic-crossover-underlay" d="M 145 440 L 145 672 Q 145 680 153 680 L 420 680" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="watch" data-edge-to="render" data-edge-label="Palette.Event()" data-edge-key="6" data-edge-id="stream-renders" data-composition-points="145,440;145,680;420,680" data-composition-crossover="halo" data-composition-independent="true" d="M 145 440 L 145 672 Q 145 680 153 680 L 420 680" class="a-default" data-animate="edge" style="--step:6" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         </g>
         <g data-graph-role="automatic-crossover" style="--step:7">
-          <path data-graph-role="automatic-crossover-underlay" d="M 514 560 L 514 511 Q 514 503 522 503 L 700 503" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
-          <path data-edge-from="history" data-edge-to="cli" data-edge-label="JSON" data-edge-key="7" data-edge-id="json-history" data-composition-points="514,560;514,503;700,503" data-composition-crossover="halo" data-composition-independent="true" d="M 514 560 L 514 511 Q 514 503 522 503 L 700 503" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+          <path data-graph-role="automatic-crossover-underlay" d="M 760 348 L 612 348 Q 604 348 604 356 L 604 367" fill="none" stroke="var(--mask)" stroke-width="5.8" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="relay" data-edge-to="sse" data-edge-label="text/event-stream" data-edge-key="7" data-edge-id="frames-arrive" data-composition-points="760,348;604,348;604,367" data-composition-crossover="halo" data-composition-independent="true" d="M 760 348 L 612 348 Q 604 348 604 356 L 604 367" class="a-emphasis" data-animate="edge" style="--step:7" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        </g>
+        <g data-graph-role="automatic-crossover" style="--step:8">
+          <path data-graph-role="automatic-crossover-underlay" d="M 760 68 L 240 68" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="test" data-edge-to="main" data-edge-label="go build ./cmd/feed" data-edge-key="8" data-edge-id="test-builds" data-composition-points="760,68;240,68" data-composition-crossover="halo" data-composition-independent="true" d="M 760 68 L 240 68" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        </g>
+        <g data-graph-role="automatic-crossover" style="--step:9">
+          <path data-graph-role="automatic-crossover-underlay" d="M 760 82 L 282 82 Q 274 82 274 90 L 274 191 Q 274 199 266 199 L 250 199" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="test" data-edge-to="cli" data-edge-label="-X cli.idleTimeoutSetting" data-edge-key="9" data-edge-id="test-injects" data-composition-points="760,82;274,82;274,199;250,199" data-composition-crossover="halo" data-composition-independent="true" d="M 760 82 L 282 82 Q 274 82 274 90 L 274 191 Q 274 199 266 199 L 250 199" class="a-default" data-animate="edge" style="--step:9" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        </g>
+        <g data-graph-role="automatic-crossover" style="--step:10">
+          <path data-graph-role="automatic-crossover-underlay" d="M 880 110 L 880 300" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-edge-from="test" data-edge-to="relay" data-edge-label="fakeRelay (httptest)" data-edge-key="10" data-edge-id="test-fakes" data-composition-points="880,110;880,300" data-composition-crossover="halo" data-composition-independent="true" d="M 880 110 L 880 300" class="a-default" data-animate="edge" style="--step:10" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         </g>
 
         <!-- Components -->
-        <g id="node-github" data-node-id="github" data-node-label="GitHub" tabindex="0" role="button" aria-label="Enfocar GitHub, instancia corporativa, Componente de arquitectura" aria-pressed="false" data-node-kind="external" data-node-sublabel="instancia corporativa" data-node-context="Componente de arquitectura">
-          <title>GitHub · instancia corporativa · Componente de arquitectura</title>
-          <rect x="40" y="40" width="170" height="64" rx="8" class="c-mask"/>
-          <rect x="40" y="40" width="170" height="64" rx="8" class="c-external" data-animate="node" style="--step:0" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(46 46) scale(0.6875)">
+        <g id="node-main" data-node-id="main" data-node-label="cmd/feed/main.go" tabindex="0" role="button" aria-label="Enfocar cmd/feed/main.go, signal.NotifyContext · os.Exit(code), Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="signal.NotifyContext · os.Exit(code)" data-node-tag="version por ldflags" data-node-context="Componente de arquitectura">
+          <title>cmd/feed/main.go · signal.NotifyContext · os.Exit(code) · Componente de arquitectura · version por ldflags</title>
+          <rect x="40" y="40" width="200" height="62" rx="8" class="c-mask"/>
+          <rect x="40" y="40" width="200" height="62" rx="8" class="c-backend" data-animate="node" style="--step:0" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 46) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="140" y="69" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">cmd/feed/main.go</text>
+        <text data-detail="context" x="140" y="85" class="t-muted" font-size="8.8" text-anchor="middle">signal.NotifyContext · os.Exit(code)</text>
+        <text data-detail="fine" x="140" y="94" class="t-backend" font-size="7" text-anchor="middle">version por ldflags</text>
+        </g>
+
+        <g id="node-cli" data-node-id="cli" data-node-label="internal/cli/cli.go" tabindex="0" role="button" aria-label="Enfocar internal/cli/cli.go, Run · history · colorEnabled, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Run · history · colorEnabled" data-node-tag="relayFallback()" data-node-context="Componente de arquitectura">
+          <title>internal/cli/cli.go · Run · history · colorEnabled · Componente de arquitectura · relayFallback()</title>
+          <rect x="40" y="180" width="210" height="66" rx="8" class="c-mask"/>
+          <rect x="40" y="180" width="210" height="66" rx="8" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 186) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="145" y="211" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">internal/cli/cli.go</text>
+        <text data-detail="context" x="145" y="227" class="t-muted" font-size="9" text-anchor="middle">Run · history · colorEnabled</text>
+        <text data-detail="fine" x="145" y="238" class="t-backend" font-size="7" text-anchor="middle">relayFallback()</text>
+        </g>
+
+        <g id="node-watch" data-node-id="watch" data-node-label="internal/cli/watch.go" tabindex="0" role="button" aria-label="Enfocar internal/cli/watch.go, watch · stream · emitter, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="watch · stream · emitter" data-node-tag="idleReader · backoff" data-node-context="Componente de arquitectura">
+          <title>internal/cli/watch.go · watch · stream · emitter · Componente de arquitectura · idleReader · backoff</title>
+          <rect x="40" y="360" width="210" height="80" rx="8" class="c-mask"/>
+          <rect x="40" y="360" width="210" height="80" rx="8" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 366) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="145" y="398" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">internal/cli/watch.go</text>
+        <text data-detail="context" x="145" y="414" class="t-muted" font-size="9" text-anchor="middle">watch · stream · emitter</text>
+        <text data-detail="fine" x="145" y="432" class="t-backend" font-size="7" text-anchor="middle">idleReader · backoff</text>
+        </g>
+
+        <g id="node-terminal" data-node-id="terminal" data-node-label="cli/terminal_windows.go / terminal_other.go" tabindex="0" role="button" aria-label="Enfocar cli/terminal_windows.go / terminal_other.go, isTerminal · SetConsoleMode / ModeCharDevice, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="isTerminal · SetConsoleMode / ModeCharDevice" data-node-tag="build tags: windows / !windows" data-node-context="Componente de arquitectura">
+          <title>cli/terminal_windows.go / terminal_other.go · isTerminal · SetConsoleMode / ModeCharDevice · Componente de arquitectura · build tags: windows / !windows</title>
+          <rect x="420" y="180" width="280" height="66" rx="8" class="c-mask"/>
+          <rect x="420" y="180" width="280" height="66" rx="8" class="c-backend" data-animate="node" style="--step:4" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(426 186) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="560" y="211" class="t-primary" font-size="10.5" font-weight="600" text-anchor="middle">cli/terminal_windows.go / terminal_other.go</text>
+        <text data-detail="context" x="560" y="227" class="t-muted" font-size="9" text-anchor="middle">isTerminal · SetConsoleMode / ModeCharDevice</text>
+        <text data-detail="fine" x="560" y="238" class="t-backend" font-size="7" text-anchor="middle">build tags: windows / !windows</text>
+        </g>
+
+        <g id="node-sse" data-node-id="sse" data-node-label="internal/sse/sse.go" tabindex="0" role="button" aria-label="Enfocar internal/sse/sse.go, NewReader · Next, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="NewReader · Next" data-node-tag="sólo data:" data-node-context="Componente de arquitectura">
+          <title>internal/sse/sse.go · NewReader · Next · Componente de arquitectura · sólo data:</title>
+          <rect x="420" y="367" width="200" height="66" rx="8" class="c-mask"/>
+          <rect x="420" y="367" width="200" height="66" rx="8" class="c-backend" data-animate="node" style="--step:5" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(426 373) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="520" y="398" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">internal/sse/sse.go</text>
+        <text data-detail="context" x="520" y="414" class="t-muted" font-size="9" text-anchor="middle">NewReader · Next</text>
+        <text data-detail="fine" x="520" y="425" class="t-backend" font-size="7" text-anchor="middle">sólo data:</text>
+        </g>
+
+        <g id="node-activity" data-node-id="activity" data-node-label="internal/activity/activity.go" tabindex="0" role="button" aria-label="Enfocar internal/activity/activity.go, Event · Parse · Filter.Match, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Event · Parse · Filter.Match" data-node-tag="when como time.Time" data-node-context="Componente de arquitectura">
+          <title>internal/activity/activity.go · Event · Parse · Filter.Match · Componente de arquitectura · when como time.Time</title>
+          <rect x="420" y="507" width="230" height="66" rx="8" class="c-mask"/>
+          <rect x="420" y="507" width="230" height="66" rx="8" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(426 513) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="535" y="538" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">internal/activity/activity.go</text>
+        <text data-detail="context" x="535" y="554" class="t-muted" font-size="9" text-anchor="middle">Event · Parse · Filter.Match</text>
+        <text data-detail="fine" x="535" y="565" class="t-backend" font-size="7" text-anchor="middle">when como time.Time</text>
+        </g>
+
+        <g id="node-render" data-node-id="render" data-node-label="internal/render/render.go" tabindex="0" role="button" aria-label="Enfocar internal/render/render.go, Palette.Event · badge · subject, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Palette.Event · badge · subject" data-node-context="Componente de arquitectura">
+          <title>internal/render/render.go · Palette.Event · badge · subject · Componente de arquitectura</title>
+          <rect x="420" y="647" width="230" height="66" rx="8" class="c-mask"/>
+          <rect x="420" y="647" width="230" height="66" rx="8" class="c-backend" data-animate="node" style="--step:7" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(426 653) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="535" y="678" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">internal/render/render.go</text>
+        <text data-detail="context" x="535" y="694" class="t-muted" font-size="9" text-anchor="middle">Palette.Event · badge · subject</text>
+        </g>
+
+        <g id="node-test" data-node-id="test" data-node-label="test/" tabindex="0" role="button" aria-label="Enfocar test/, main · harness · e2e, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="main · harness · e2e" data-node-tag="binarios reales + fakeRelay" data-node-context="Componente de arquitectura">
+          <title>test/ · main · harness · e2e · Componente de arquitectura · binarios reales + fakeRelay</title>
+          <rect x="760" y="40" width="240" height="70" rx="8" class="c-mask"/>
+          <rect x="760" y="40" width="240" height="70" rx="8" class="c-backend" data-animate="node" style="--step:8" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(766 46) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="880" y="73" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">test/</text>
+        <text data-detail="context" x="880" y="89" class="t-muted" font-size="9" text-anchor="middle">main · harness · e2e</text>
+        <text data-detail="fine" x="880" y="102" class="t-backend" font-size="7" text-anchor="middle">binarios reales + fakeRelay</text>
+        </g>
+
+        <g id="node-relay" data-node-id="relay" data-node-label="relay" tabindex="0" role="button" aria-label="Enfocar relay, GET /stream · GET /history, Componente de arquitectura" aria-pressed="false" data-node-kind="external" data-node-sublabel="GET /stream · GET /history" data-node-context="Componente de arquitectura">
+          <title>relay · GET /stream · GET /history · Componente de arquitectura</title>
+          <rect x="760" y="300" width="190" height="64" rx="8" class="c-mask"/>
+          <rect x="760" y="300" width="190" height="64" rx="8" class="c-external" data-animate="node" style="--step:3" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(766 306) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="125" y="70" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">GitHub</text>
-        <text data-detail="context" x="125" y="86" class="t-muted" font-size="9" text-anchor="middle">instancia corporativa</text>
-        </g>
-
-        <g id="node-ingress" data-node-id="ingress" data-node-label="Ingreso de webhooks" tabindex="0" role="button" aria-label="Enfocar Ingreso de webhooks, POST / · bytes crudos, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="POST / · bytes crudos" data-node-tag="HMAC-SHA256" data-node-context="Componente de arquitectura">
-          <title>Ingreso de webhooks · POST / · bytes crudos · Componente de arquitectura · HMAC-SHA256</title>
-          <rect x="40" y="178" width="170" height="64" rx="8" class="c-mask"/>
-          <rect x="40" y="178" width="170" height="64" rx="8" class="c-backend" data-animate="node" style="--step:1" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 184) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="125" y="208" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Ingreso de webhooks</text>
-        <text data-detail="context" x="125" y="224" class="t-muted" font-size="9" text-anchor="middle">POST / · bytes crudos</text>
-        <text data-detail="fine" x="125" y="234" class="t-backend" font-size="7" text-anchor="middle">HMAC-SHA256</text>
-        </g>
-
-        <g id="node-adapter" data-node-id="adapter" data-node-label="Adaptador GitHub" tabindex="0" role="button" aria-label="Enfocar Adaptador GitHub, github/ · filtra y normaliza, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="github/ · filtra y normaliza" data-node-tag="2 tipos de evento" data-node-context="Componente de arquitectura">
-          <title>Adaptador GitHub · github/ · filtra y normaliza · Componente de arquitectura · 2 tipos de evento</title>
-          <rect x="40" y="316" width="170" height="64" rx="8" class="c-mask"/>
-          <rect x="40" y="316" width="170" height="64" rx="8" class="c-backend" data-animate="node" style="--step:2" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 322) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="125" y="346" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Adaptador GitHub</text>
-        <text data-detail="context" x="125" y="362" class="t-muted" font-size="9" text-anchor="middle">github/ · filtra y normaliza</text>
-        <text data-detail="fine" x="125" y="372" class="t-backend" font-size="7" text-anchor="middle">2 tipos de evento</text>
-        </g>
-
-        <g id="node-events" data-node-id="events" data-node-label="Servicio de eventos" tabindex="0" role="button" aria-label="Enfocar Servicio de eventos, ActivityEventsService, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="ActivityEventsService" data-node-tag="store + list" data-node-context="Componente de arquitectura">
-          <title>Servicio de eventos · ActivityEventsService · Componente de arquitectura · store + list</title>
-          <rect x="40" y="454" width="170" height="64" rx="8" class="c-mask"/>
-          <rect x="40" y="454" width="170" height="64" rx="8" class="c-backend" data-animate="node" style="--step:3" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 460) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="125" y="484" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Servicio de eventos</text>
-        <text data-detail="context" x="125" y="500" class="t-muted" font-size="9" text-anchor="middle">ActivityEventsService</text>
-        <text data-detail="fine" x="125" y="510" class="t-backend" font-size="7" text-anchor="middle">store + list</text>
-        </g>
-
-        <g id="node-db" data-node-id="db" data-node-label="Archivo SQLite" tabindex="0" role="button" aria-label="Enfocar Archivo SQLite, tabla activity_events, Componente de arquitectura" aria-pressed="false" data-node-kind="database" data-node-sublabel="tabla activity_events" data-node-tag="relay.db" data-node-context="Componente de arquitectura">
-          <title>Archivo SQLite · tabla activity_events · Componente de arquitectura · relay.db</title>
-          <rect x="40" y="592" width="170" height="64" rx="8" class="c-mask"/>
-          <rect x="40" y="592" width="170" height="64" rx="8" class="c-database" data-animate="node" style="--step:4" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(46 598) scale(0.6875)">
-            <ellipse cx="8" cy="4" rx="5" ry="2"/>
-            <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="125" y="622" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Archivo SQLite</text>
-        <text data-detail="context" x="125" y="638" class="t-muted" font-size="9" text-anchor="middle">tabla activity_events</text>
-        <text data-detail="fine" x="125" y="648" class="t-database" font-size="7" text-anchor="middle">relay.db</text>
-        </g>
-
-        <g id="node-live" data-node-id="live" data-node-label="Emisión en vivo" tabindex="0" role="button" aria-label="Enfocar Emisión en vivo, GET /stream · SSE, Componente de arquitectura" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="GET /stream · SSE" data-node-tag="sin historia" data-node-context="Componente de arquitectura">
-          <title>Emisión en vivo · GET /stream · SSE · Componente de arquitectura · sin historia</title>
-          <rect x="360" y="350" width="170" height="64" rx="8" class="c-mask"/>
-          <rect x="360" y="350" width="170" height="64" rx="8" class="c-messagebus" data-animate="node" style="--step:5" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(366 356) scale(0.6875)">
-            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/>
-            <circle cx="5" cy="4.5" r="1" class="sigil-fill"/>
-            <circle cx="10.5" cy="8" r="1" class="sigil-fill"/>
-            <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="445" y="380" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Emisión en vivo</text>
-        <text data-detail="context" x="445" y="396" class="t-muted" font-size="9" text-anchor="middle">GET /stream · SSE</text>
-        <text data-detail="fine" x="445" y="406" class="t-messagebus" font-size="7" text-anchor="middle">sin historia</text>
-        </g>
-
-        <g id="node-history" data-node-id="history" data-node-label="Historial" tabindex="0" role="button" aria-label="Enfocar Historial, GET /history, Componente de arquitectura" aria-pressed="false" data-node-kind="backend" data-node-sublabel="GET /history" data-node-tag="?user=" data-node-context="Componente de arquitectura">
-          <title>Historial · GET /history · Componente de arquitectura · ?user=</title>
-          <rect x="360" y="560" width="170" height="64" rx="8" class="c-mask"/>
-          <rect x="360" y="560" width="170" height="64" rx="8" class="c-backend" data-animate="node" style="--step:6" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(366 566) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="445" y="590" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Historial</text>
-        <text data-detail="context" x="445" y="606" class="t-muted" font-size="9" text-anchor="middle">GET /history</text>
-        <text data-detail="fine" x="445" y="616" class="t-backend" font-size="7" text-anchor="middle">?user=</text>
-        </g>
-
-        <g id="node-cli" data-node-id="cli" data-node-label="CLI (Go)" tabindex="0" role="button" aria-label="Enfocar CLI (Go), Fase 2 · no existe todavía, Componente de arquitectura" aria-pressed="false" data-node-kind="external" data-node-sublabel="Fase 2 · no existe todavía" data-node-context="Componente de arquitectura">
-          <title>CLI (Go) · Fase 2 · no existe todavía · Componente de arquitectura</title>
-          <rect x="700" y="455" width="170" height="64" rx="8" class="c-mask"/>
-          <rect x="700" y="455" width="170" height="64" rx="8" class="c-external" data-animate="node" style="--step:7" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(706 461) scale(0.6875)">
-            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
-            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="785" y="485" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">CLI (Go)</text>
-        <text data-detail="context" x="785" y="501" class="t-muted" font-size="9" text-anchor="middle">Fase 2 · no existe todavía</text>
+          <text data-node-label="" data-detail-anchor="" x="855" y="330" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">relay</text>
+        <text data-detail="context" x="855" y="346" class="t-muted" font-size="9" text-anchor="middle">GET /stream · GET /history</text>
         </g>
 
         <!-- Connection labels -->
-        <g data-detail="context" data-edge-from="github" data-edge-to="ingress" data-edge-label="webhook" data-edge-key="0" data-edge-id="webhook-post">
-          <rect x="75.4" y="134" width="43.6" height="14" rx="3" class="c-mask"/>
-          <text x="97.2" y="144" class="t-edge-emphasis" font-size="8" text-anchor="middle">webhook</text>
+        <g data-detail="context" data-edge-from="main" data-edge-to="cli" data-edge-label="cli.Run()" data-edge-key="0" data-edge-id="main-run">
+          <rect x="80.80000000000001" y="134" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
+          <text x="107.4" y="144" class="t-edge-emphasis" font-size="8" text-anchor="middle">cli.Run()</text>
         </g>
-        <g data-detail="context" data-edge-from="ingress" data-edge-to="adapter" data-edge-label="payload" data-edge-key="1" data-edge-id="payload-to-adapter">
-          <rect x="75.4" y="272" width="43.6" height="14" rx="3" class="c-mask"/>
-          <text x="97.2" y="282" class="t-edge-emphasis" font-size="8" text-anchor="middle">payload</text>
+        <g data-detail="context" data-edge-from="cli" data-edge-to="watch" data-edge-label="watch()" data-edge-key="1" data-edge-id="run-watch">
+          <rect x="95.4" y="296" width="43.6" height="14" rx="3" class="c-mask"/>
+          <text x="117.2" y="306" class="t-edge-emphasis" font-size="8" text-anchor="middle">watch()</text>
         </g>
-        <g data-detail="context" data-edge-from="adapter" data-edge-to="events" data-edge-label="evento" data-edge-key="2" data-edge-id="event-out">
-          <rect x="80.19999999999999" y="410" width="38.8" height="14" rx="3" class="c-mask"/>
-          <text x="99.6" y="420" class="t-edge-emphasis" font-size="8" text-anchor="middle">evento</text>
+        <g data-detail="context" data-edge-from="cli" data-edge-to="relay" data-edge-label="GET /history (net/http)" data-edge-key="2" data-edge-id="run-history">
+          <rect x="436.8" y="296" width="120.39999999999999" height="14" rx="3" class="c-mask"/>
+          <text x="497" y="306" class="t-edge-default" font-size="8" text-anchor="middle">GET /history (net/http)</text>
         </g>
-        <g data-detail="context" data-edge-from="events" data-edge-to="db" data-edge-label="INSERT" data-edge-key="3" data-edge-id="insert-row">
-          <rect x="80.19999999999999" y="548" width="38.8" height="14" rx="3" class="c-mask"/>
-          <text x="99.6" y="558" class="t-edge-default" font-size="8" text-anchor="middle">INSERT</text>
+        <g data-detail="context" data-edge-from="cli" data-edge-to="terminal" data-edge-label="colorEnabled()" data-edge-key="3" data-edge-id="run-is-terminal">
+          <rect x="296.4" y="193" width="77.2" height="14" rx="3" class="c-mask"/>
+          <text x="335" y="203" class="t-edge-default" font-size="8" text-anchor="middle">colorEnabled()</text>
         </g>
-        <g data-detail="context" data-edge-from="events" data-edge-to="live" data-edge-label="si se guardó" data-edge-key="4" data-edge-id="deliver-stored">
-          <rect x="243.2" y="378" width="67.6" height="14" rx="3" class="c-mask"/>
-          <text x="277" y="388" class="t-edge-emphasis" font-size="8" text-anchor="middle">si se guardó</text>
+        <g data-detail="context" data-edge-from="watch" data-edge-to="sse" data-edge-label="NewReader() · Next()" data-edge-key="4" data-edge-id="stream-reads">
+          <rect x="282" y="364.95" width="106" height="14" rx="3" class="c-mask"/>
+          <text x="335" y="374.95" class="t-edge-emphasis" font-size="8" text-anchor="middle">NewReader() · Next()</text>
         </g>
-        <g data-detail="context" data-edge-from="events" data-edge-to="history" data-edge-label="consulta" data-edge-key="5" data-edge-id="query-history">
-          <rect x="252.8" y="556" width="48.4" height="14" rx="3" class="c-mask"/>
-          <text x="277" y="566" class="t-edge-default" font-size="8" text-anchor="middle">consulta</text>
+        <g data-detail="context" data-edge-from="watch" data-edge-to="activity" data-edge-label="Parse() · Filter.Match()" data-edge-key="5" data-edge-id="stream-parses">
+          <rect x="264.4" y="503" width="125.19999999999999" height="14" rx="3" class="c-mask"/>
+          <text x="327" y="513" class="t-edge-default" font-size="8" text-anchor="middle">Parse() · Filter.Match()</text>
         </g>
-        <g data-detail="context" data-edge-from="live" data-edge-to="cli" data-edge-label="SSE" data-edge-key="6" data-edge-id="sse-frames">
-          <rect x="592" y="451" width="30" height="14" rx="3" class="c-mask"/>
-          <text x="607" y="461" class="t-edge-emphasis" font-size="8" text-anchor="middle">SSE</text>
+        <g data-detail="context" data-edge-from="watch" data-edge-to="render" data-edge-label="Palette.Event()" data-edge-key="6" data-edge-id="stream-renders">
+          <rect x="241.5" y="660" width="82" height="14" rx="3" class="c-mask"/>
+          <text x="282.5" y="670" class="t-edge-default" font-size="8" text-anchor="middle">Palette.Event()</text>
         </g>
-        <g data-detail="context" data-edge-from="history" data-edge-to="cli" data-edge-label="JSON" data-edge-key="7" data-edge-id="json-history">
-          <rect x="592" y="483" width="30" height="14" rx="3" class="c-mask"/>
-          <text x="607" y="493" class="t-edge-default" font-size="8" text-anchor="middle">JSON</text>
+        <g data-detail="context" data-edge-from="relay" data-edge-to="sse" data-edge-label="text/event-stream" data-edge-key="7" data-edge-id="frames-arrive">
+          <rect x="558.2" y="337.5" width="91.6" height="14" rx="3" class="c-mask"/>
+          <text x="604" y="347.5" class="t-edge-emphasis" font-size="8" text-anchor="middle">text/event-stream</text>
+        </g>
+        <g data-detail="context" data-edge-from="test" data-edge-to="main" data-edge-label="go build ./cmd/feed" data-edge-key="8" data-edge-id="test-builds">
+          <rect x="449.4" y="48" width="101.2" height="14" rx="3" class="c-mask"/>
+          <text x="500" y="58" class="t-edge-default" font-size="8" text-anchor="middle">go build ./cmd/feed</text>
+        </g>
+        <g data-detail="context" data-edge-from="test" data-edge-to="cli" data-edge-label="-X cli.idleTimeoutSetting" data-edge-key="9" data-edge-id="test-injects">
+          <rect x="209" y="120.5" width="130" height="14" rx="3" class="c-mask"/>
+          <text x="274" y="130.5" class="t-edge-default" font-size="8" text-anchor="middle">-X cli.idleTimeoutSetting</text>
+        </g>
+        <g data-detail="context" data-edge-from="test" data-edge-to="relay" data-edge-label="fakeRelay (httptest)" data-edge-key="10" data-edge-id="test-fakes">
+          <rect x="768" y="198" width="106" height="14" rx="3" class="c-mask"/>
+          <text x="821" y="208" class="t-edge-default" font-size="8" text-anchor="middle">fakeRelay (httptest)</text>
         </g>
 
         <!-- Boundary labels (foreground masks keep routes out of titles) -->
@@ -5382,22 +5413,14 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
         <!-- Legend -->
         <g data-legend="" data-legend-bridge="">
-          <text x="40" y="688" class="t-primary" font-size="12" font-weight="650">Leyenda</text>
-          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Backend" data-legend-x="40" data-legend-baseline="708" data-legend-width="87">
-            <rect x="40" y="699" width="16" height="10" rx="2.5" class="c-backend" stroke-width="1"/>
-            <text x="62" y="708" class="t-muted" font-size="10" font-weight="500">Backend</text>
+          <text x="40" y="745" class="t-primary" font-size="12" font-weight="650">Leyenda</text>
+          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Backend" data-legend-x="40" data-legend-baseline="765" data-legend-width="87">
+            <rect x="40" y="756" width="16" height="10" rx="2.5" class="c-backend" stroke-width="1"/>
+            <text x="62" y="765" class="t-muted" font-size="10" font-weight="500">Backend</text>
           </g>
-          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="Base de datos" data-legend-x="149" data-legend-baseline="708" data-legend-width="124">
-            <rect x="149" y="699" width="16" height="10" rx="2.5" class="c-database" stroke-width="1"/>
-            <text x="171" y="708" class="t-muted" font-size="10" font-weight="500">Base de datos</text>
-          </g>
-          <g data-legend-semantic-kind="messagebus" data-legend-kind="messagebus" data-legend-label="Bus de mensajes" data-legend-x="295" data-legend-baseline="708" data-legend-width="136">
-            <rect x="295" y="699" width="16" height="10" rx="2.5" class="c-messagebus" stroke-width="1"/>
-            <text x="317" y="708" class="t-muted" font-size="10" font-weight="500">Bus de mensajes</text>
-          </g>
-          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="Externo" data-legend-x="453" data-legend-baseline="708" data-legend-width="87">
-            <rect x="453" y="699" width="16" height="10" rx="2.5" class="c-external" stroke-width="1"/>
-            <text x="475" y="708" class="t-muted" font-size="10" font-weight="500">Externo</text>
+          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="Externo" data-legend-x="149" data-legend-baseline="765" data-legend-width="87">
+            <rect x="149" y="756" width="16" height="10" rx="2.5" class="c-external" stroke-width="1"/>
+            <text x="171" y="765" class="t-muted" font-size="10" font-weight="500">Externo</text>
           </g>
         </g>
       </svg>
@@ -5580,48 +5603,50 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
       <div class="card">
         <div class="card-header">
           <div class="card-dot violet"></div>
-          <h3>Puerta de entrada</h3>
+          <h3>Arranque y contrato de proceso</h3>
         </div>
         <ul>
-          <li>HMAC-SHA256 sobre los bytes crudos; sin firma válida responde 401 (ADR-0002)</li>
-          <li>El parser JSON del framework está apagado: parsea el controlador, después de verificar</li>
-          <li>Un payload no crítico o ilegible se acusa y se descarta, nunca se guarda</li>
+          <li>main.go es el único lugar con os.Args, os.Stdout y os.Exit; el interior devuelve el código</li>
+          <li>cli.Run despacha watch y history: cada subcomando parsea su propio flag set</li>
+          <li>stdout: eventos; stderr: banner, avisos de reconexión y errores</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot emerald"></div>
-          <h3>Filtro y forma</h3>
+          <h3>Un frame, un camino</h3>
         </div>
         <ul>
-          <li>Merge a main = acción closed + merged + base.ref main</li>
-          <li>Asignación = assigned, u opened ya asignado, con label bug o feedback</li>
-          <li>Una sola forma de siete campos para el stream y el historial (user story 16)</li>
+          <li>stream() envuelve el body en idleReader y le pasa el lector a sse.Reader</li>
+          <li>emitter.emit() parsea, filtra y elige salida: payload crudo con --json, dos líneas sin él</li>
+          <li>La request del stream la hace watch.go; relay dibuja el otro extremo del cable</li>
+          <li>render depende del tipo activity.Event; el resto de sus llamadas vienen de watch.go</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot cyan"></div>
-          <h3>Entrega e idempotencia</h3>
+          <h3>Dos builds de terminal</h3>
         </div>
         <ul>
-          <li>Entrega at-least-once: X-GitHub-Delivery es columna única de la fila</li>
-          <li>Un reenvío lo rechaza ese índice y se acusa igual que uno nuevo (ADR-0005)</li>
-          <li>El canal en vivo no guarda historia: el que llega tarde recibe lo que viene</li>
+          <li>isTerminal tiene una implementación por build tag; el resto del paquete no cambia</li>
+          <li>En Windows SetConsoleMode prende VT y, si el console lo rechaza, no se emite un escape</li>
+          <li>colorEnabled() apaga el color con --no-color, NO_COLOR, o stdout que no es consola</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot amber"></div>
-          <h3>Todavía falta</h3>
+          <h3>La costura de prueba</h3>
         </div>
         <ul>
-          <li>El CLI en Go (Fase 2): no existe nada en client/</li>
-          <li>CI en GitHub Actions y README (Fase 3)</li>
-          <li>Fixtures sintéticas: no hay una entrega real de GitHub capturada</li>
+          <li>La suite compila dos binarios: uno normal y uno con idleTimeoutSetting=300ms</li>
+          <li>fakeRelay es un httptest que sirve /stream y /history y registra lo pedido</li>
+          <li>Ningún test importa paquetes internos: el proceso es la única costura (ticket 01 del CLI)</li>
+          <li>Los tests verifican que el cliente nunca manda Last-Event-ID</li>
         </ul>
       </div>
     </div>
