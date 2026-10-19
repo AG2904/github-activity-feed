@@ -245,8 +245,8 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 
 ## 7. Qué no está en este mapa
 
-- **El cliente CLI en Go** (Fase 2): todavía no existe nada en `client/`. Los
-  clientes de hoy son `curl`.
+- **El CLI en Go** (Fase 2): tiene su propio mapa en
+  [`docs/cli-flow.md`](cli-flow.md).
 - **CI, README y distribución de binarios** (Fase 3).
 - **La elección de qué repositorios escucha el relay**: se configura del lado de
   GitHub, no acá.

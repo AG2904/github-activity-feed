@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Llamadas entre archivos — CLI en Go",
+    "locale": "es",
+    "output": ".archify/architecture-file-calls-cli-20261019-141819/file-calls.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AG2904/Gitlab-notifier.git",
+      "provider": "github",
+      "revision": "4feaa3efe5c5a48fcd62635edc17bfb2b8e63949"
+    }
+  },
+  "components": [
+    {
+      "id": "main",
+      "type": "backend",
+      "label": "cmd/feed/main.go",
+      "sublabel": "signal.NotifyContext · os.Exit(code)",
+      "tag": "version por ldflags",
+      "pos": [40, 40],
+      "size": [200, 62],
+      "sources": [{ "path": "client/cmd/feed/main.go", "line": 19, "end_line": 33 }]
+    },
+    {
+      "id": "cli",
+      "type": "backend",
+      "label": "internal/cli/cli.go",
+      "sublabel": "Run · history · colorEnabled",
+      "tag": "relayFallback()",
+      "pos": [40, 180],
+      "size": [210, 66],
+      "sources": [
+        { "path": "client/internal/cli/cli.go", "line": 22, "end_line": 58 },
+        { "path": "client/internal/cli/cli.go", "line": 74, "end_line": 130 },
+        { "path": "client/internal/cli/cli.go", "line": 164, "end_line": 173 }
+      ]
+    },
+    {
+      "id": "watch",
+      "type": "backend",
+      "label": "internal/cli/watch.go",
+      "sublabel": "watch · stream · emitter",
+      "tag": "idleReader · backoff",
+      "pos": [40, 360],
+      "size": [210, 80],
+      "sources": [
+        { "path": "client/internal/cli/watch.go", "line": 117, "end_line": 164 },
+        { "path": "client/internal/cli/watch.go", "line": 177, "end_line": 199 },
+        { "path": "client/internal/cli/watch.go", "line": 213, "end_line": 239 }
+      ]
+    },
+    {
+      "id": "terminal",
+      "type": "backend",
+      "label": "cli/terminal_windows.go / terminal_other.go",
+      "sublabel": "isTerminal · SetConsoleMode / ModeCharDevice",
+      "tag": "build tags: windows / !windows",
+      "pos": [420, 180],
+      "size": [280, 66],
+      "sources": [
+        { "path": "client/internal/cli/terminal_windows.go", "line": 18, "end_line": 29 },
+        { "path": "client/internal/cli/terminal_other.go", "line": 9, "end_line": 12 }
+      ]
+    },
+    {
+      "id": "sse",
+      "type": "backend",
+      "label": "internal/sse/sse.go",
+      "sublabel": "NewReader · Next",
+      "tag": "sólo data:",
+      "pos": [420, 367],
+      "size": [200, 66],
+      "sources": [
+        { "path": "client/internal/sse/sse.go", "line": 23, "end_line": 30 },
+        { "path": "client/internal/sse/sse.go", "line": 30, "end_line": 66 }
+      ]
+    },
+    {
+      "id": "activity",
+      "type": "backend",
+      "label": "internal/activity/activity.go",
+      "sublabel": "Event · Parse · Filter.Match",
+      "tag": "when como time.Time",
+      "pos": [420, 507],
+      "size": [230, 66],
+      "sources": [
+        { "path": "client/internal/activity/activity.go", "line": 17, "end_line": 26 },
+        { "path": "client/internal/activity/activity.go", "line": 40, "end_line": 52 },
+        { "path": "client/internal/activity/activity.go", "line": 57, "end_line": 90 }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "backend",
+      "label": "internal/render/render.go",
+      "sublabel": "Palette.Event · badge · subject",
+      "pos": [420, 647],
+      "size": [230, 66],
+      "sources": [
+        { "path": "client/internal/render/render.go", "line": 30, "end_line": 54 },
+        { "path": "client/internal/render/render.go", "line": 56, "end_line": 79 }
+      ]
+    },
+    {
+      "id": "test",
+      "type": "backend",
+      "label": "test/",
+      "sublabel": "main · harness · e2e",
+      "tag": "binarios reales + fakeRelay",
+      "pos": [760, 40],
+      "size": [240, 70],
+      "sources": [
+        { "path": "client/test/main_test.go", "line": 24, "end_line": 52 },
+        { "path": "client/test/harness_test.go", "line": 38, "end_line": 96 }
+      ]
+    },
+    {
+      "id": "relay",
+      "type": "external",
+      "label": "relay",
+      "sublabel": "GET /stream · GET /history",
+      "pos": [760, 300],
+      "size": [190, 64],
+      "sources": [
+        { "path": "src/relay/stream.controller.ts", "line": 30, "end_line": 38 },
+        { "path": "src/relay/history.controller.ts", "line": 17, "end_line": 23 }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "main-run", "from": "main", "to": "cli", "label": "cli.Run()", "variant": "emphasis" },
+    { "id": "run-watch", "from": "cli", "to": "watch", "label": "watch()", "variant": "emphasis" },
+    { "id": "run-history", "from": "cli", "to": "relay", "label": "GET /history (net/http)" },
+    { "id": "run-is-terminal", "from": "cli", "to": "terminal", "label": "colorEnabled()" },
+    { "id": "stream-reads", "from": "watch", "to": "sse", "label": "NewReader() · Next()", "variant": "emphasis" },
+    { "id": "stream-parses", "from": "watch", "to": "activity", "label": "Parse() · Filter.Match()" },
+    { "id": "stream-renders", "from": "watch", "to": "render", "label": "Palette.Event()" },
+    { "id": "frames-arrive", "from": "relay", "to": "sse", "label": "text/event-stream", "variant": "emphasis" },
+    { "id": "test-builds", "from": "test", "to": "main", "label": "go build ./cmd/feed" },
+    { "id": "test-injects", "from": "test", "to": "cli", "label": "-X cli.idleTimeoutSetting" },
+    { "id": "test-fakes", "from": "test", "to": "relay", "label": "fakeRelay (httptest)" }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Arranque y contrato de proceso",
+      "items": [
+        "main.go es el único lugar con os.Args, os.Stdout y os.Exit; el interior devuelve el código",
+        "cli.Run despacha watch y history: cada subcomando parsea su propio flag set",
+        "stdout: eventos; stderr: banner, avisos de reconexión y errores"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Un frame, un camino",
+      "items": [
+        "stream() envuelve el body en idleReader y le pasa el lector a sse.Reader",
+        "emitter.emit() parsea, filtra y elige salida: payload crudo con --json, dos líneas sin él",
+        "La request del stream la hace watch.go; relay dibuja el otro extremo del cable",
+        "render depende del tipo activity.Event; el resto de sus llamadas vienen de watch.go"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Dos builds de terminal",
+      "items": [
+        "isTerminal tiene una implementación por build tag; el resto del paquete no cambia",
+        "En Windows SetConsoleMode prende VT y, si el console lo rechaza, no se emite un escape",
+        "colorEnabled() apaga el color con --no-color, NO_COLOR, o stdout que no es consola"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "La costura de prueba",
+      "items": [
+        "La suite compila dos binarios: uno normal y uno con idleTimeoutSetting=300ms",
+        "fakeRelay es un httptest que sirve /stream y /history y registra lo pedido",
+        "Ningún test importa paquetes internos: el proceso es la única costura (ticket 01 del CLI)",
+        "Los tests verifican que el cliente nunca manda Last-Event-ID"
+      ]
+    }
+  ]
+}
