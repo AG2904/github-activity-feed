@@ -1,9 +1,13 @@
 # Probar el relay a mano
 
-Guía para levantar el relay y verificar con las manos lo que los tickets 01 a 07
-construyeron. La suite e2e prueba lo mismo de forma automatizada (48 casos sobre la
+Guía para levantar el relay y verificar con las manos lo que los tickets 01 a 09
+construyeron. La suite e2e prueba lo mismo de forma automatizada (54 casos sobre la
 misma seam HTTP); esto es para cuando querés ver el cable, probar un payload propio o
 mostrarle el sistema a alguien.
+
+Este documento cubre el relay solo. El CLI tiene su propia guía en
+[`docs/cli-testing.md`](cli-testing.md), y el recorrido de punta a punta —relay y CLI
+juntos— en [`docs/end-to-end-testing.md`](end-to-end-testing.md).
 
 ## Antes de empezar: las dos ideas que hay que entender
 

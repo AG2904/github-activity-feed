@@ -286,3 +286,7 @@ El relay tiene que estar arriba; los pasos para levantarlo y alimentarlo con un
 webhook firmado están en [`docs/manual-testing.md`](manual-testing.md). En Windows el
 binario es `feed.exe`, y `go test ./...` compila los dos binarios de prueba y tarda
 alrededor de dos minutos.
+
+El recorrido a mano, caso por caso y con la salida esperada de cada uno, está en
+[`docs/cli-testing.md`](cli-testing.md); el del sistema completo —relay y CLI
+hablándose— en [`docs/end-to-end-testing.md`](end-to-end-testing.md).
