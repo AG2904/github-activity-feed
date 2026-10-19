@@ -284,7 +284,8 @@ autenticación. Si querés el circuito real, hace falta una URL pública.
 
 1. Expuesto el relay: `cloudflared tunnel --url http://localhost:3000` (o `ngrok http
    3000`). Ninguna de las dos está instalada en esta máquina, así que este paso **no
-   está verificado acá**.
+   está verificado acá**. El concepto, las opciones y los costos están en
+   [`docs/exposing-the-relay.md`](exposing-the-relay.md).
 2. En el repo de prueba: **Settings → Webhooks → Add webhook**.
    - Payload URL: la URL del túnel, terminada en `/`.
    - Content type: `application/json`.
