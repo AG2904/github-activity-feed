@@ -80,16 +80,33 @@ En local, el mismo `/stream` manda cabeceras en 0,02 s y el heartbeat de 15 s ll
 
 No es una limitación genérica de SSE en Cloudflare: un servidor Node que imita las
 cabeceras del relay y su formato de frame (`\n` inicial incluido) **sí** streamea por el
-mismo túnel, con el primer byte a 1,4 s. La diferencia está en cómo Nest/Express escribe
-el `@Sse` cuando cloudflared está en el medio; la causa raíz no está identificada.
+mismo túnel, con el primer byte a 1,4 s.
 
-Qué hacer con eso:
+### Qué se descartó
 
-- **El CLI no necesita el túnel.** Dejalo apuntando a `http://localhost:3000`: el túnel
-  existe sólo para GitHub → relay, y así el sistema completo funciona. Es el modo que
-  esta guía recomienda y el que está verificado de punta a punta hasta `/history`.
-- **Si necesitás el CLI remoto**, un túnel con nombre u otro proveedor queda por
-  verificar; con Quick Tunnels, hoy no.
+| Hipótesis | Cómo se probó | Resultado |
+| --- | --- | --- |
+| el primer chunk de 1 byte que escribe Nest | servidor Node que escribe `\n` solo y después frames | streamea |
+| las cabeceras del relay (`no-store`, `Pragma`, `X-Accel`, `x-powered-by`) | servidor Node que las copia exactas | streamea |
+| QUIC | `cloudflared --protocol http2` | 0 bytes en 42 s |
+| el writer de Nest | proxy Node que lee `/stream` del relay y reescribe cada chunk | 0 bytes; su log confirma que sí recibe los chunks |
+| un error de cloudflared | `--loglevel debug` | el request se proxea a `localhost:4000/stream`, sin error de body |
+
+El proxy es el dato que más cierra: si el writer fuera la causa, reescribir los mismos
+bytes habría funcionado. **La causa raíz queda sin identificar.**
+
+### Cómo se arregla (o no)
+
+| Opción | Costo | Confianza | Comentario |
+| --- | --- | --- | --- |
+| CLI contra `localhost` | cero | **verificado** | el túnel existe sólo para GitHub → relay |
+| desplegar el relay (VPS, Fly, Render) | un servidor | alta, sin verificar acá | bypassa cloudflared por completo |
+| ngrok | cuenta gratis | media, sin verificar | otra data plane; puede comportarse distinto |
+| reescribir el SSE del relay | tiempo | **descartada** | el proxy Node con los mismos bytes falla igual |
+
+Para desarrollo, la primera. Si necesitás el CLI remoto, la segunda: un deploy chico es
+más predecible que perseguir un bug de quick tunnels, que además no tienen garantía de
+nada.
 
 Dos medidas del mismo día que conviene tener presentes: la URL tarda **56–64 segundos**
 en ser alcanzable después de aparecer (si disparás antes, falla en silencio), y un
@@ -196,5 +213,6 @@ cuenta, `protocol=quic`, `POST /` firmado por la URL pública con `200` y su fil
 también se midió acá, no se copió de ningún lado.
 
 **No verificado acá**: `ngrok` (no está instalado y su free tier pide cuenta), los
-túneles con nombre, y el comportamiento desde una instancia corporativa. Para esas
-filas, el documento repite lo que publica cada proveedor, con fecha.
+túneles con nombre, el deploy del relay como alternativa de arreglo, y el
+comportamiento desde una instancia corporativa. Para esas filas, el documento repite lo
+que publica cada proveedor, con fecha.
