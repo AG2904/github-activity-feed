@@ -65,18 +65,32 @@ límite propio que no tiene que ver con eso.
 
 ## Un límite conocido: el stream en vivo
 
-Medido en esta máquina en octubre de 2026 contra un Quick Tunnel (`cloudflared`
+Medido en dos máquinas y dos redes distintas en octubre de 2026 —una de ellas doméstica,
+sin firewall corporativo ni proxy de por medio—, contra un Quick Tunnel (`cloudflared`
 2026.10.1, `protocol=quic`, sin cuenta y sin administrador):
 
 | Ruta por la URL pública | Resultado |
 | --- | --- |
-| `POST /` firmado | `200 {"received":true}` y la fila aparece en `/history` |
-| `GET /history` | `200` con el body correcto |
+| `POST /` firmado | `200 {"received":true}` en ~0,3 s y la fila aparece en `/history` |
+| `GET /history` | `200` con el body correcto, en ~0,7 s |
 | `GET /stream` | cabeceras en ~0,4 s y después **cero bytes, indefinidamente** |
+
+La fila del `POST` no es sólo de `curl`: un webhook **real** de GitHub apuntando a la URL
+del túnel entregó su `ping` inicial y después un `issues` con `200 {"received":true}` en
+*Recent Deliveries*, y la fila apareció en `/history` local y público.
 
 Se reprodujo con `curl` y con el binario del CLI, con una ráfaga de 40 eventos (unos
 12 KB) y con `STREAM_HEARTBEAT_MS=1000` para descartar un problema de silencio inicial.
-En local, el mismo `/stream` manda cabeceras en 0,02 s y el heartbeat de 15 s llega.
+En local, el mismo `/stream` manda cabeceras en 0,02 s y entrega el evento y los
+heartbeats (306 bytes en 45 s).
+
+Que se reproduzca en una red doméstica importa: **no es un firewall corporativo, ni un
+proxy de la empresa, ni la máquina**. En esa segunda red el webhook público y `/history`
+funcionan igual de bien; lo único que no atraviesa es el stream.
+
+Y los bytes no quedan retenidos: matando el relay con el stream abierto desde la URL
+pública, el cliente recibe `0` bytes igual, no un volcado final. El edge descarta, no
+bufferiza para liberar después.
 
 No es una limitación genérica de SSE en Cloudflare: un servidor Node que imita las
 cabeceras del relay y su formato de frame (`\n` inicial incluido) **sí** streamea por el
@@ -91,9 +105,14 @@ mismo túnel, con el primer byte a 1,4 s.
 | QUIC | `cloudflared --protocol http2` | 0 bytes en 42 s |
 | el writer de Nest | proxy Node que lee `/stream` del relay y reescribe cada chunk | 0 bytes; su log confirma que sí recibe los chunks |
 | un error de cloudflared | `--loglevel debug` | el request se proxea a `localhost:4000/stream`, sin error de body |
+| el protocolo del cliente | el mismo `/stream` por HTTP/2 (`ALPN=h2`, `200 text/event-stream`) | 0 bytes en 25 s |
+| el túnel puntual | un segundo Quick Tunnel simultáneo, otro hostname | mismo `200` y 0 bytes |
+| buffering que se libera al cerrar | matar el origin con el stream abierto desde la URL pública | 0 bytes; no hay volcado final |
 
 El proxy es el dato que más cierra: si el writer fuera la causa, reescribir los mismos
-bytes habría funcionado. **La causa raíz queda sin identificar.**
+bytes habría funcionado. **La causa raíz queda sin identificar.** Lo único que el patrón
+sugiere es el edge: los dos Quick Tunnels de la prueba resolvieron al mismo colo
+(`CF-Ray` con sufijo `MIA`), así que un edge distinto no está descartado.
 
 ### Cómo se arregla (o no)
 
@@ -108,8 +127,8 @@ Para desarrollo, la primera. Si necesitás el CLI remoto, la segunda: un deploy 
 más predecible que perseguir un bug de quick tunnels, que además no tienen garantía de
 nada.
 
-Dos medidas del mismo día que conviene tener presentes: la URL tarda **56–64 segundos**
-en ser alcanzable después de aparecer (si disparás antes, falla en silencio), y un
+Dos medidas que conviene tener presentes: la URL tarda en ser alcanzable después de
+aparecer —de 8 s a 64 s según la corrida, y si disparás antes falla en silencio—, y un
 túnel de cinco ni siquiera resolvió DNS. Los quick tunnels no tienen garantía de
 disponibilidad, y eso está en sus términos.
 
@@ -204,13 +223,22 @@ por repo es de lectura (`/history?repository=`, `feed watch --repo`).
 
 ## Qué se verificó acá
 
-**Verificado en esta máquina**: el relay local, el webhook firmado, el stream y el CLI,
-documentados en [`docs/manual-testing.md`](manual-testing.md) y
+**Verificado en dos máquinas y dos redes** (una doméstica, sin firewall corporativo): el
+relay local, el webhook firmado, el stream y el CLI, documentados en
+[`docs/manual-testing.md`](manual-testing.md) y
 [`docs/end-to-end-testing.md`](end-to-end-testing.md). Con `cloudflared` 2026.10.1
 bajado al temporal y sin permisos de administrador: creación del Quick Tunnel sin
 cuenta, `protocol=quic`, `POST /` firmado por la URL pública con `200` y su fila en
-`/history`, y `GET /history` público. El límite del stream de la sección anterior
-también se midió acá, no se copió de ningún lado.
+`/history`, y `GET /history` público. En la segunda red se repitió lo mismo, más el
+stream por HTTP/2 y un segundo túnel simultáneo. El límite del stream de la sección
+anterior también se midió acá, en las dos redes, no se copió de ningún lado.
+
+**Con un webhook de GitHub de verdad**: eventos `Issues` y `Pull requests`, secret
+compartido con el relay. Un issue con label `bug` y assignee llegó como `200
+{"received":true}`, quedó en `/history` y el `feed watch` lo pintó desde el stream
+local. Ojo al probar: crear un issue **ya asignado** produce dos entregas críticas
+(`opened` y `assigned`) y por lo tanto dos filas y dos líneas, porque el relay las
+recibe como deliveries distintos.
 
 **No verificado acá**: `ngrok` (no está instalado y su free tier pide cuenta), los
 túneles con nombre, el deploy del relay como alternativa de arreglo, y el
