@@ -26,28 +26,38 @@ El CLI tiene dos caminos de lectura y un arranque. Todo lo demás son hojas.
 terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │ cli.Run(os.Args[1:], stdout, stderr, version)
                               ▼
-                         internal/cli/cli.go · watch()
-                              │ flags: --relay --user --repo --no-color --json
+                         internal/cli/cli.go · cli.Run
+                              │ despacho: watch | history
+                              │ flags de watch: --relay --user --repo
+                              │                 --backfill <n> --no-color --json
                               │ banner "watching <url>" en stderr
                               ▼
-                         internal/cli/watch.go · watch()  ── loop ──▶ stream()
-                              │                                        │ GET /stream
-                              │                                        │ (sin Last-Event-ID)
-                              │                                        ▼
-                              │                                   idleReader(5 min)
-                              │                                        │
-                              │                                        ▼
-                              │                                   internal/sse · Reader.Next()
-                              │                                        │ data:
-                              │                                        ▼
-                              │                                   emitter.emit()
-                              │                                     ├─ activity.Parse()
-                              │                                     ├─ Filter.Match()
-                              │                                     └─ render.Palette.Event()
-                              │                                        │  o payload crudo (--json)
-                              │                                        ▼
-                              │                                   stdout: el evento
-                              └── error ──▶ backoff 1 → 30 s ──▶ reconecta
+                         internal/cli/watch.go · watch()
+                              │
+                              │ primera conexión, si --backfill > 0:
+                              │   GET /history ──▶ backfill() ──▶ N filas
+                              │   oldest first, el vivo sigue debajo
+                              ▼
+                              loop
+                              │
+                              ├──▶ stream() ──▶ GET /stream (sin Last-Event-ID)
+                              │                      │
+                              │                      ▼
+                              │                 idleReader(5 min)
+                              │                      │
+                              │                      ▼
+                              │                 internal/sse · Reader.Next()
+                              │                      │ data:
+                              │                      ▼
+                              │                 emitter.emit()
+                              │                   ├─ activity.Parse()
+                              │                   ├─ Filter.Match()
+                              │                   └─ render.Palette.Event()
+                              │                      │  o payload crudo (--json)
+                              │                      ▼
+                              │                 stdout: el evento
+                              │
+                              └── error ──▶ backoff 1 → 30 s ──▶ vuelve al loop
 ```
 
 Paso por paso:
@@ -66,49 +76,67 @@ Paso por paso:
    `http://localhost:3000`), escribe `watching <url>` en stderr y construye el
    `emitter` con las tres decisiones que no cambian durante la vida del proceso:
    paleta con o sin color, `--json` sí o no, y el filtro local.
-4. **`stream()`** hace el `GET /stream` y sostiene esa conexión hasta que se cae, el
+4. **`backfill()`** corre antes de la primera conexión y pide `/history` una sola vez,
+   para que la terminal no arranque en blanco: imprime hasta `--backfill <n>` filas
+   (diez por defecto, `0` lo apaga) y las pinta oldest first, así el vivo sigue abajo
+   en orden. Es best-effort a propósito: un relay que todavía no contesta deja la
+   terminal como está y la conexión siguiente vuelve a preguntar; un historial que sí
+   se leyó no se pide dos veces.
+5. **`stream()`** hace el `GET /stream` y sostiene esa conexión hasta que se cae, el
    relay se calla, o el contexto se cancela. Envuelve el body en un `idleReader` y le
    pasa el lector al parser SSE. Cada `Next()` produce un payload y `emitter.emit()`
    decide qué hacer con él.
-5. **`emitter.emit()`** es la política de salida en un solo lugar. Un payload que no
+6. **`emitter.emit()`** es la política de salida en un solo lugar. Un payload que no
    parsea **no es un error**: devuelve `false` y se ignora, porque un frame roto no
    puede tumbar un watch. Un evento que el filtro descarta devuelve `true`: prueba
    que la conexión está viva, aunque no se escriba nada. Si pasa, se imprime el
    payload tal cual (`--json`) o se renderiza en dos líneas.
-6. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
+7. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
    cualquier punto, el retorno es `0`, no un error.
-7. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
+8. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
    jitter de hasta un cuarto del paso. Una conexión que entregó al menos un evento
    válido resetea la escalera, así que un corte aislado vuelve a esperar un segundo.
 
 ### 1.2 Una consulta al historial (`feed history`)
 
 ```
-terminal ──feed history──▶ cli.Run ──▶ internal/cli/cli.go · history()
-                                            │ flags: --relay --json --group-by-repo
-                                            │ target = relay + "/history"
-                                            ▼
-                                       GET /history ──▶ relay
-                                            │ 200
-                                            ▼
-                                       --json:        io.Copy(stdout, body)
-                                       sin --json:    io.Copy(io.Discard, body)
+terminal ──feed history──▶ cli.Run ──▶ internal/cli/history.go · history()
+                                             │ flags: --relay --user --repo
+                                             │        --no-color --json | --group-by-repo
+                                             │ target = relay + "/history"
+                                             ▼
+                                        GET /history ──▶ relay
+                                             │ 200
+                                             ▼
+                                        storedHistory() ──▶ emitter.shown()
+                                             │  filtra --user y --repo, descarta
+                                             │  las filas que no parsean
+                                             ▼
+                                        --json:           writeArray, bytes crudos
+                                        --group-by-repo:  render.Palette.Grouped
+                                        sin flag:         render.Palette.Event,
+                                                          newest first
 ```
 
 - **`history()`** hace una sola request y no reintenta: es una pregunta puntual, no
   una suscripción. Un `200` es éxito; cualquier otro código es un error con el status
   en stderr y salida `1`.
-- **`--json` escribe el body crudo**, byte por byte, sin tocar `encoding/json`. Es la
-  forma de ver el contrato del relay sin que el CLI opine sobre él.
+- **El filtro es local, igual que en el stream.** `--user` y `--repo` se aplican sobre
+  las filas que el relay sirvió, con el mismo `Filter`, así que `feed watch --user` y
+  `feed history --user` no pueden contestar cosas distintas sobre la misma persona.
+- **`--json` escribe un array de payloads crudos**, uno por evento mostrado, en el
+  orden en que el relay los sirvió. Cada elemento son los bytes que llegaron: nada se
+  re-serializa, así que claves, `null` y el timestamp en milisegundos quedan intactos.
+  El filtro igual se aplica, porque crudo es una forma y no una exención.
+- **Sin `--json` el historial se pinta**, newest first: el mismo `Palette.Event()` de
+  dos líneas que usa el vivo, porque un reporte se lee desde arriba.
+- **`--group-by-repo`** reemplaza ese render por uno agrupado: un encabezado por
+  repositorio en orden alfabético, y las filas sin repositorio al final, sin encabezado,
+  porque no hay nombre que inventarles (ADR-0010).
 - **`--json` y `--group-by-repo` juntos son un error de uso** (`2`), con el
   razonamiento en el mensaje: agrupar es presentación, y la salida cruda no tiene.
-- **Hoy, sin `--json`, `history` no imprime nada**: consume el body y lo descarta.
-  Es el ticket 07 del cliente, todavía abierto; `--group-by-repo` se acepta y no
-  tiene efecto todavía. Lo que sí funciona es `--json`, y es lo que usa la suite.
-- **No existe `--user` en `history`** todavía. El filtro por usuario que el relay ya
-  sirve (`/history?user=`) todavía no tiene bandera en el CLI.
 
 ### 1.3 Códigos de salida
 
@@ -206,16 +234,21 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 | Archivo | Responsabilidad | Quién lo llama |
 | --- | --- | --- |
 | `client/cmd/feed/main.go` | proceso: señales, `cli.Run`, código de salida | la shell |
-| `client/internal/cli/cli.go` | `Run`, despacho, `history`, `--version`, `colorEnabled` | `main.go` |
+| `client/internal/cli/cli.go` | `Run`, despacho, `--version`, `colorEnabled` | `main.go` |
 | `client/internal/cli/watch.go` | `watch`, `stream`, `emitter`, `idleReader`, `backoff` | `cli.Run` |
+| `client/internal/cli/history.go` | `history`: una request, filtro local y las tres salidas | `cli.Run` |
+| `client/internal/cli/backfill.go` | `backfill`: la primera conexión llena la pantalla | `watch` |
+| `client/internal/cli/stored.go` | `storedHistory`, `storedRows`, `emitter.shown` | `history`, `backfill` |
 | `client/internal/cli/terminal_windows.go` | `isTerminal` + VT en Windows | `colorEnabled` |
 | `client/internal/cli/terminal_other.go` | `isTerminal` en el resto | `colorEnabled` |
 | `client/internal/sse/sse.go` | `Reader.Next()`: frames SSE a payloads | `watch.go` |
-| `client/internal/activity/activity.go` | `Event`, `Parse()`, `Filter.Match()` | `watch.go` |
-| `client/internal/render/render.go` | `Palette.Event()`: dos líneas de terminal | `watch.go` |
+| `client/internal/activity/activity.go` | `Event`, `Parse()`, `Filter.Match()` | `watch.go`, `history.go` |
+| `client/internal/render/render.go` | `Palette.Event()`: dos líneas de terminal | `watch.go`, `history.go` |
+| `client/internal/render/grouped.go` | `Palette.Grouped()`: el reporte por repositorio | `history.go` |
 | `client/test/main_test.go` | compila los dos binarios con `-ldflags` | `go test` |
 | `client/test/harness_test.go` | `fakeRelay`: `httptest` con `/stream` y `/history` | toda la suite |
 | `client/test/e2e_test.go` | los casos, siempre a través del binario | `go test` |
+| `client/tools/build.mjs` | `cli:build` y `cli:dist`: los cuatro binarios con versión | `npm run` |
 
 ## 6. Los invariantes que no se ven en el código
 
@@ -235,8 +268,9 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 - **El filtro local no inventa reglas.** Es actor-o-assignee, igual que el historial.
   Cambiar una de las dos lados exige cambiar la otra.
 - **No hay reanudación.** El `id:` se ignora y no se persiste cursor; el hueco entre
-  reconexiones lo llena `feed history`, no el stream. Fingir continuidad sería mentir
-  sobre lo que el relay guarda.
+  reconexiones lo llena `feed history`, no el stream. `--backfill` no cambia eso:
+  cubre la primera conexión, no las siguientes, y nunca pide el historial dos veces.
+  Fingir continuidad sería mentir sobre lo que el relay guarda.
 - **El interior no conoce el proceso.** `cli.Run` recibe `args`, `stdout` y `stderr`
   como parámetros y devuelve el código; nadie adentro toca `os.Args` ni `os.Exit`.
 - **Cero dependencias.** Si `go.mod` gana un `require`, alguien rompió ADR-0008 sin
@@ -247,10 +281,11 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 ## 7. Qué no está en este mapa
 
 - **El relay** — tiene su propio mapa en [`docs/relay-flow.md`](relay-flow.md).
-- **Los tickets abiertos del CLI**: 06 (la primera conexión no es una pantalla en
-  blanco), 07 (el historial renderizado y sus filtros) y 08 (distribuir el binario).
-  Hoy `history` sin `--json` no imprime, y no hay binarios publicados.
-- **CI y release**: no hay workflow que compile el cliente ni publique artefactos.
+- **Los tickets del CLI**: 06 (la primera conexión no es una pantalla en blanco),
+  07 (el historial renderizado y sus filtros) y 08 (distribuir el binario) están
+  cerrados, y este mapa describe el resultado. Lo que sigue abierto es CI.
+- **CI y release**: no hay workflow que compile el cliente ni publique artefactos;
+  los binarios salen de `npm run cli:dist`, a mano.
 - **El detalle de los colores**: qué badge toma qué color vive en
   `render.Palette.badge()`; no cambia el flujo.
 - **La elección del relay**: `--relay` o `$RELAY_URL`; el resto de la configuración
@@ -267,18 +302,23 @@ funciona:
    un cambio de frame rompe todo.
 3. `client/internal/cli/watch.go` — el camino completo: request, lectura, emisión,
    reconexión y backoff.
-4. `client/internal/render/render.go` — cómo un evento se vuelve dos líneas.
-5. `client/internal/cli/cli.go` — el despacho, los códigos de salida y el contrato de
+4. `client/internal/cli/history.go` y `stored.go` — el otro camino: una request, el
+   mismo filtro y las tres salidas.
+5. `client/internal/render/render.go` — cómo un evento se vuelve dos líneas.
+6. `client/internal/cli/cli.go` — el despacho, los códigos de salida y el contrato de
    stdout/stderr.
-6. `client/test/e2e_test.go` y `harness_test.go` — la suite es la especificación
+7. `client/test/e2e_test.go` y `harness_test.go` — la suite es la especificación
    ejecutable: un `fakeRelay` de `httptest` y binarios reales, nunca imports internos.
 
 Para ejecutarlo con tus ojos, desde `client/`:
 
 ```bash
-go build -o feed ./cmd/feed
+go build -o feed ./cmd/feed          # o, desde la raíz: npm run cli:build
 ./feed watch   --relay http://localhost:3000
+./feed watch   --relay http://localhost:3000 --backfill 20
+./feed history --relay http://localhost:3000
 ./feed history --relay http://localhost:3000 --json
+./feed history --relay http://localhost:3000 --group-by-repo
 GOOS=windows GOARCH=amd64 go build -o feed.exe ./cmd/feed
 ```
 

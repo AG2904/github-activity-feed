@@ -319,9 +319,10 @@ entera.
 
 ## Qué no prueba este documento
 
-- **El historial renderizado** y sus filtros en el CLI: ticket 07, abierto. Hoy
-  `feed history` sólo sirve `--json`.
-- **La distribución del binario**: ticket 08. Sólo se prueba la versión inyectada.
+- **El historial renderizado** y sus filtros en el CLI: ticket 07, cerrado, pero esta
+  guía no lo recorre; se queda en la salida cruda contra el relay real.
+- **La distribución del binario**: ticket 08, cerrado; acá sólo se prueba la versión
+  inyectada, no los cuatro binarios de `cli:dist`.
 - **CI**: no hay workflow que corra las dos suites.
 - **Retención y purgado**: los eventos se guardan indefinidamente.
 - **Varios relays o alta disponibilidad**: hay un proceso y un archivo SQLite.

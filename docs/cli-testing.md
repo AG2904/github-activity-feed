@@ -267,13 +267,15 @@ El archivo es **el body de `/history`, byte por byte**. Comparalo:
 
 El orden es `id DESC` —lo más nuevo primero— y no hay paginación.
 
-Dos límites que hoy son reales y conviene no confundir con un error de configuración:
+El CLI hace el mismo pedido y filtra localmente. Lo que conviene saber al probarlo a
+mano:
 
-- **`./feed history` sin `--json` no imprime nada.** Consume el body y lo descarta:
-  el renderizado del historial es el ticket 07, todavía abierto. Sale con `0`.
-- **`--group-by-repo` sola tampoco imprime nada**, y no tiene efecto todavía. Sólo se
-  rechaza cuando la combinás con `--json`.
-- **No existe `--user` en `history`**: el relay ya lo soporta, el CLI todavía no.
+- **`./feed history` sin `--json` pinta el historial**, newest first, con las mismas
+  dos líneas que el vivo. Sale con `0`.
+- **`--group-by-repo` agrupa** por repositorio en orden alfabético, y deja al final,
+  sin encabezado, las filas sin repositorio.
+- **`--user` y `--repo` filtran localmente**, con la misma regla que `watch`: un
+  `--user` que no es actor ni assignee no aparece en el reporte.
 
 ## Paso 11 — El color
 
