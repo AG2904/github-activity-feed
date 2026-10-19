@@ -23,15 +23,17 @@ function reportedAssignees(issue: Record<string, unknown>): string[] {
 
 /**
  * A critical event exactly when GitHub reports an issue carrying a critical
- * label with someone on it — either the update that adds an assignee, or a
- * creation that already arrives assigned.
+ * label with someone on it, on the action that assigns.
  *
- * The action is half the trigger, never all of it. `opened` qualifies only when
- * the issue comes with someone already assigned, which is what makes an
- * assignment at creation count the same as a later one; and an action that
- * merely touches an already-assigned issue — labeling it, editing it — is not
- * an assignment and produces nothing, because reporting it would attribute to
- * the labeler an assignment they never made.
+ * `opened` is deliberately not a trigger. GitHub delivers `assigned` and
+ * `opened` as two deliveries for an issue created already assigned, and both
+ * report the same assignee set, so accepting `opened` stores one happening
+ * twice. The creation is not lost: it is read from the `assigned` delivery that
+ * arrives with it.
+ *
+ * An action that merely touches an already-assigned issue — labeling it,
+ * editing it — is not an assignment and produces nothing, because reporting it
+ * would attribute to the labeler an assignment they never made.
  *
  * GitHub's `issues` payload carries no `changes` object and no
  * previous-assignee set, so there is nothing to diff: the reported state is the
@@ -50,7 +52,7 @@ export function isCriticalAssignment(payload: unknown): payload is IssuePayload 
   if (!(loginOf(webhook.assignee) ?? reportedAssignees(issue)[0])) {
     return false;
   }
-  return webhook.action === 'assigned' || webhook.action === 'opened';
+  return webhook.action === 'assigned';
 }
 
 /**
@@ -63,8 +65,9 @@ export function toAssignmentEvent(payload: IssuePayload): ActivityEvent | undefi
   const issue = asRecord(payload?.issue) ?? {};
   const actor = loginOf(payload?.sender);
   // GitHub timestamps the assignment on the issue itself, not on the event: a
-  // later assignment moves `updated_at`, a creation carries `created_at`.
-  const when = isoInstant(payload?.action === 'opened' ? issue.created_at : issue.updated_at);
+  // later assignment moves `updated_at`, and so does the one that lands at
+  // creation, which is why `created_at` is no longer read here.
+  const when = isoInstant(issue.updated_at);
   const subject = issue.title;
   const url = issue.html_url;
   if (!actor || !when || typeof subject !== 'string' || typeof url !== 'string') {

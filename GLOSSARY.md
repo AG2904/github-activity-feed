@@ -39,6 +39,7 @@ _Avoid_: merge, integration
 
 **Assignment**:
 An issue gaining an assignee, whether at creation or later. It is the trigger for the issue-side critical event, gated on the issue carrying a `bug` or `feedback` label at that moment.
+_Note_: GitHub reports it as the `assigned` action in both cases. The `opened` delivery that accompanies a creation arriving already assigned reports the same happening, not a second one (ADR-0012).
 _Avoid_: allocation, ownership
 
 **Repository**:

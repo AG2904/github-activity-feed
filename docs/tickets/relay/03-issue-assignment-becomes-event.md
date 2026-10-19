@@ -116,3 +116,12 @@ oxlint          → 0 warnings, 0 errors
 - **Dos casos de fixture del ticket 04 se adelantaron acá** (issue sin label
   crítica, payload malformado), porque son el mismo predicado que este ticket
   introduce. El ticket 04 conserva el barrido negativo completo.
+
+## Corrección posterior
+
+- **2026-10-19**: el ticket 10 (ADR-0012) retiró a `opened` como trigger de
+  asignación. Este ticket lo aceptaba cuando el issue llegaba ya asignado, pero
+  GitHub manda `assigned` y `opened` como dos deliveries del mismo hecho, y el
+  relay lo guardaba dos veces. La creación sigue almacenándose, por su delivery
+  `assigned`. El resto de los criterios de acá siguen vigentes; ver
+  `docs/tickets/relay/10-an-assignment-at-creation-counts-once.md`.

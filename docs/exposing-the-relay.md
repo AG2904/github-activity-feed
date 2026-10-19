@@ -236,9 +236,9 @@ anterior también se midió acá, en las dos redes, no se copió de ningún lado
 **Con un webhook de GitHub de verdad**: eventos `Issues` y `Pull requests`, secret
 compartido con el relay. Un issue con label `bug` y assignee llegó como `200
 {"received":true}`, quedó en `/history` y el `feed watch` lo pintó desde el stream
-local. Ojo al probar: crear un issue **ya asignado** produce dos entregas críticas
-(`opened` y `assigned`) y por lo tanto dos filas y dos líneas, porque el relay las
-recibe como deliveries distintos.
+local. Esa misma corrida destapó que crear un issue **ya asignado** producía dos
+filas; el relay ahora cuenta sólo la delivery `assigned` como asignación, así que
+la creación entra una vez (ADR-0012).
 
 **No verificado acá**: `ngrok` (no está instalado y su free tier pide cuenta), los
 túneles con nombre, el deploy del relay como alternativa de arreglo, y el

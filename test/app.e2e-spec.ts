@@ -426,7 +426,10 @@ describe('Relay HTTP seam', () => {
       });
     });
 
-    it('stores an issue created with an assignee and carrying feedback', async () => {
+    it('ignores an issue opened with an assignee, because the assignment arrives on its own', async () => {
+      // GitHub delivers `assigned` and `opened` for the same creation, so
+      // `opened` cannot also mean "assigned": doing both stores the happening
+      // twice, once per field it read the assignee set from.
       await postWebhook(
         JSON.stringify(
           issuePayload({
@@ -435,12 +438,31 @@ describe('Relay HTTP seam', () => {
             // carries who is on it.
             assignee: undefined,
             issue: {
-              html_url: 'https://github.com/AG2904/github-activity-feed/issues/72',
+              html_url: issueUrl(72),
               labels: [{ name: 'feedback' }],
               created_at: '2026-10-15T08:30:00Z',
-              // Deliberately later than created_at, so that reading the wrong
-              // field for `when` fails this test instead of passing by luck.
               updated_at: '2026-10-15T09:45:00Z',
+            },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).not.toContainEqual(expect.objectContaining({ url: issueUrl(72) }));
+    });
+
+    it('stores the assignment GitHub sends for an issue created already assigned', async () => {
+      // The other half of the pair above: the creation is not lost, it is read
+      // from the delivery that reports the assignment.
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            action: 'assigned',
+            issue: {
+              html_url: issueUrl(76),
+              labels: [{ name: 'feedback' }],
+              created_at: '2026-10-15T08:30:00Z',
+              updated_at: '2026-10-15T08:30:01Z',
             },
           }),
         ),
@@ -453,8 +475,8 @@ describe('Relay HTTP seam', () => {
           actor: 'lucia.gomez',
           assignee: 'tomas.ferreira',
           labels: ['feedback'],
-          url: 'https://github.com/AG2904/github-activity-feed/issues/72',
-          when: '2026-10-15T08:30:00.000Z',
+          url: issueUrl(76),
+          when: '2026-10-15T08:30:01.000Z',
         }),
       );
     });
