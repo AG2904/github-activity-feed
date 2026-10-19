@@ -10,6 +10,12 @@ dist/
 /tsc.cmd
 /typeorm.cmd
 
+# client build artifacts (go build -o feed ./cmd/feed)
+client/feed
+client/feed.exe
+client/feed-idle
+client/feed-idle.exe
+
 # archify: the diagrams are versioned, the per-run evidence receipts are not
 # (they carry absolute machine paths and are regenerated on every finalize)
 .archify/**/*.finalize.json
