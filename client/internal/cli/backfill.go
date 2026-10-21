@@ -15,7 +15,7 @@ import (
 // history that was read is never asked for a second time. The one error it
 // returns is a failure to write the feed, because a closed stdout ends the
 // watch wherever it happens.
-func backfill(ctx context.Context, url string, out emitter, limit int) (filled bool, err error) {
+func backfill(ctx context.Context, url string, out *emitter, limit int) (filled bool, err error) {
 	if limit <= 0 {
 		return true, nil
 	}

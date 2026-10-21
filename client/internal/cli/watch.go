@@ -132,7 +132,7 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 // context is cancelled. It reports whether a valid event arrived, which is
 // what resets the backoff even when the filter discards it, and calls connected
 // once the response is accepted.
-func stream(ctx context.Context, target string, out emitter, connected func()) (eventSeen bool, err error) {
+func stream(ctx context.Context, target string, out *emitter, connected func()) (eventSeen bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
 		return false, &fatalError{err}
@@ -186,18 +186,21 @@ func stream(ctx context.Context, target string, out emitter, connected func()) (
 
 // emitter is the output policy in one value: what this client shows, and how it
 // is written. It never decides what the relay sends; only what reaches stdout.
+// It also remembers whether a card was already printed, because the blank line
+// between cards belongs to the sequence and not to one card.
 type emitter struct {
 	out     io.Writer
 	palette render.Palette
 	json    bool
 	filter  activity.Filter
+	printed bool
 }
 
 // newEmitter builds the output policy both commands hand their events to: the
 // same stdout, the same colour rule, the same filter, so `--no-color` and
 // `--user` cannot come to mean different things in the two of them.
-func newEmitter(stdout io.Writer, noColor bool, filter activity.Filter) emitter {
-	return emitter{
+func newEmitter(stdout io.Writer, noColor bool, filter activity.Filter) *emitter {
+	return &emitter{
 		out:     stdout,
 		palette: render.Palette{Color: colorEnabled(stdout, noColor)},
 		filter:  filter,
@@ -209,7 +212,7 @@ func newEmitter(stdout io.Writer, noColor bool, filter activity.Filter) emitter 
 // valid, and that is what resets the backoff — and shown when this client shows
 // it. It is the one place the acceptance rule is written down, so the live
 // stream and the backfill cannot disagree about it.
-func (e emitter) accept(payload string) (event activity.Event, valid, shown bool) {
+func (e *emitter) accept(payload string) (event activity.Event, valid, shown bool) {
 	event, err := activity.Parse([]byte(payload))
 	if err != nil {
 		return activity.Event{}, false, false
@@ -219,22 +222,33 @@ func (e emitter) accept(payload string) (event activity.Event, valid, shown bool
 
 // paint writes one event of the feed. It is the only place the feed reaches
 // stdout as feed lines, so the backfill and the live stream cannot disagree
-// about --json, about colour, or about the rendered form.
-func (e emitter) paint(payload string, event activity.Event) error {
+// about --json, about colour, or about the rendered form. The blank line that
+// separates cards is written here, before a card that is not the first, so the
+// last event never leaves a gap under the prompt and `--json` never gets one.
+func (e *emitter) paint(payload string, event activity.Event) error {
 	if e.json {
 		// Re-marshalling would reorder keys and could reshape null or the
 		// millisecond timestamp.
 		_, err := io.WriteString(e.out, payload+"\n")
 		return err
 	}
-	return e.palette.Event(e.out, event, time.Now())
+	if e.printed {
+		if _, err := io.WriteString(e.out, "\n"); err != nil {
+			return err
+		}
+	}
+	if err := e.palette.Event(e.out, event, time.Now()); err != nil {
+		return err
+	}
+	e.printed = true
+	return nil
 }
 
 // group writes the report shape: the same events, one section per repository.
 // Raw output has no grouped form — the flags refuse the combination — so there
 // is nothing to decide here, only to hand over, the same way paint hands over a
 // feed line. Every byte the CLI puts on stdout starts here.
-func (e emitter) group(events []activity.Event, now time.Time) error {
+func (e *emitter) group(events []activity.Event, now time.Time) error {
 	return e.palette.Grouped(e.out, events, now)
 }
 

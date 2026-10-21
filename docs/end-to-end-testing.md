@@ -152,8 +152,8 @@ Send-Webhook $otherRepo  'pull_request' 'e2e-4'   # 5. otro repositorio
 
 ### Qué mirar
 
-En el CLI, exactamente dos líneas por caso 1 y 4 —la duplicada no se imprime— y una
-más por el merge de `other/repo`:
+En el CLI, exactamente una línea JSON por caso 1 y 4 —la duplicada no se imprime— y
+una más por el merge de `other/repo`:
 
 ```text
 {"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix memory leak in parser component","assignee":null,"labels":["bug"],…}
@@ -191,7 +191,7 @@ Mandá un merge nuevo a `AG2904/github-activity-feed` con `X-GitHub-Delivery: e2
 El relay entregó el evento a ambos. El filtro es local, y por eso `feed watch --user`
 puede cambiar sin tocar el relay.
 
-## Paso 6 — El renderizado de dos líneas
+## Paso 6 — El renderizado en tarjetas
 
 El mismo evento, con el CLI en modo terminal:
 
@@ -200,16 +200,21 @@ El mismo evento, con el CLI en modo terminal:
 ```
 
 ```text
-[pr.merged] Fix memory leak in parser component
-AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42
-[issue.assigned] tomas.ferreira Ship the onboarding checklist
-AG2904/github-activity-feed · lucia.gomez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7
+maria.perez merged into main
+  Fix memory leak in parser component
+  AG2904/github-activity-feed · [bug] · 2h ago
+  https://github.com/AG2904/github-activity-feed/pull/42
+
+lucia.gomez assigned to tomas.ferreira
+  Ship the onboarding checklist
+  AG2904/github-activity-feed · [bug] · 2h ago
+  https://github.com/AG2904/github-activity-feed/issues/7
 ```
 
 `2h ago` es relativo al momento de imprimir: con el `when` del ejemplo vas a ver los
-días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. En una terminal de
-verdad, sin `--no-color`, el badge va coloreado y el título es un hyperlink OSC 8 al
-`url`; en un pipe no hay un solo escape.
+días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. La cuarta línea, la
+URL, existe sólo sin hyperlink: en una terminal con color el título es el link OSC 8 y
+la tarjeta se queda en tres líneas. En un pipe no hay un solo escape.
 
 ## Paso 7 — Lo que no se repite
 

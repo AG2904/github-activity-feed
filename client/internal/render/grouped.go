@@ -1,7 +1,6 @@
 package render
 
 import (
-	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -12,39 +11,68 @@ import (
 
 // Grouped writes the feed as a per-repository report: one header per repository
 // in alphabetical order, each with the events that happened in it in the order
-// they were given, and the repository left out of the per-event lines because
-// the header already named it. Groups are separated by a blank line.
+// they were given, and the repository left out of the per-event cards because
+// the header already named it. A blank line separates the header from its first
+// card, each card from the next, and one group from another.
+//
+// This is the one place that owns its own spacing: a report is a whole document
+// rather than a sequence of cards, so the emitter that separates feed cards has
+// nothing to interleave here.
 //
 // An event with no repository — a row stored before the column existed
 // (ADR-0010) — has nothing to be grouped under and no name worth inventing for
-// it, so it is written last, after a blank line, without a header: its second
-// line already says everything there is to say about where it happened.
+// it, so it is written last, without a header: its context line already says
+// everything there is to say about where it happened.
 func (p Palette) Grouped(w io.Writer, events []activity.Event, now time.Time) error {
 	groups, unnamed := byRepository(events)
 
 	for i, group := range groups {
 		if i > 0 {
-			fmt.Fprintln(w)
+			if err := blank(w); err != nil {
+				return err
+			}
 		}
 		if err := p.heading(w, group.repository); err != nil {
 			return err
 		}
-		for _, event := range group.events {
-			if err := p.line(w, event, now, withoutRepository); err != nil {
+		if err := blank(w); err != nil {
+			return err
+		}
+		for j, event := range group.events {
+			if j > 0 {
+				if err := blank(w); err != nil {
+					return err
+				}
+			}
+			if err := p.card(w, event, now, withoutRepository); err != nil {
 				return err
 			}
 		}
 	}
 
 	if len(unnamed) > 0 && len(groups) > 0 {
-		fmt.Fprintln(w)
+		if err := blank(w); err != nil {
+			return err
+		}
 	}
-	for _, event := range unnamed {
-		if err := p.line(w, event, now, withRepository); err != nil {
+	for i, event := range unnamed {
+		if i > 0 {
+			if err := blank(w); err != nil {
+				return err
+			}
+		}
+		if err := p.card(w, event, now, withRepository); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// blank writes the empty line a report uses to separate its parts, and reports
+// a closed stdout like every other write does.
+func blank(w io.Writer) error {
+	_, err := io.WriteString(w, "\n")
+	return err
 }
 
 // repositoryGroup is one section of a report: the repository the header names
@@ -88,6 +116,6 @@ func (p Palette) heading(w io.Writer, repository string) error {
 	if p.Color {
 		repository = bold + repository + reset
 	}
-	_, err := fmt.Fprintln(w, repository)
+	_, err := io.WriteString(w, repository+"\n")
 	return err
 }

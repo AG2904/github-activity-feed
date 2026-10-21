@@ -105,7 +105,9 @@ what happened whether or not the terminal shows colour.
 - **Separation belongs to the emitter, not the renderer.** The renderer paints one
   card; the emitter writes the blank line *before* every card except the first. That
   keeps the last event from leaving a gap under the prompt, and keeps the renderer
-  stateless. `--json` gets no blank lines.
+  stateless for the feed. The grouped report is the documented exception: it renders a
+  whole document — header included — in one call, so `Palette.Grouped` owns its own
+  spacing and the emitter has nothing to interleave there. `--json` gets no blank lines.
 - **Colour by role, 16-colour ANSI**, applied to `render.Palette`:
 
   | Element | Colour | Why |

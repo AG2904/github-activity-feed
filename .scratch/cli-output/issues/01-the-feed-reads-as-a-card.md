@@ -4,7 +4,7 @@
 [spec](../spec.md) describes — a sentence, the title, the context — including labels,
 human relative time and the blank line between events.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A merge renders three lines: `actor merged into main`, the title on its own line,
       and `repository · [labels] · time`.
@@ -40,3 +40,9 @@ human relative time and the blank line between events.
   in agreement, and it is also how the last card avoids leaving a gap under the prompt.
   And `into main` is derived from the type, because the event carries no branch; the
   spec records the condition under which that stops being honest.
+- 2026-10-21: Done. La tarjeta, las etiquetas, `yesterday` y la separación están en
+  `main`, con el registro de evidencia en
+  [`docs/tickets/cli-output/01-the-feed-reads-as-a-card.md`](../../../docs/tickets/cli-output/01-the-feed-reads-as-a-card.md).
+  La suite del cliente quedó en verde (`go test ./...`, 38.2 s) y el relay en 55/55. El
+  ticket 02 toma desde acá: este cambio no trae la paleta por rol, sólo el peso del
+  título y su hyperlink.

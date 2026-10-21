@@ -144,6 +144,93 @@ func TestWatchPaintsTheAssigneeOnAnAssignment(t *testing.T) {
 	}
 }
 
+func TestWatchRendersAnAssignmentWithoutAnAssignee(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "issue.assigned",
+		"AG2904/github-activity-feed", "lucia.gomez", "Ship the onboarding checklist", nil,
+		`["bug"]`, "https://github.com/AG2904/github-activity-feed/issues/7"))
+
+	want := "lucia.gomez assigned\n" +
+		"  Ship the onboarding checklist\n" +
+		"  AG2904/github-activity-feed · [bug] · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want an assignment with no destination %q", got, want)
+	}
+}
+
+func TestWatchRendersEveryLabel(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "issue.assigned",
+		"AG2904/github-activity-feed", "lucia.gomez", "Ship the onboarding checklist",
+		ptr("tomas.ferreira"), `["bug","feedback"]`,
+		"https://github.com/AG2904/github-activity-feed/issues/7"))
+
+	want := "lucia.gomez assigned to tomas.ferreira\n" +
+		"  Ship the onboarding checklist\n" +
+		"  AG2904/github-activity-feed · [bug, feedback] · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want every label between the brackets %q", got, want)
+	}
+}
+
+func TestWatchRendersALegacyRowWithoutARepository(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	// An empty repository is the null of a row stored before the column existed
+	// (ADR-0010): the context line starts at the label instead of inventing one.
+	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "pr.merged",
+		"", "maria.perez", "Legacy merge", nil, `["bug"]`,
+		"https://github.com/AG2904/github-activity-feed/pull/1"))
+
+	want := "maria.perez merged into main\n" +
+		"  Legacy merge\n" +
+		"  [bug] · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/pull/1\n"
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want a context line starting at the label %q", got, want)
+	}
+}
+
+func TestRelativeTimeSaysYesterday(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	relay.send(t, mergedFrame(time.Now().Add(-30*time.Hour)))
+	relay.send(t, mergedFrame(time.Now().Add(-50*time.Hour)))
+
+	want := "maria.perez merged into main\n" +
+		"  Fix memory leak in parser component\n" +
+		"  AG2904/github-activity-feed · yesterday\n" +
+		"  https://github.com/AG2904/github-activity-feed/pull/42\n" +
+		"\n" +
+		"maria.perez merged into main\n" +
+		"  Fix memory leak in parser component\n" +
+		"  AG2904/github-activity-feed · 2d ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want yesterday and then two days %q", got, want)
+	}
+}
+
 func TestWatchDiscardsFramesItCannotUseAndKeepsReading(t *testing.T) {
 	relay := newFakeRelay(t)
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL)
@@ -161,7 +248,7 @@ func TestWatchDiscardsFramesItCannotUseAndKeepsReading(t *testing.T) {
 	relay.send(t, mergedFrame(when))
 	relay.send(t, assignedFrame(when))
 
-	want := mergedOutput + assignedOutput
+	want := cards(mergedOutput, assignedOutput)
 	feed.waitStdout(t, want)
 
 	if got := feed.stdout.String(); got != want {
@@ -340,7 +427,7 @@ func TestReconnectDoesNotReplayPrintedEvents(t *testing.T) {
 	}
 
 	relay.send(t, assignedFrame(when))
-	want := mergedOutput + assignedOutput
+	want := cards(mergedOutput, assignedOutput)
 	feed.waitStdout(t, want)
 
 	if got := feed.stdout.String(); got != want {
@@ -396,7 +483,7 @@ func TestWatchFiltersByActor(t *testing.T) {
 	relay.send(t, mergedFrame(when))
 	relay.send(t, assignedFrame(when))
 
-	want := mergedOutput + assignedOutput
+	want := cards(mergedOutput, assignedOutput)
 	feed.waitStdout(t, want)
 
 	if got := feed.stdout.String(); got != want {
@@ -449,8 +536,10 @@ func TestWatchFiltersCombineAsConjunction(t *testing.T) {
 	relay.send(t, assignedFrame(when))
 	relay.send(t, eventFrame(when, "issue.assigned", "other/repo", "someone.else", "Other repo assignment", ptr("lucia.gomez"), `["bug"]`, "https://github.com/other/repo/issues/9"))
 
-	want := "[issue.assigned] lucia.gomez Other repo assignment\n" +
-		"other/repo · someone.else · 2h ago · https://github.com/other/repo/issues/9\n"
+	want := "someone.else assigned to lucia.gomez\n" +
+		"  Other repo assignment\n" +
+		"  other/repo · [bug] · 2h ago\n" +
+		"  https://github.com/other/repo/issues/9\n"
 	feed.waitStdout(t, want)
 
 	if got := feed.stdout.String(); got != want {
@@ -504,7 +593,7 @@ func TestWatchBackfillsTheFirstConnection(t *testing.T) {
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
 	relay.waitConnected(t)
 
-	want := assignedOutput + mergedOutput
+	want := cards(assignedOutput, mergedOutput)
 	feed.waitStdout(t, want)
 
 	if got := feed.stdout.String(); got != want {
@@ -600,9 +689,10 @@ func TestWatchBackfillsTenEventsByDefault(t *testing.T) {
 	// last of the backfill to reach stdout.
 	feed.waitStdout(t, "Merge 11\n")
 
-	// Ten events, two lines each: the default is ten and not twelve.
-	if lines := nonEmptyLines(feed.stdout.String()); len(lines) != 20 {
-		t.Errorf("stdout has %d lines, want 10 events on two lines each\n%v", len(lines), lines)
+	// Ten events, four lines each without colour: the default is ten and not
+	// twelve.
+	if lines := nonEmptyLines(feed.stdout.String()); len(lines) != 40 {
+		t.Errorf("stdout has %d lines, want 10 cards on four lines each\n%v", len(lines), lines)
 	}
 	for _, want := range []string{"Merge 11\n", "Merge 2\n"} {
 		if !strings.Contains(feed.stdout.String(), want) {
@@ -740,7 +830,7 @@ func TestHistoryListsTheStoredEventsNewestFirst(t *testing.T) {
 	if got.code != 0 {
 		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
 	}
-	want := assignedOutput + mergedOutput
+	want := cards(assignedOutput, mergedOutput)
 	if got.stdout != want {
 		t.Errorf("stdout = %q, want the relay's own order %q", got.stdout, want)
 	}
@@ -766,7 +856,7 @@ func TestHistoryFiltersByInvolvement(t *testing.T) {
 	}
 	// Maria is the actor of both — she merged, and she assigned — and she has
 	// nothing to do with someone else's merge.
-	want := assignedOutput + mergedOutput
+	want := cards(assignedOutput, mergedOutput)
 	if got.stdout != want {
 		t.Errorf("stdout = %q, want only maria's involvement %q", got.stdout, want)
 	}
@@ -808,8 +898,10 @@ func TestHistoryFiltersCombineAsConjunction(t *testing.T) {
 	if got.code != 0 {
 		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
 	}
-	want := "[issue.assigned] lucia.gomez Other repo assignment\n" +
-		"other/repo · someone.else · 2h ago · https://github.com/other/repo/issues/9\n"
+	want := "someone.else assigned to lucia.gomez\n" +
+		"  Other repo assignment\n" +
+		"  other/repo · [bug] · 2h ago\n" +
+		"  https://github.com/other/repo/issues/9\n"
 	if got.stdout != want {
 		t.Errorf("stdout = %q, want user and repository to combine as a conjunction %q", got.stdout, want)
 	}
@@ -834,11 +926,13 @@ func TestHistoryGroupsByRepository(t *testing.T) {
 	}
 	// Alphabetical, the relay's order inside each group, and no repository
 	// repeated on the per-event lines.
-	want := "AG2904/github-activity-feed\n" + mergedGrouped + assignedGrouped +
+	want := "AG2904/github-activity-feed\n\n" + mergedGrouped + "\n" + assignedGrouped +
 		"\n" +
-		"other/repo\n" +
-		"[pr.merged] Other repo merge\n" +
-		"someone.else · 2h ago · https://github.com/other/repo/pull/9\n"
+		"other/repo\n\n" +
+		"someone.else merged into main\n" +
+		"  Other repo merge\n" +
+		"  2h ago\n" +
+		"  https://github.com/other/repo/pull/9\n"
 	if got.stdout != want {
 		t.Errorf("stdout = %q, want the grouped report %q", got.stdout, want)
 	}
@@ -860,10 +954,12 @@ func TestHistoryGroupsTheEventsWithoutARepositoryLast(t *testing.T) {
 	}
 	// Nothing to group it under and no name worth inventing, so it is written
 	// last without a header.
-	want := "AG2904/github-activity-feed\n" + mergedGrouped +
+	want := "AG2904/github-activity-feed\n\n" + mergedGrouped +
 		"\n" +
-		"[pr.merged] Legacy merge\n" +
-		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/1\n"
+		"maria.perez merged into main\n" +
+		"  Legacy merge\n" +
+		"  2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/pull/1\n"
 	if got.stdout != want {
 		t.Errorf("stdout = %q, want the ungrouped event last and without a header %q", got.stdout, want)
 	}
@@ -931,22 +1027,37 @@ const rawPayload = `{"type":"pr.merged","repository":"AG2904/github-activity-fee
 // an ampersand to make re-serialization visible.
 const historyBody = `[{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"},{"type":"issue.assigned","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Ship the onboarding checklist","assignee":"lucia.gomez","labels":["bug"],"url":"https://github.com/AG2904/github-activity-feed/issues/7","when":"2026-10-11T14:00:00.000Z"}]`
 
-// The two rendered forms the fixtures below produce, all at "2h ago".
+// The two rendered forms the fixtures below produce, all at "2h ago". A card is
+// the sentence, the title and the context; without colour the URL is a fourth
+// line, because there is no hyperlink to carry it.
 const (
-	mergedOutput = "[pr.merged] Fix memory leak in parser component\n" +
-		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n"
-	assignedOutput = "[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
-		"AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n"
+	mergedOutput = "maria.perez merged into main\n" +
+		"  Fix memory leak in parser component\n" +
+		"  AG2904/github-activity-feed · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
+	assignedOutput = "maria.perez assigned to lucia.gomez\n" +
+		"  Ship the onboarding checklist\n" +
+		"  AG2904/github-activity-feed · [bug] · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
 )
 
 // The same two events inside a grouped report, where the header already named
-// the repository and the second line therefore does not.
+// the repository and the context line therefore does not.
 const (
-	mergedGrouped = "[pr.merged] Fix memory leak in parser component\n" +
-		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42\n"
-	assignedGrouped = "[issue.assigned] lucia.gomez Ship the onboarding checklist\n" +
-		"maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7\n"
+	mergedGrouped = "maria.perez merged into main\n" +
+		"  Fix memory leak in parser component\n" +
+		"  2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
+	assignedGrouped = "maria.perez assigned to lucia.gomez\n" +
+		"  Ship the onboarding checklist\n" +
+		"  [bug] · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
 )
+
+// cards joins rendered cards with the blank line the feed puts between them.
+func cards(rendered ...string) string {
+	return strings.Join(rendered, "\n")
+}
 
 func mergedFrame(when time.Time) string {
 	return eventFrame(when, "pr.merged", "AG2904/github-activity-feed", "maria.perez",

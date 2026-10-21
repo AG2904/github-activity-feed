@@ -45,7 +45,7 @@ func storedRows(body io.Reader) ([]json.RawMessage, error) {
 // them. It is the emitter's acceptance rule asked over rows instead of frames,
 // so the report and the live feed cannot disagree about --user, about --repo,
 // or about a row the CLI cannot read.
-func (e emitter) shown(payloads []json.RawMessage) []storedEvent {
+func (e *emitter) shown(payloads []json.RawMessage) []storedEvent {
 	shown := make([]storedEvent, 0, len(payloads))
 	for _, payload := range payloads {
 		event, _, show := e.accept(string(payload))

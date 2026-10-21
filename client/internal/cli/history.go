@@ -12,7 +12,7 @@ import (
 
 // history answers a retrospective question about the stored past: the audit
 // history, once, printed and exited. It is the same feed as the live one — the
-// same eight fields, the same two lines, the same hyperlink — because where an
+// same eight fields, the same card, the same hyperlink — because where an
 // event came from differs and the thing does not (story 18).
 func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>] [--user <login>] [--repo <owner/name>] [--no-color] [--json | --group-by-repo]")

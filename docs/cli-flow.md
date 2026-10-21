@@ -90,7 +90,8 @@ Paso por paso:
    parsea **no es un error**: devuelve `false` y se ignora, porque un frame roto no
    puede tumbar un watch. Un evento que el filtro descarta devuelve `true`: prueba
    que la conexión está viva, aunque no se escriba nada. Si pasa, se imprime el
-   payload tal cual (`--json`) o se renderiza en dos líneas.
+   payload tal cual (`--json`) o se renderiza como la tarjeta de tres líneas —más la
+   URL cuando no hay hyperlink—.
 7. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
@@ -130,8 +131,8 @@ terminal ──feed history──▶ cli.Run ──▶ internal/cli/history.go �
   orden en que el relay los sirvió. Cada elemento son los bytes que llegaron: nada se
   re-serializa, así que claves, `null` y el timestamp en milisegundos quedan intactos.
   El filtro igual se aplica, porque crudo es una forma y no una exención.
-- **Sin `--json` el historial se pinta**, newest first: el mismo `Palette.Event()` de
-  dos líneas que usa el vivo, porque un reporte se lee desde arriba.
+- **Sin `--json` el historial se pinta**, newest first: la misma tarjeta
+  `Palette.Event()` que usa el vivo, porque un reporte se lee desde arriba.
 - **`--group-by-repo`** reemplaza ese render por uno agrupado: un encabezado por
   repositorio en orden alfabético, y las filas sin repositorio al final, sin encabezado,
   porque no hay nombre que inventarles (ADR-0010).
@@ -243,7 +244,7 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 | `client/internal/cli/terminal_other.go` | `isTerminal` en el resto | `colorEnabled` |
 | `client/internal/sse/sse.go` | `Reader.Next()`: frames SSE a payloads | `watch.go` |
 | `client/internal/activity/activity.go` | `Event`, `Parse()`, `Filter.Match()` | `watch.go`, `history.go` |
-| `client/internal/render/render.go` | `Palette.Event()`: dos líneas de terminal | `watch.go`, `history.go` |
+| `client/internal/render/render.go` | `Palette.Event()`: la tarjeta de un evento | `watch.go`, `history.go` |
 | `client/internal/render/grouped.go` | `Palette.Grouped()`: el reporte por repositorio | `history.go` |
 | `client/test/main_test.go` | compila los dos binarios con `-ldflags` | `go test` |
 | `client/test/harness_test.go` | `fakeRelay`: `httptest` con `/stream` y `/history` | toda la suite |
@@ -286,8 +287,9 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   cerrados, y este mapa describe el resultado. Lo que sigue abierto es CI.
 - **CI y release**: no hay workflow que compile el cliente ni publique artefactos;
   los binarios salen de `npm run cli:dist`, a mano.
-- **El detalle de los colores**: qué badge toma qué color vive en
-  `render.Palette.badge()`; no cambia el flujo.
+- **El detalle de los colores**: la paleta por rol llega con
+  [`.scratch/cli-output/issues/02-colour-tells-the-roles-apart.md`](../.scratch/cli-output/issues/02-colour-tells-the-roles-apart.md);
+  hoy sólo el título y el encabezado del reporte llevan peso. No cambia el flujo.
 - **La elección del relay**: `--relay` o `$RELAY_URL`; el resto de la configuración
   es del lado del relay.
 
@@ -304,7 +306,7 @@ funciona:
    reconexión y backoff.
 4. `client/internal/cli/history.go` y `stored.go` — el otro camino: una request, el
    mismo filtro y las tres salidas.
-5. `client/internal/render/render.go` — cómo un evento se vuelve dos líneas.
+5. `client/internal/render/render.go` — cómo un evento se vuelve una tarjeta.
 6. `client/internal/cli/cli.go` — el despacho, los códigos de salida y el contrato de
    stdout/stderr.
 7. `client/test/e2e_test.go` y `harness_test.go` — la suite es la especificación

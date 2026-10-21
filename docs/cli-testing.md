@@ -117,8 +117,10 @@ Invoke-WebRequest -Uri http://localhost:3000/ -Method Post -UseBasicParsing `
 La terminal del CLI muestra, en stdout:
 
 ```text
-[pr.merged] Fix memory leak in parser component
-AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42
+maria.perez merged into main
+  Fix memory leak in parser component
+  AG2904/github-activity-feed · [bug] · 2h ago
+  https://github.com/AG2904/github-activity-feed/pull/42
 ```
 
 Y en stderr, desde el arranque:
@@ -127,10 +129,12 @@ Y en stderr, desde el arranque:
 watching http://localhost:3000/stream
 ```
 
-Detalles que importan: `2h ago` es **relativo al momento de imprimir**, no al
-`merged_at`; el badge entre corchetes es el `type`; y el asignado, cuando existe, va
-antes del título y en negrita si hay color. Sin color, la URL se imprime cruda porque
-no hay hyperlink de terminal que la esconda.
+Detalles que importan: una tarjeta son tres líneas —la frase, el título y el
+contexto— más una cuarta con la URL cuando no hay hyperlink, que es el caso de un pipe
+o de `--no-color`. `2h ago` es **relativo al momento de imprimir**, no al `merged_at`.
+Las etiquetas entre corchetes son las del evento y son la razón por la que una
+asignación te interrumpió. En una terminal con color, el título es el link y la línea
+de la URL desaparece.
 
 ## Paso 5 — `--json`: el contrato crudo
 
@@ -270,8 +274,8 @@ El orden es `id DESC` —lo más nuevo primero— y no hay paginación.
 El CLI hace el mismo pedido y filtra localmente. Lo que conviene saber al probarlo a
 mano:
 
-- **`./feed history` sin `--json` pinta el historial**, newest first, con las mismas
-  dos líneas que el vivo. Sale con `0`.
+- **`./feed history` sin `--json` pinta el historial**, newest first, con la misma
+  tarjeta que el vivo. Sale con `0`.
 - **`--group-by-repo` agrupa** por repositorio en orden alfabético, y deja al final,
   sin encabezado, las filas sin repositorio.
 - **`--user` y `--repo` filtran localmente**, con la misma regla que `watch`: un
@@ -307,7 +311,7 @@ de consola, así que este es el único paso que se verifica a mano.
 | --- | --- | --- | --- |
 | 01 — arrancar y llegar al relay | banner, precedencia `--relay` > `$RELAY_URL` > default | 3, 4 | sí |
 | 01 — arrancar y llegar al relay | URL inusable es fatal | 2 | sí |
-| 02 — pintar eventos en vivo | merge y asignación en dos líneas | 4 | sí |
+| 02 — pintar eventos en vivo | merge y asignación como tarjetas | 4 | sí |
 | 02 — pintar eventos en vivo | sin color en un pipe | 11 | sí |
 | 03 — el contrato crudo | `--json` byte por byte, sin `\u0026` | 5 | sí |
 | 03 — el contrato crudo | basura descartada sin cortar el stream | 7 | sí |
