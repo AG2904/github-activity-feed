@@ -6,7 +6,7 @@ the connective tissue in dim — 16 colours, only on a terminal.
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Actor in bold cyan; `merged` in bold green; `assigned` in bold amber; `main` in
       bold green; the assignee in bold cyan.
@@ -37,3 +37,9 @@ the connective tissue in dim — 16 colours, only on a terminal.
   are different words, the repository contains a slash, the labels sit in brackets. A
   reader who loses colour loses emphasis and nothing else — which is also why the first
   ticket ships and stays readable without this one.
+- 2026-10-21: Done. La paleta está en `main` con el registro de evidencia en
+  [`docs/tickets/cli-output/02-colour-tells-the-roles-apart.md`](../../../docs/tickets/cli-output/02-colour-tells-the-roles-apart.md).
+  Verificación de bytes (un programa temporal con `Color = true`), suite del cliente en
+  verde (38.3 s) y relay 55/55. Dos ajustes que salieron de la revisión: el gris es
+  `90` y no `faint` porque conhost con VT ignora el atributo 2, y un tipo de evento
+  desconocido hereda gris en vez de tomar prestado el ámbar de la asignación.

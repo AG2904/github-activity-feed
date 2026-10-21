@@ -111,10 +111,11 @@ func byRepository(events []activity.Event) ([]repositoryGroup, []activity.Event)
 }
 
 // heading names a group. The header is the only structure a grouped report has,
-// so it is the one line worth weighting when escapes are in use.
+// so it is the one line worth weighting when escapes are in use: bold and blue,
+// the colour a place already has in the feed.
 func (p Palette) heading(w io.Writer, repository string) error {
 	if p.Color {
-		repository = bold + repository + reset
+		repository = p.paint(bold+blue, repository)
 	}
 	_, err := io.WriteString(w, repository+"\n")
 	return err

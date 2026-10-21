@@ -287,9 +287,9 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   cerrados, y este mapa describe el resultado. Lo que sigue abierto es CI.
 - **CI y release**: no hay workflow que compile el cliente ni publique artefactos;
   los binarios salen de `npm run cli:dist`, a mano.
-- **El detalle de los colores**: la paleta por rol llega con
-  [`.scratch/cli-output/issues/02-colour-tells-the-roles-apart.md`](../.scratch/cli-output/issues/02-colour-tells-the-roles-apart.md);
-  hoy sólo el título y el encabezado del reporte llevan peso. No cambia el flujo.
+- **El detalle de los colores**: la paleta por rol vive en `render.go` —cian para las
+  personas, verde para la integración, ámbar para la asignación, azul para el
+  repositorio, rojo para las etiquetas y gris para el contexto— y no cambia el flujo.
 - **La elección del relay**: `--relay` o `$RELAY_URL`; el resto de la configuración
   es del lado del relay.
 

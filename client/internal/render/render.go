@@ -12,12 +12,18 @@ import (
 	"github.com/AG2904/github-activity-feed/client/internal/activity"
 )
 
-// The card ships plain in ticket 01: only the title's weight and its hyperlink
-// are styled. The role palette arrives with the colour ticket, so the shape can
-// be reviewed without arguing about hues.
+// The palette carries roles, not decoration: two states, the people, the place,
+// and the reason. Sixteen-colour codes, because the binary ships to terminals
+// that are not Windows Terminal.
 const (
 	reset = "\x1b[0m"
 	bold  = "\x1b[1m"
+	grey  = "\x1b[90m"
+	cyan  = "\x1b[1;36m"
+	green = "\x1b[1;32m"
+	amber = "\x1b[1;33m"
+	blue  = "\x1b[34m"
+	red   = "\x1b[1;31m"
 )
 
 // Palette renders one event per call. Color enables ANSI colour, bold, and OSC
@@ -68,17 +74,21 @@ func (p Palette) card(w io.Writer, event activity.Event, now time.Time, shape li
 // reusing this one. An unknown type degrades to its raw value and no
 // destination, so a new event type still reads as something.
 func (p Palette) headline(event activity.Event) string {
-	parts := []string{event.Actor}
+	parts := []string{p.paint(cyan, event.Actor)}
 	switch event.Type {
 	case "pr.merged":
-		parts = append(parts, "merged", "into", "main")
+		parts = append(parts,
+			p.paint(green, "merged"),
+			p.paint(grey, "into"),
+			p.paint(green, "main"),
+		)
 	case "issue.assigned":
-		parts = append(parts, "assigned")
+		parts = append(parts, p.paint(amber, "assigned"))
 		if event.Assignee != nil && *event.Assignee != "" {
-			parts = append(parts, "to", *event.Assignee)
+			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, *event.Assignee))
 		}
 	default:
-		parts = append(parts, event.Type)
+		parts = append(parts, p.paint(grey, event.Type))
 	}
 	return strings.Join(parts, " ")
 }
@@ -99,13 +109,23 @@ func (p Palette) title(event activity.Event) string {
 func (p Palette) context(event activity.Event, now time.Time, shape lineShape) string {
 	parts := make([]string, 0, 3)
 	if shape == withRepository && hasRepository(event) {
-		parts = append(parts, *event.Repository)
+		parts = append(parts, p.paint(blue, *event.Repository))
 	}
 	if len(event.Labels) > 0 {
-		parts = append(parts, "["+strings.Join(event.Labels, ", ")+"]")
+		parts = append(parts, p.paint(red, "["+strings.Join(event.Labels, ", ")+"]"))
 	}
-	parts = append(parts, relative(now, event.When))
-	return strings.Join(parts, " · ")
+	parts = append(parts, p.paint(grey, relative(now, event.When)))
+	return strings.Join(parts, p.paint(grey, " · "))
+}
+
+// paint wraps text in an escape only when colour is allowed. Every flat coloured
+// segment goes through here, so a pipe cannot receive one by accident; the title
+// builds its own because it has to wrap the hyperlink around the text.
+func (p Palette) paint(code, text string) string {
+	if !p.Color {
+		return text
+	}
+	return code + text + reset
 }
 
 // hasRepository reports whether the event carries a repository the renderer can

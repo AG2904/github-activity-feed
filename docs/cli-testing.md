@@ -294,9 +294,35 @@ sola: hay color sólo si stdout es un terminal de verdad, no lo apagó `--no-col
 lo apagó `NO_COLOR`. Un pipe nunca tiene color, y ése es el motivo por el que
 `feed watch | jq` es seguro.
 
+El color codifica **roles**, no decoración:
+
+| Elemento | Color | Por qué |
+| --- | --- | --- |
+| actor y assignee | cian bold | las dos personas de la frase |
+| `merged` y `main` | verde bold | integración: algo llegó a `main` |
+| `assigned` | ámbar bold | atención: trabajo nuevo |
+| `into` / `to` | gris tenue | conector, no información |
+| título | bold + hyperlink OSC 8 | el contenido |
+| repositorio | azul | ubicación |
+| etiquetas | rojo bold | la razón de la interrupción |
+| `·` y el tiempo | gris tenue | contexto |
+
+El gris es *bright black* (`90`), no *faint* (`2`): conhost con VT ignora el atributo
+*faint*, así que el contexto perdería su énfasis justo en la consola que la paleta toma
+como límite.
+
+Qué se puede verificar y qué no: la suite corre con stdout en un pipe, así que no puede
+afirmar los tonos. Sí puede afirmar la ausencia de escapes, y de dos maneras: hay casos
+que los buscan explícitamente, y los fixtures sin color comparan la salida exacta, así
+que cualquier `\x1b` filtrado los rompe. La presencia y los matices se miran a mano en
+una terminal: `./feed watch --relay http://localhost:3000` y comparar contra la tabla.
+
 En Windows, además, el color exige que la consola acepte secuencias ANSI: el binario
-prende `ENABLE_VIRTUAL_TERMINAL_PROCESSING`; si la consola lo rechaza, no emite
-escapes en vez de imprimir basura.
+prende `ENABLE_VIRTUAL_TERMINAL_PROCESSING`; si la consola lo rechaza, no emite escapes
+en vez de imprimir basura.
+
+El reporte agrupado pinta el encabezado del repositorio en azul bold, porque es la única
+estructura que tiene.
 
 ## Paso 12 — Ctrl-C
 

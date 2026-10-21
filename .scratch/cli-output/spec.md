@@ -117,15 +117,17 @@ what happened whether or not the terminal shows colour.
   | `assigned` | bold amber | attention: work landed on someone |
   | `main` | bold green | the destination of the same fact |
   | assignee | bold cyan | the other person in the sentence |
-  | `into` / `to` | dim | the connector is grammar, not information |
+  | `into` / `to` | grey | the connector is grammar, not information |
   | title | bold, default, OSC 8 | the content; it does not compete |
   | repository | blue | a location, the way a path is shown |
   | labels | bold red | the reason it interrupted you |
-  | `·` and the time | dim | context |
+  | `·` and the time | grey | context |
 
   Sixteen colours, not 256: the binary is distributed to terminals that are not Windows
-  Terminal, and every one of these codes works wherever VT works. No emoji, no box
-  drawing, no reverse video: the console is a portability boundary.
+  Terminal, and every one of these codes works wherever VT works. "Grey" is bright black
+  (`90`), not faint (`2`): conhost with VT ignores the faint attribute, so the context
+  would lose its de-emphasis exactly on the console this palette is bounded by. No emoji,
+  no box drawing, no reverse video: the console is a portability boundary.
 - **Colour is never the only signal.** `merged` and `assigned` are different words, the
   repository contains a slash, labels sit in brackets. A reader who loses colour loses
   reinforcement and nothing else.
