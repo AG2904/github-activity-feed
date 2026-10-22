@@ -304,6 +304,30 @@ func TestWatchRendersEveryLabel(t *testing.T) {
 	}
 }
 
+// The labels pin has two halves, and this is the second: a card whose event
+// carries no labels starts line two at the title — no empty "[]", no leading
+// space, no extra blank line. Its own event, because the merged fixture now
+// carries the reason before the what.
+func TestWatchStartsLineTwoAtTheTitleWhenTheEventHasNoLabels(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "pr.merged",
+		"AG2904/github-activity-feed", "maria.perez", "Fix memory leak in parser component",
+		nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/42"))
+
+	want := "maria.perez merged into main\n" +
+		"  Fix memory leak in parser component\n" +
+		"  AG2904/github-activity-feed · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want line two to start at the title, not at an empty [] %q", got, want)
+	}
+}
+
 func TestWatchRendersALegacyRowWithoutARepository(t *testing.T) {
 	relay := newFakeRelay(t)
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
@@ -336,12 +360,12 @@ func TestRelativeTimeSaysYesterday(t *testing.T) {
 	relay.send(t, mergedFrame(time.Now().Add(-50*time.Hour)))
 
 	want := "maria.perez merged into main\n" +
-		"  Fix memory leak in parser component\n" +
+		"  [bug] Fix memory leak in parser component\n" +
 		"  AG2904/github-activity-feed · yesterday\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n" +
 		"\n" +
 		"maria.perez merged into main\n" +
-		"  Fix memory leak in parser component\n" +
+		"  [bug] Fix memory leak in parser component\n" +
 		"  AG2904/github-activity-feed · 2d ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
 	feed.waitStdout(t, want)
@@ -1245,12 +1269,12 @@ const historyBody = `[{"type":"pr.merged","repository":"AG2904/github-activity-f
 
 // The two rendered forms the fixtures below produce, all at "2h ago". A card is
 // the sentence, the title and the context; without colour the URL is a fourth
-// line, because there is no hyperlink to carry it. The merged event carries no
-// labels, so its line two starts at the title: no empty "[]" ever reaches the
-// terminal.
+// line, because there is no hyperlink to carry it. The merged event carries the
+// bug label, so its line two is the reason before the what — the pin for a card
+// with no labels lives in its own test, on its own event.
 const (
 	mergedOutput = "maria.perez merged into main\n" +
-		"  Fix memory leak in parser component\n" +
+		"  [bug] Fix memory leak in parser component\n" +
 		"  AG2904/github-activity-feed · 2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
 	assignedOutput = "maria.perez assigned to lucia.gomez\n" +
@@ -1264,7 +1288,7 @@ const (
 // with the title: the reason is not repository-scoped.
 const (
 	mergedGrouped = "maria.perez merged into main\n" +
-		"  Fix memory leak in parser component\n" +
+		"  [bug] Fix memory leak in parser component\n" +
 		"  2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
 	assignedGrouped = "maria.perez assigned to lucia.gomez\n" +
@@ -1280,7 +1304,7 @@ func cards(rendered ...string) string {
 
 func mergedFrame(when time.Time) string {
 	return eventFrame(when, "pr.merged", "AG2904/github-activity-feed", "maria.perez",
-		"Fix memory leak in parser component", nil, "[]",
+		"Fix memory leak in parser component", nil, `["bug"]`,
 		"https://github.com/AG2904/github-activity-feed/pull/42")
 }
 
