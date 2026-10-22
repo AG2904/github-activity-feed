@@ -90,8 +90,9 @@ Paso por paso:
    parsea **no es un error**: devuelve `false` y se ignora, porque un frame roto no
    puede tumbar un watch. Un evento que el filtro descarta devuelve `true`: prueba
    que la conexión está viva, aunque no se escriba nada. Si pasa, se imprime el
-   payload tal cual (`--json`) o se renderiza como la tarjeta de tres líneas —más la
-   URL cuando no hay hyperlink—.
+   payload tal cual (`--json`) o se renderiza como la tarjeta de tres líneas —la
+   frase, el título con las etiquetas al frente, el contexto— más la URL cuando no
+   hay hyperlink.
 7. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
@@ -164,14 +165,15 @@ con dos diferencias de representación:
 | `Actor` | `string` | |
 | `Subject` | `string` | |
 | `Assignee` | `*string` | `nil` cuando el evento no tiene uno |
-| `Labels` | `[]string` | se parsea; hoy no se renderiza |
+| `Labels` | `[]string` | va entre corchetes al frente del título |
 | `URL` | `string` | |
 | `When` | `time.Time` | ya parseado con `time.RFC3339` |
 
 `Parse()` es la única puerta: rechaza un payload que no sea JSON, uno al que le falte
 `type`, `actor`, `subject`, `url` o `when`, y uno cuyo `when` no parsea. Un evento a
-medio llenar no se renderiza: se descarta. `labels` ausente queda `nil`, que es
-distinto de una lista vacía sólo en la cabeza de quien lo lea —hoy nadie lo lee—.
+medio llenar no se renderiza: se descarta. `labels` ausente queda `nil`, distinto de
+una lista vacía sólo en el modelo: el renderizador lee la longitud, así que las dos
+formas imprimen el título sin un `[]` vacío.
 
 ### 2.2 `activity.Filter` — el filtro local
 
