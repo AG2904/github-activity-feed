@@ -94,8 +94,10 @@ what happened whether or not the terminal shows colour.
 
 ## Implementation Decisions
 
-- **Scope: the human output only.** `--json` is the contract and does not change by a
-  byte; the filters, the order, the flags and the wire format are untouched.
+- **Scope: the human output only.** `--json` is the contract: the CLI still hands over
+  the relay's bytes verbatim and reshapes nothing, so the filters, the order, the flags
+  and the wire format stay untouched. The bytes themselves did change shape, because
+  the relay's event gained `branch` (ticket 05, ADR-0013); see the dated amendment below.
 - **The card.** Three lines, fixed indentation of two spaces on lines two and three:
   1. `actor verb [destination]`
   2. `[labels] title` — the labels the event carries, in brackets and separated from
