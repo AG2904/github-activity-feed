@@ -32,17 +32,17 @@ no reason to exist beyond novelty.
 
 ## Solution
 
-One event becomes a **card of three lines** — a sentence, the thing, the context — with
-a blank line between cards:
+One event becomes a **card of three lines** — a sentence, the thing (prefixed by the
+reason), the context — with a blank line between cards:
 
 ```text
 maria.perez merged into main
-  Fix memory leak in parser component
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug] Fix memory leak in parser component
+  AG2904/github-activity-feed · 2h ago
 
 lucia.gomez assigned to tomas.ferreira
-  Ship the onboarding checklist
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug, feedback] Ship the onboarding checklist
+  AG2904/github-activity-feed · 2h ago
 ```
 
 When the terminal cannot hyperlink (a pipe, `--no-color`), a fourth indented line
@@ -50,9 +50,18 @@ carries the URL, because a subject with no link is a dead end:
 
 ```text
 maria.perez merged into main
-  Fix memory leak in parser component
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug] Fix memory leak in parser component
+  AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/pull/42
+```
+
+The card is not the whole screen. `watch` also says what it is doing and what
+happened, on **stderr**, in plain words — the session chrome:
+
+```text
+watching http://localhost:3000/stream · backfill 10     (stderr, on start)
+connected · 3 events from history                       (stderr, after the first connect)
+stopped · 12 events · 7 merged · 5 assigned             (stderr, on exit)
 ```
 
 Colour carries **roles**, never decoration, and never the only signal: the words say
@@ -64,8 +73,8 @@ what happened whether or not the terminal shows colour.
    landed — so that I understand it without decoding a badge.
 2. As a developer, I want the title on its own line, so that the thing that happened has
    room to be read instead of competing with metadata.
-3. As a developer, I want to see the label that made an assignment critical, so that I
-   know why it interrupted me.
+3. As a developer, I want the label that made an event critical to read immediately
+   before the thing it qualifies, so that the reason arrives before the content.
 4. As a developer, I want one event to look like one card, so that a burst reads as a
    list and not as a wall.
 5. As a developer, I want colour to separate people, states, places and reasons, so that
@@ -76,6 +85,12 @@ what happened whether or not the terminal shows colour.
    `1d ago` — so that the feed sounds like someone wrote it.
 8. As a developer, I want the live feed, the backfill and the history report to use the
    same card, so that an event looks the same wherever I meet it.
+9. As a developer, I want `watch` to say what it is watching and whether it is connected,
+   so that a silent terminal reads as "nothing happened" and not as "it hung".
+10. As a developer, I want a one-line account when I stop the watch, so that the session
+    tells me what it saw before it goes away.
+11. As a developer, I want all of that on stderr, so that redirecting stdout to a file or
+    a pipe leaves the machine-readable feed untouched.
 
 ## Implementation Decisions
 
@@ -83,10 +98,11 @@ what happened whether or not the terminal shows colour.
   byte; the filters, the order, the flags and the wire format are untouched.
 - **The card.** Three lines, fixed indentation of two spaces on lines two and three:
   1. `actor verb [destination]`
-  2. the title, hyperlinked when colour is on
-  3. `repository · [labels] · time` — each segment omitted when the event does not
-     carry it (a legacy row has no repository; a merge with no labels has no label
-     segment).
+  2. `[labels] title` — the labels the event carries, in brackets and separated from
+     the title by one space, hyperlinked when colour is on; a card with no labels
+     starts with the title.
+  3. `repository · time` — each segment omitted when the event does not carry it (a
+     legacy row has no repository).
   A fourth indented line carries the URL only when hyperlinks are unavailable.
 - **Vocabulary.** `merged` and `assigned` are the human words; `pr.merged` and
   `issue.assigned` stay on the wire and in `--json`. An unknown type falls back to its
@@ -95,9 +111,14 @@ what happened whether or not the terminal shows colour.
   assignee phrase, so `into main` is safe only because `pr.merged` *means* a merge into
   `main`; a future type with a different destination gets its own phrase rather than
   reusing this one. An assignment with a null assignee renders `assigned` with no `to`.
-- **Labels are shown.** They are the reason the event exists, and the CLI already
-  receives them: `[bug]`, `[bug, feedback]`, in the context line. The old decision to
-  parse and ignore them is reversed here.
+- **Labels ride with the title.** They are the reason the event exists, and the CLI
+  already receives them: `[bug]`, `[bug, feedback]`, immediately before the thing they
+  qualify — the load-bearing word first, the way cargo puts the qualifier next to the
+  object (`Compiling serde v1.0.203`). The old decision to parse and ignore them was
+  already reversed; this amendment moves them out of the context line because a reason
+  the reader reaches last is a reason they scan past. An assignment without labels is
+  unchanged, and the bold-red-on-bold pair survives conhost: the reset between the two
+  segments keeps them distinct.
 - **Time keeps four human boundaries**: `just now` under a minute, `Nm ago` under an
   hour, `Nh ago` under a day, **`yesterday` from 24 to 48 hours**, `Nd ago` beyond
   that. The 24–48 window is an approximation of a calendar day and is documented as
@@ -108,6 +129,33 @@ what happened whether or not the terminal shows colour.
   stateless for the feed. The grouped report is the documented exception: it renders a
   whole document — header included — in one call, so `Palette.Grouped` owns its own
   spacing and the emitter has nothing to interleave there. `--json` gets no blank lines.
+- **The session chrome is stderr, and it is plain.** `watch` narrates its own life in
+  three lines, all on stderr, all uncoloured:
+  1. on start, the banner already printed today, extended: `watching <url> · backfill
+     <n>`, with the `--user` / `--repo` filters appended when set (`watching <url> ·
+     user maria · repo AG2904/x · backfill 10`);
+  2. after the first connection is accepted: `connected · <n> events from history` when
+     the backfill printed some, `connected · waiting for events` when it printed none;
+     a later reconnect keeps the existing `watch: reconnected` notice, so only the
+     first connection gets the affirmative line;
+  3. on exit — Ctrl-C included, whenever `watch` returns — `stopped · <n> events ·
+     <k> merged · <l> assigned` when any event was shown, `stopped · no events`
+     otherwise. The counts are of *shown* events, filter included, because that is
+     what the reader saw.
+  The chrome is not TTY-gated, unlike gh's epilogue: it is the connection banner's
+  family — today's `watching <url>` is already unconditional — and every line is one
+  sentence of state a redirected log benefits from just as much as a terminal does.
+  What it must never do is reach stdout or carry an escape: it is messaging, which is
+  stderr's job, and it is plain text by construction, so the escape discipline below
+  still describes stdout and nothing about the chrome can break it.
+- **No heartbeat, and no spinner.** A feed that can stay silent for hours is exactly
+  where a periodic "still alive" line tempts you, and it is refused here: gh redraws it
+  on an alternate screen where repetition is invisible, while on our append-only
+  terminal every repeat is permanent ink and the line that said "alive" is the line
+  that starts saying "spam". Silence is already answered by the reconnect notices — a
+  dead relay speaks, a healthy quiet one does not — and by the time on the last card.
+  The first-connection line answers the only moment "is it alive?" has no other
+  reply: the one right after start.
 - **Colour by role, 16-colour ANSI**, applied to `render.Palette`:
 
   | Element | Colour | Why |
@@ -147,17 +195,29 @@ what happened whether or not the terminal shows colour.
   asserts exact stdout for one card of each type, with colour off (a pipe), so the
   fixtures are the contract.
 - **Cases that must be pinned**:
-  - a merged event renders the three lines, in that order, with the label segment;
+  - a merged event renders the three lines, in that order, with the labels before the
+    title;
   - an assigned event renders `actor assigned to assignee`, and `assigned` alone when
     the assignee is null;
-  - an event with no labels omits the segment instead of printing an empty `[]`;
-  - a legacy event with `repository: null` starts the context line at the label;
+  - an event with no labels starts line two with the title instead of printing an
+    empty `[]`;
+  - a legacy event with `repository: null` renders a context line of just the time;
   - `yesterday` appears at 30 hours and `2d ago` at 50;
   - two consecutive events are separated by exactly one blank line, and the first card
     is not preceded by one;
   - the same card appears in `watch` (live), in the backfill, and in `history`, with the
     grouped report omitting the repository;
-  - without colour the URL is the fourth line; `--json` is byte-identical to the relay.
+  - without colour the URL is the fourth line; `--json` is byte-identical to the relay;
+  - the start banner names the backfill count and any filters; after the first
+    connection stderr carries `connected · <n> events from history`, or `connected ·
+    waiting for events` when the history was empty; a reconnect carries
+    `watch: reconnected` and not a second `connected` line;
+  - stopping the watch prints `stopped · <n> events · <k> merged · <l> assigned`, with
+    filter-discarded events not counted, and `stopped · no events` when nothing was
+    shown.
+- **The chrome is asserted on stderr only.** Every chrome assertion reads the stderr
+  channel; stdout keeps the exact card fixtures, so a chrome line that leaked into the
+  feed would fail the stdout comparison even before the stderr one.
 - **What is not automatable here**: colour itself. A pipe has no TTY, so the suite can
   only assert the *absence* of escapes; the presence and the hues are verified by hand
   in `docs/cli-testing.md`, in Windows Terminal and in a conhost with VT.
@@ -172,7 +232,9 @@ what happened whether or not the terminal shows colour.
 - Filtering by label or by event type, and grouping the live feed.
 - A TUI, desktop notifications, sound, or a daemon.
 - Any change to `--json`, to the wire format, or to the relay.
-- Colouring the stderr banner or the reconnect notices.
+- Colouring the stderr banner, the session chrome, or the reconnect notices: all of it
+  is plain text by decision, so the escape discipline above has exactly one stream to
+  describe.
 
 ## Further Notes
 
@@ -184,9 +246,21 @@ what happened whether or not the terminal shows colour.
   are not UTF-8; reverse-video label chips read as selection in some terminals; a
   one-line format was the previous design and is the complaint that opened this
   feature; a full sentence with the title quoted inline was rejected because quotes
-  force a typographic decision the console cannot guarantee.
+  force a typographic decision the console cannot guarantee. A **table** — `gh run
+  list`'s columns, one row per event — was re-checked against the evidence in
+  [`.scratch/cli-output/research/other-cli-output-designs.md`](research/other-cli-output-designs.md)
+  and stays rejected: gh pads its columns because it fetches the whole batch before
+  printing, while a live feed emits events one at a time and cannot re-pad rows already
+  on screen; without truncation — which is out of scope — the rows only fit short
+  titles.
+- **Why the labels moved up, and not the time.** The label is the only segment that
+  answers *why*; the time answers *when*, and the eye that is deciding whether to
+  interrupt itself has already read the sentence by the time the context line ends.
+  Putting the reason next to the thing it qualifies is the same move cargo makes with
+  `Compiling serde v1.0.203` and compose makes with its source prefix: the qualifier
+  rides with the content, not with the footer.
 - **The colour palette is a claim about roles, not about taste.** If a new element needs
-  a hue, it needs a role first; otherwise it inherits `dim`.
+  a hue, it needs a role first; otherwise it inherits `grey`.
 - **The renderer stays stateless.** Separation, backfill and grouping are the emitter's
   job; the renderer answers "how does one event look", which is what makes the four
   call sites agree.
@@ -202,3 +276,16 @@ what happened whether or not the terminal shows colour.
   the event carries no branch, and the type already means "merge to main", so deriving
   the phrase from the type is the only honest source. The note above records the
   condition under which it stops being safe.
+- 2026-10-22: **Amendment — the card gains the reason, the session gains a voice.**
+  After research across `gh`, `git`, `cargo`, `bun`, `npm` and `docker compose`
+  ([the note](research/other-cli-output-designs.md)), two changes. First, the labels
+  move from the context line to the front of the title: the *why* arrives before the
+  *what*, which strengthens user story 3 instead of weakening it. Second, `watch` gets
+  session chrome — a banner that names its filters, one line after the first
+  connection, one line on stop — all on stderr, all plain, none of it TTY-gated,
+  because the connection banner already prints unconditionally and a redirected log
+  deserves the same lifecycle a terminal does. The chrome is deliberately not a
+  heartbeat: repetition on an append-only terminal is permanent ink, and the reconnect
+  notices already answer "did it die?". The table shape was checked against the
+  evidence a second time and rejected for a reason now written down instead of
+  remembered.
