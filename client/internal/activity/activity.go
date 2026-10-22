@@ -10,6 +10,17 @@ import (
 	"time"
 )
 
+// The event types the relay's contract defines: the wire vocabulary every part
+// of the client switches on. The human words ("merged", "assigned") belong to
+// the renderer; these belong to the domain, so a type added to the contract is
+// named once here instead of hunted down as a bare string across packages.
+const (
+	// TypePRMerged is a pull request merged into main.
+	TypePRMerged = "pr.merged"
+	// TypeIssueAssigned is an issue gaining an assignee.
+	TypeIssueAssigned = "issue.assigned"
+)
+
 // Event is one ActivityEvent from the relay, with the timestamp already
 // parsed. Repository and Assignee are pointers because the contract makes them
 // nullable: a row stored before the repository column existed, and every

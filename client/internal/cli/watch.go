@@ -293,9 +293,9 @@ func (e *emitter) paint(payload string, event activity.Event) error {
 func (e *emitter) count(event activity.Event) {
 	e.total++
 	switch event.Type {
-	case "pr.merged":
+	case activity.TypePRMerged:
 		e.merged++
-	case "issue.assigned":
+	case activity.TypeIssueAssigned:
 		e.assigned++
 	}
 }
