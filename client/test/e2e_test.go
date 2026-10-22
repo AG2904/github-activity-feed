@@ -107,7 +107,7 @@ func TestWatchBannerNamesTheBackfillAndFilters(t *testing.T) {
 	if got := feed.stdout.String(); got != "" {
 		t.Errorf("stdout = %q, want empty while only the chrome has spoken", got)
 	}
-	if strings.ContainsRune(feed.stderr.String(), '\x1b') {
+	if hasEscape(feed.stderr.String()) {
 		t.Errorf("stderr contains an escape sequence in the chrome: %q", feed.stderr.String())
 	}
 }
@@ -129,10 +129,10 @@ func TestWatchSaysConnectedAfterTheFirstConnection(t *testing.T) {
 	}
 	// Exactly one affirmative line: the count is of what the backfill printed,
 	// after the filter, not of what the relay stored.
-	if got := strings.Count(feed.stderr.String(), "connected · "); got != 1 {
+	if got := connectedLines(feed.stderr.String()); got != 1 {
 		t.Errorf("stderr carries %d connection lines, want exactly 1\nstderr: %q", got, feed.stderr.String())
 	}
-	if strings.ContainsRune(feed.stderr.String(), '\x1b') {
+	if hasEscape(feed.stderr.String()) {
 		t.Errorf("stderr contains an escape sequence in the chrome: %q", feed.stderr.String())
 	}
 }
@@ -149,7 +149,7 @@ func TestWatchSaysWaitingWhenTheBackfillPrintedNothing(t *testing.T) {
 	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
 	feed.waitStdout(t, mergedOutput)
 
-	if got := strings.Count(feed.stderr.String(), "connected · "); got != 1 {
+	if got := connectedLines(feed.stderr.String()); got != 1 {
 		t.Errorf("stderr carries %d connection lines, want exactly 1\nstderr: %q", got, feed.stderr.String())
 	}
 }
@@ -175,7 +175,7 @@ func TestWatchSaysConnectedWhenTheFirstAttemptIsRefused(t *testing.T) {
 	if before := stderr[:index]; strings.Contains(before, "watch: reconnected") {
 		t.Errorf("stderr = %q, want no reconnect notice before the first accepted connection", stderr)
 	}
-	if got := strings.Count(stderr, "connected · "); got != 1 {
+	if got := connectedLines(stderr); got != 1 {
 		t.Errorf("stderr carries %d connection lines, want exactly 1\nstderr: %q", got, stderr)
 	}
 }
@@ -204,7 +204,7 @@ func TestWatchSaysConnectedOnceAcrossReconnects(t *testing.T) {
 	if lines := nonEmptyLines(feed.stderr.String()); len(lines) != 4 {
 		t.Errorf("stderr has %d lines, want banner, connected and the reconnect pair\n%v", len(lines), lines)
 	}
-	if got := strings.Count(feed.stderr.String(), "connected · "); got != 1 {
+	if got := connectedLines(feed.stderr.String()); got != 1 {
 		t.Errorf("stderr carries %d connection lines, want exactly 1\nstderr: %q", got, feed.stderr.String())
 	}
 }
@@ -240,7 +240,7 @@ func TestWatchPaintsAMergedPullRequest(t *testing.T) {
 	if got := feed.stdout.String(); got != want {
 		t.Errorf("stdout = %q, want %q", got, want)
 	}
-	if strings.ContainsRune(feed.stdout.String(), '\x1b') {
+	if hasEscape(feed.stdout.String()) {
 		t.Errorf("stdout contains an escape sequence while piped: %q", feed.stdout.String())
 	}
 }
@@ -258,7 +258,7 @@ func TestWatchPaintsTheAssigneeOnAnAssignment(t *testing.T) {
 	if got := feed.stdout.String(); got != want {
 		t.Errorf("stdout = %q, want %q", got, want)
 	}
-	if strings.ContainsRune(feed.stdout.String(), '\x1b') {
+	if hasEscape(feed.stdout.String()) {
 		t.Errorf("stdout contains an escape sequence while piped: %q", feed.stdout.String())
 	}
 }
@@ -421,7 +421,7 @@ func TestWatchJSONWritesTheFramePayloadVerbatim(t *testing.T) {
 	if got := feed.stdout.String(); got != rawPayload+"\n" {
 		t.Errorf("stdout = %q, want the payload byte for byte plus one newline", got)
 	}
-	if strings.ContainsRune(feed.stdout.String(), '\x1b') {
+	if hasEscape(feed.stdout.String()) {
 		t.Errorf("stdout contains an escape sequence in --json mode: %q", feed.stdout.String())
 	}
 	// The chrome still narrates on stderr: --json changes the shape of stdout,
@@ -1054,7 +1054,7 @@ func TestWatchJSONBackfillsOnePayloadPerLine(t *testing.T) {
 	if got := feed.stdout.String(); got != want {
 		t.Errorf("stdout = %q, want the relay's own bytes one event per line %q", got, want)
 	}
-	if strings.ContainsRune(feed.stdout.String(), '\x1b') {
+	if hasEscape(feed.stdout.String()) {
 		t.Errorf("stdout contains an escape sequence in --json mode: %q", feed.stdout.String())
 	}
 }
@@ -1300,6 +1300,18 @@ const (
 // cards joins rendered cards with the blank line the feed puts between them.
 func cards(rendered ...string) string {
 	return strings.Join(rendered, "\n")
+}
+
+// hasEscape reports whether a stream carries an ANSI escape: the chrome and the
+// piped feed must never do, and every assertion of that goes through here.
+func hasEscape(text string) bool {
+	return strings.ContainsRune(text, '\x1b')
+}
+
+// connectedLines counts the affirmative connection lines on stderr: exactly one
+// per session, the first accepted connection's.
+func connectedLines(stderr string) int {
+	return strings.Count(stderr, "connected · ")
 }
 
 func mergedFrame(when time.Time) string {
