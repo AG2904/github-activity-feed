@@ -6,7 +6,7 @@ component`. The *why* arrives before the *what*.
 
 **Blocked by:** none — 01 and 02 are done.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] Line two of the card is `[labels] title` — the labels the event carries, in
       brackets, separated from the title by exactly one space, in the order the event
@@ -41,3 +41,12 @@ component`. The *why* arrives before the *what*.
   conhost: the reset between the two segments keeps them distinct, so neither drops
   its weight. This is the one place the palette table's rows are adjacent in the
   output rather than separated by default text, and it survives.
+- 2026-10-22: Done. Las etiquetas viajan con el título en `cli-output-03-04`, con el
+  registro de evidencia en
+  [`docs/tickets/cli-output/04-the-reason-rides-with-the-title.md`](../../../docs/tickets/cli-output/04-the-reason-rides-with-the-title.md).
+  Cliente en verde (`go test -count=1 ./...`, 47.3 s) y relay 55/55. La revisión de
+  dos ejes agregó el pin que faltaba —la tarjeta *merged* con etiquetas, que el spec
+  pinea y su ejemplo muestra— y movió los literales `pr.merged` / `issue.assigned` a
+  constantes compartidas en `activity`, porque ahora se usan en `render` y en `watch`.
+  Los colores reales quedan con la misma frontera que el ticket 02: verificación de
+  bytes y paso manual en `docs/cli-testing.md`.
