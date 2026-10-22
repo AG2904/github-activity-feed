@@ -30,6 +30,7 @@ type fakeRelay struct {
 	drop           chan struct{}
 	historyBody    string
 	historyFailing bool
+	streamFailures int
 	done           chan struct{}
 	doneOnce       sync.Once
 
@@ -50,6 +51,10 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 		relay.record(r.URL.RequestURI())
 		switch r.URL.Path {
 		case "/stream":
+			if relay.streamFails() {
+				http.Error(w, "the relay refused the subscription", http.StatusInternalServerError)
+				return
+			}
 			relay.recordEventID(r.Header.Get("Last-Event-ID"))
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.Header().Set("Cache-Control", "no-cache")
@@ -154,6 +159,27 @@ func (f *fakeRelay) historyFails() bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.historyFailing
+}
+
+// failStream makes the next n /stream requests answer 500, the way a relay that
+// is up but refusing this subscription would — enough to start a watch whose
+// first attempt fails and whose second is the one accepted.
+func (f *fakeRelay) failStream(n int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.streamFailures = n
+}
+
+// streamFails answers whether this /stream request is one of the refused ones,
+// counting it against the allowance either way.
+func (f *fakeRelay) streamFails() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.streamFailures == 0 {
+		return false
+	}
+	f.streamFailures--
+	return true
 }
 
 func (f *fakeRelay) hits(path string) int {

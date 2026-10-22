@@ -90,7 +90,12 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	// stdout — and the session's account must speak on all of them.
 	defer out.summarize(stderr)
 	backoff := &backoff{}
-	attempts := 0
+	// The welcome belongs to the first connection the relay accepts, not to
+	// the first attempt: a relay that is unreachable or refuses at startup is
+	// retried by design, so the attempt that finally lands is still the
+	// session's first connection. Only a connection after an accepted one is a
+	// recovery, and only then does the reconnect notice speak.
+	accepted := false
 	filled := false
 
 	for {
@@ -111,19 +116,20 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		}
 
 		eventSeen, err := stream(ctx, target, out, func() {
-			// The first connection is the only moment "is it alive?" has no
-			// other reply, so it answers in words: how much history printed,
-			// or that there is none. Every later connection is a recovery
-			// worth naming instead, so a reconnect never doubles as a second
-			// welcome and the affirmative line is printed exactly once.
+			// The first accepted connection is the only moment "is it alive?"
+			// has no other reply, so it answers in words: how much history
+			// printed, or that there is none. Every later connection is a
+			// recovery worth naming instead, so a reconnect never doubles as a
+			// second welcome and the affirmative line is printed exactly once.
 			switch {
-			case attempts > 0:
+			case accepted:
 				fmt.Fprintln(stderr, "watch: reconnected")
 			case out.total > 0:
 				fmt.Fprintf(stderr, "connected · %d events from history\n", out.total)
 			default:
 				fmt.Fprintln(stderr, "connected · waiting for events")
 			}
+			accepted = true
 		})
 		if ctx.Err() != nil {
 			return 0
@@ -143,7 +149,6 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 		delay := backoff.delay()
 		fmt.Fprintf(stderr, "watch: reconnecting in %s: %v\n", delay, err)
-		attempts++
 
 		timer := time.NewTimer(delay)
 		select {

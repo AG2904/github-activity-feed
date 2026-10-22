@@ -153,6 +153,32 @@ func TestWatchSaysWaitingWhenTheBackfillPrintedNothing(t *testing.T) {
 	}
 }
 
+// A relay that refuses the very first attempt does not lose the session its
+// welcome: the affirmative line belongs to the first connection the relay
+// accepts, not to the first attempt.
+func TestWatchSaysConnectedWhenTheFirstAttemptIsRefused(t *testing.T) {
+	relay := newFakeRelay(t)
+	relay.failStream(1)
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+	feed.waitStderr(t, "connected · waiting for events\n")
+
+	// The refusal before it is a retry worth naming, but never a recovery:
+	// `watch: reconnected` may only follow a connection that was accepted once.
+	stderr := feed.stderr.String()
+	index := strings.Index(stderr, "connected · ")
+	if index < 0 {
+		t.Fatalf("stderr = %q, want the affirmative line", stderr)
+	}
+	if before := stderr[:index]; strings.Contains(before, "watch: reconnected") {
+		t.Errorf("stderr = %q, want no reconnect notice before the first accepted connection", stderr)
+	}
+	if got := strings.Count(stderr, "connected · "); got != 1 {
+		t.Errorf("stderr carries %d connection lines, want exactly 1\nstderr: %q", got, stderr)
+	}
+}
+
 func TestWatchSaysConnectedOnceAcrossReconnects(t *testing.T) {
 	relay := newFakeRelay(t)
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
