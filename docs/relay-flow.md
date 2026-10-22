@@ -129,6 +129,7 @@ sirve el stream y el historial para que un cliente parsee una sola cosa:
 | --- | --- | --- |
 | `type` | `'pr.merged' \| 'issue.assigned'` | conjunto cerrado |
 | `repository` | `string \| null` | `owner/name` |
+| `branch` | `string \| null` | la rama de origen de un merge (`head.ref`); `null` si el evento no tiene una |
 | `actor` | `string` | quien causó el evento |
 | `subject` | `string` | título del PR o del issue |
 | `assignee` | `string \| null` | `null` si el evento no tiene uno |
@@ -136,9 +137,12 @@ sirve el stream y el historial para que un cliente parsee una sola cosa:
 | `url` | `string` | el link al PR o al issue |
 | `when` | `IsoInstant` | UTC ISO-8601 con milisegundos, forma canónica |
 
-Los dos nulos **no significan lo mismo**, y confundirlos es el error fácil:
+Los nulos **no significan lo mismo**, y confundirlos es el error fácil:
 `assignee` es `null` porque una *clase* de evento no tiene asignado; `repository` es
-`null` porque una *fila* es anterior a que existiera la columna.
+`null` porque una *fila* es anterior a que existiera la columna. `branch` puede ser
+`null` por las dos razones a la vez: una asignación no tiene rama, y una fila anterior
+a la columna tampoco; el cliente las trata igual y cae en la frase derivada del tipo
+(ADR-0013).
 
 `IsoInstant` es un tipo nominal: no se puede pasar un string cualquiera donde se
 espera un instante canónico sin pasar por `isoInstant()`, que es el único productor.
@@ -151,9 +155,9 @@ espera un instante canónico sin pasar por `isoInstant()`, que es el único prod
 | --- | --- | --- |
 | `id` | entero, PK | orden del historial; no sale al cable |
 | `deliveryId` | texto, **único**, nullable | la identidad de la *entrega*, no del evento; el índice único **es** el dedupe |
-| `type` · `repository` · `actor` · `subject` · `assignee` · `labels` · `url` · `when` | — | los ocho campos del contrato |
+| `type` · `repository` · `branch` · `actor` · `subject` · `assignee` · `labels` · `url` · `when` | — | los nueve campos del contrato |
 
-`repository` es **nullable por obligación**, no por diseño: SQLite no puede agregar
+`repository` y `branch` son **nullable por obligación**, no por diseño: SQLite no puede agregar
 una columna `NOT NULL` a una tabla poblada, y TypeORM responde a un cambio de esquema
 recreando la tabla y copiando las filas, así que una columna `NOT NULL` hace fallar
 la copia y el relay no arranca. Está medido, y la suite lo prueba levantando una app
@@ -205,7 +209,7 @@ Estos archivos no aparecen en el grafo de llamadas porque no llaman a nadie: **d
 | `src/relay/github/merge-to-main.ts` | filtro + normalización de `pr.merged` | `to-activity-event` |
 | `src/relay/github/issue-assignment.ts` | filtro + normalización de `issue.assigned` | `to-activity-event` |
 | `src/relay/github/payload.ts` | lectura defensiva de payloads + `GitHubDelivery` | los dos normalizadores |
-| `src/relay/domain/activity-event.ts` | el contrato de 8 campos + `isoInstant()` | adaptador, servicio, controladores |
+| `src/relay/domain/activity-event.ts` | el contrato de 9 campos + `isoInstant()` | adaptador, servicio, controladores |
 | `src/relay/domain/critical.ts` | qué hace crítico a un evento | los dos normalizadores |
 | `src/relay/activity-events.service.ts` | `store()`, `list()`, `HistoryFilter`, `fromStoredRow()` | los dos controladores de lectura y el de ingreso |
 | `src/relay/activity-event.entity.ts` | la fila persistida | el servicio (TypeORM) |

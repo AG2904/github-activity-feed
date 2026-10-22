@@ -64,6 +64,7 @@ function pullRequestPayload(
       merged_at: '2026-10-15T12:00:00Z',
       html_url: 'https://github.com/AG2904/github-activity-feed/pull/42',
       base: { ref: 'main' },
+      head: { ref: 'fix/memory-leak' },
       user: { login: 'maria.perez' },
       labels: [{ name: 'bug' }, { name: 'area:relay' }],
       ...pullRequest,
@@ -292,6 +293,7 @@ describe('Relay HTTP seam', () => {
       expect(history.body).toContainEqual({
         type: 'pr.merged',
         repository: REPOSITORY,
+        branch: 'fix/memory-leak',
         actor: 'maria.perez',
         subject: 'Fix memory leak in parser component',
         assignee: null,
@@ -323,6 +325,49 @@ describe('Relay HTTP seam', () => {
       ).expect(200);
 
       expect((await storedFor(url))[0]).toMatchObject({ repository: 'AG2904/another-repo' });
+    });
+
+    it('carries the source branch the payload names, not the base branch', async () => {
+      // `base.ref` decides whether the merge is critical; `head.ref` is the line
+      // of work that landed, and it is the branch the card names. The two differ
+      // on every merge, so a fixture with them equal could not tell them apart.
+      const url = pullUrl(192);
+      await postWebhook(
+        JSON.stringify(
+          pullRequestPayload({
+            base: { ref: 'main' },
+            head: { ref: 'refactor/stream-heartbeat' },
+            html_url: url,
+          }),
+        ),
+      ).expect(200);
+
+      expect((await storedFor(url))[0]).toMatchObject({
+        branch: 'refactor/stream-heartbeat',
+      });
+    });
+
+    it('normalizes a merge with no usable head ref, with a null branch', async () => {
+      // The branch is supplementary: losing it must never lose the event. GitHub
+      // always sends `head.ref`, so these are defensive shapes, not deliveries
+      // the relay expects — and every one of them still stores the happening.
+      const heads: Array<{ name: string; head?: unknown }> = [
+        { name: 'missing head', head: undefined },
+        { name: 'missing head ref', head: {} },
+        { name: 'numeric head ref', head: { ref: 42 } },
+        { name: 'empty head ref', head: { ref: '' } },
+      ];
+
+      for (const [index, { head }] of heads.entries()) {
+        const url = pullUrl(193 + index);
+        await postWebhook(
+          JSON.stringify(pullRequestPayload({ head, html_url: url })),
+        ).expect(200);
+
+        expect(await storedFor(url)).toEqual([
+          expect.objectContaining({ type: 'pr.merged', url, branch: null }),
+        ]);
+      }
     });
 
     it('ignores a PR merged into a branch other than main', async () => {
@@ -417,6 +462,7 @@ describe('Relay HTTP seam', () => {
       expect(history.body).toContainEqual({
         type: 'issue.assigned',
         repository: REPOSITORY,
+        branch: null,
         actor: 'lucia.gomez',
         subject: 'Webhook drops events under load',
         assignee: 'tomas.ferreira',
@@ -779,11 +825,12 @@ describe('Relay HTTP seam', () => {
       await postMerge(url, 'delivery-155').expect(200);
 
       const [stored] = await storedFor(url);
-      // Deep equality on purpose: exactly eight fields reach the wire, so a ninth
-      // column arriving there fails here (ADR-0005).
+      // Deep equality on purpose: exactly nine fields reach the wire, so a tenth
+      // column arriving there fails here (ADR-0005, ADR-0013).
       expect(stored).toEqual({
         type: 'pr.merged',
         repository: REPOSITORY,
+        branch: 'fix/memory-leak',
         actor: 'maria.perez',
         subject: 'Fix memory leak in parser component',
         assignee: null,
@@ -1048,13 +1095,14 @@ describe('Relay HTTP seam', () => {
         await legacyApp.init();
         const response = await request(legacyApp.getHttpServer()).get('/history').expect(200);
 
-        // The row outlived the table rebuild, and it answers with no repository: it
-        // was written before anyone recorded one, and recovering it from the url is
-        // the derivation this ticket exists to remove.
+        // The row outlived the table rebuild, and it answers with no repository
+        // and no branch: it was written before anyone recorded either, and
+        // recovering them from the url is the derivation these tickets removed.
         expect(response.body).toEqual([
           {
             type: 'pr.merged',
             repository: null,
+            branch: null,
             actor: 'maria.perez',
             subject: 'Stored before the column existed',
             assignee: null,

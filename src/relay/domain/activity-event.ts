@@ -1,10 +1,10 @@
 /**
  * The single normalized shape the relay stores and serves (see GLOSSARY.md).
  *
- * Eight fields, no more. An ActivityEvent describes a *happening* — what
- * happened, where, to whom, where to look, and when — so the identifiers that
- * belong to a delivery or to a storage row deliberately do not appear here
- * (ADR-0005).
+ * Nine fields, no more. An ActivityEvent describes a *happening* — what
+ * happened, where it landed, where it happened, to whom, where to look, and
+ * when — so the identifiers that belong to a delivery or to a storage row
+ * deliberately do not appear here (ADR-0005).
  */
 
 /** The critical happenings the relay knows how to normalize. A closed set. */
@@ -46,6 +46,15 @@ export interface ActivityEvent {
    * repository to report rather than one to guess at (ticket 09).
    */
   repository: string | null;
+  /**
+   * The source branch that landed, from the pull request's `head.ref`.
+   *
+   * Null for an event that has no branch to name: an assignment, a merge whose
+   * payload carried no usable head ref, or a row stored before the relay
+   * recorded one (ADR-0013). Supplementary, never load-bearing: an event is
+   * still an event without it.
+   */
+  branch: string | null;
   actor: string;
   subject: string;
   /** The user the issue was assigned to; `null` for an event that has none. */

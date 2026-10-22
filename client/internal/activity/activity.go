@@ -22,12 +22,13 @@ const (
 )
 
 // Event is one ActivityEvent from the relay, with the timestamp already
-// parsed. Repository and Assignee are pointers because the contract makes them
-// nullable: a row stored before the repository column existed, and every
-// pr.merged event.
+// parsed. Repository, Branch and Assignee are pointers because the contract
+// makes them nullable: a row stored before the column existed, an event that
+// has no branch to name, and every issue.assigned event.
 type Event struct {
 	Type       string
 	Repository *string
+	Branch     *string
 	Actor      string
 	Subject    string
 	Assignee   *string
@@ -69,6 +70,7 @@ func Parse(payload []byte) (Event, error) {
 	var wire struct {
 		Type       string   `json:"type"`
 		Repository *string  `json:"repository"`
+		Branch     *string  `json:"branch"`
 		Actor      string   `json:"actor"`
 		Subject    string   `json:"subject"`
 		Assignee   *string  `json:"assignee"`
@@ -91,6 +93,7 @@ func Parse(payload []byte) (Event, error) {
 	return Event{
 		Type:       wire.Type,
 		Repository: wire.Repository,
+		Branch:     wire.Branch,
 		Actor:      wire.Actor,
 		Subject:    wire.Subject,
 		Assignee:   wire.Assignee,

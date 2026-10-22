@@ -70,16 +70,21 @@ func (p Palette) card(w io.Writer, event activity.Event, now time.Time, shape li
 }
 
 // headline is the sentence: who acted, what the verb was, and where it landed.
-// The destination is derived from the event's type because the event carries no
-// branch; a type that means something else gets its own phrase rather than
-// reusing this one. An unknown type degrades to its raw value and no
-// destination, so a new event type still reads as something.
+// A merge names the branch that landed when the event carries one; a null
+// branch — a legacy row or a payload without a usable head ref — falls back to
+// the type-derived phrase, because pr.merged still means a merge into main. A
+// type that means something else gets its own phrase rather than reusing this
+// one. An unknown type degrades to its raw value and no destination, so a new
+// event type still reads as something.
 func (p Palette) headline(event activity.Event) string {
 	parts := []string{p.paint(cyan, event.Actor)}
 	switch event.Type {
 	case activity.TypePRMerged:
+		parts = append(parts, p.paint(green, "merged"))
+		if event.Branch != nil && *event.Branch != "" {
+			parts = append(parts, p.paint(blue, *event.Branch))
+		}
 		parts = append(parts,
-			p.paint(green, "merged"),
 			p.paint(grey, "into"),
 			p.paint(green, "main"),
 		)

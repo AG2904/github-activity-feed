@@ -8,6 +8,7 @@ interface GitHubPullRequest {
   merged_at: string | null;
   html_url: string;
   base: { ref: string };
+  head: { ref: string };
   labels: Array<{ name: string }>;
 }
 
@@ -41,6 +42,10 @@ export function toMergeToMainEvent(payload: PullRequestPayload): ActivityEvent |
   const when = isoInstant(pullRequest?.merged_at);
   const subject = pullRequest?.title;
   const url = pullRequest?.html_url;
+  // The source branch is supplementary: a payload without a usable head ref
+  // still normalizes, it simply has no branch to name (ADR-0013).
+  const headRef = asRecord(pullRequest?.head)?.ref;
+  const branch = typeof headRef === 'string' && headRef !== '' ? headRef : null;
   if (
     !actor ||
     !when ||
@@ -53,6 +58,7 @@ export function toMergeToMainEvent(payload: PullRequestPayload): ActivityEvent |
   return {
     type: 'pr.merged',
     repository: repositoryName(payload?.repository),
+    branch,
     actor,
     subject,
     assignee: null,

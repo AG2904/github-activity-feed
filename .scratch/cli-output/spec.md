@@ -36,7 +36,7 @@ One event becomes a **card of three lines** — a sentence, the thing (prefixed 
 reason), the context — with a blank line between cards:
 
 ```text
-maria.perez merged into main
+maria.perez merged fix/memory-leak into main
   [bug] Fix memory leak in parser component
   AG2904/github-activity-feed · 2h ago
 
@@ -49,7 +49,7 @@ When the terminal cannot hyperlink (a pipe, `--no-color`), a fourth indented lin
 carries the URL, because a subject with no link is a dead end:
 
 ```text
-maria.perez merged into main
+maria.perez merged fix/memory-leak into main
   [bug] Fix memory leak in parser component
   AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/pull/42
@@ -107,10 +107,13 @@ what happened whether or not the terminal shows colour.
 - **Vocabulary.** `merged` and `assigned` are the human words; `pr.merged` and
   `issue.assigned` stay on the wire and in `--json`. An unknown type falls back to its
   raw value, so a new event type degrades to legible rather than to blank.
-- **The destination is derived from the type.** The event carries no branch and no
-  assignee phrase, so `into main` is safe only because `pr.merged` *means* a merge into
-  `main`; a future type with a different destination gets its own phrase rather than
-  reusing this one. An assignment with a null assignee renders `assigned` with no `to`.
+- **The destination names the branch when the event carries one.** A merge's source
+  branch (`branch`, from the relay's `head.ref`, ADR-0013) renders `actor merged
+  <branch> into main`. When `branch` is null — a row stored before the field existed,
+  or a payload with no usable head ref — the phrase falls back to `actor merged into
+  main`, because `pr.merged` still *means* a merge into `main`; a future type with a
+  different destination gets its own phrase rather than reusing this one. An
+  assignment with a null assignee renders `assigned` with no `to`.
 - **Labels ride with the title.** They are the reason the event exists, and the CLI
   already receives them: `[bug]`, `[bug, feedback]`, immediately before the thing they
   qualify — the load-bearing word first, the way cargo puts the qualifier next to the
@@ -168,6 +171,7 @@ what happened whether or not the terminal shows colour.
   | `into` / `to` | grey | the connector is grammar, not information |
   | title | bold, default, OSC 8 | the content; it does not compete |
   | repository | blue | a location, the way a path is shown |
+  | branch | blue | a location, the way a path is shown |
   | labels | bold red | the reason it interrupted you |
   | `·` and the time | grey | context |
 
@@ -196,7 +200,9 @@ what happened whether or not the terminal shows colour.
   fixtures are the contract.
 - **Cases that must be pinned**:
   - a merged event renders the three lines, in that order, with the labels before the
-    title;
+    title, and names its branch when the event carries one;
+  - a merged event with `branch: null` renders `actor merged into main`, with no empty
+    segment and no doubled `into main`;
   - an assigned event renders `actor assigned to assignee`, and `assigned` alone when
     the assignee is null;
   - an event with no labels starts line two with the title instead of printing an
@@ -231,7 +237,9 @@ what happened whether or not the terminal shows colour.
 - 256-colour, truecolour, themes, or a configurable palette.
 - Filtering by label or by event type, and grouping the live feed.
 - A TUI, desktop notifications, sound, or a daemon.
-- Any change to `--json`, to the wire format, or to the relay.
+- Any change to `--json` beyond carrying the relay's bytes verbatim: the CLI does not
+  reshape it. The wire format and the relay change only through a documented
+  amendment such as ADR-0013, which adds `branch` to the event.
 - Colouring the stderr banner, the session chrome, or the reconnect notices: all of it
   is plain text by decision, so the escape discipline above has exactly one stream to
   describe.
@@ -289,6 +297,15 @@ what happened whether or not the terminal shows colour.
   notices already answer "did it die?". The table shape was checked against the
   evidence a second time and rejected for a reason now written down instead of
   remembered.
+- 2026-10-22: **Amendment — the merge names its branch.** `pr.merged` now carries the
+  source branch (`branch`, read from `head.ref` and nullable for the same SQLite
+  reason as `repository`; ADR-0013), and the card reads `actor merged <branch> into
+  main`. The "the event carries no branch" note under Implementation Decisions is
+  retired, the palette gains the branch in the repository's location role, and the
+  Out of Scope clause no longer forbids the wire change: `--json` still hands over the
+  relay's bytes verbatim, but those bytes now include `branch`, and a legacy row or a
+  payload without a usable head ref carries `null`. The card falls back to `merged
+  into main` there, because `pr.merged` still means a merge into main.
 - 2026-10-22: The session-chrome bullet's banner example was corrected to `watching
   <url> · backfill 10 · user maria · repo AG2904/x`: the example had the segments in an
   order that contradicted the prose beside it and ticket 03's checklist (backfill
