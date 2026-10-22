@@ -269,7 +269,7 @@ func TestWatchRendersAnAssignmentWithoutAnAssignee(t *testing.T) {
 	relay.waitConnected(t)
 
 	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "issue.assigned",
-		"AG2904/github-activity-feed", "lucia.gomez", "Ship the onboarding checklist", nil,
+		"AG2904/github-activity-feed", "", "lucia.gomez", "Ship the onboarding checklist", nil,
 		`["bug"]`, "https://github.com/AG2904/github-activity-feed/issues/7"))
 
 	want := "lucia.gomez assigned\n" +
@@ -289,7 +289,7 @@ func TestWatchRendersEveryLabel(t *testing.T) {
 	relay.waitConnected(t)
 
 	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "issue.assigned",
-		"AG2904/github-activity-feed", "lucia.gomez", "Ship the onboarding checklist",
+		"AG2904/github-activity-feed", "", "lucia.gomez", "Ship the onboarding checklist",
 		ptr("tomas.ferreira"), `["bug","feedback"]`,
 		"https://github.com/AG2904/github-activity-feed/issues/7"))
 
@@ -314,7 +314,7 @@ func TestWatchStartsLineTwoAtTheTitleWhenTheEventHasNoLabels(t *testing.T) {
 	relay.waitConnected(t)
 
 	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "pr.merged",
-		"AG2904/github-activity-feed", "maria.perez", "Fix memory leak in parser component",
+		"AG2904/github-activity-feed", "", "maria.perez", "Fix memory leak in parser component",
 		nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/42"))
 
 	want := "maria.perez merged into main\n" +
@@ -337,7 +337,7 @@ func TestWatchRendersALegacyRowWithoutARepository(t *testing.T) {
 	// (ADR-0010): the context line is the time alone, and the label rides with
 	// the title instead of filling the repository's place.
 	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "pr.merged",
-		"", "maria.perez", "Legacy merge", nil, `["bug"]`,
+		"", "", "maria.perez", "Legacy merge", nil, `["bug"]`,
 		"https://github.com/AG2904/github-activity-feed/pull/1"))
 
 	want := "maria.perez merged into main\n" +
@@ -351,6 +351,29 @@ func TestWatchRendersALegacyRowWithoutARepository(t *testing.T) {
 	}
 }
 
+// The branch is supplementary: a merge stored before the relay recorded one
+// falls back to the type-derived phrase, with no empty segment and no doubled
+// `into main`.
+func TestWatchRendersAMergeWithoutABranch(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "pr.merged",
+		"AG2904/github-activity-feed", "", "maria.perez", "Legacy merge", nil, `["bug"]`,
+		"https://github.com/AG2904/github-activity-feed/pull/1"))
+
+	want := "maria.perez merged into main\n" +
+		"  [bug] Legacy merge\n" +
+		"  AG2904/github-activity-feed · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/pull/1\n"
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want the type-derived phrase when the branch is null %q", got, want)
+	}
+}
+
 func TestRelativeTimeSaysYesterday(t *testing.T) {
 	relay := newFakeRelay(t)
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
@@ -359,12 +382,12 @@ func TestRelativeTimeSaysYesterday(t *testing.T) {
 	relay.send(t, mergedFrame(time.Now().Add(-30*time.Hour)))
 	relay.send(t, mergedFrame(time.Now().Add(-50*time.Hour)))
 
-	want := "maria.perez merged into main\n" +
+	want := "maria.perez merged fix/memory-leak into main\n" +
 		"  [bug] Fix memory leak in parser component\n" +
 		"  AG2904/github-activity-feed · yesterday\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n" +
 		"\n" +
-		"maria.perez merged into main\n" +
+		"maria.perez merged fix/memory-leak into main\n" +
 		"  [bug] Fix memory leak in parser component\n" +
 		"  AG2904/github-activity-feed · 2d ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
@@ -561,7 +584,7 @@ func TestWatchStoppedCountsLeaveOutWhatTheFilterDiscarded(t *testing.T) {
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
 	// Somebody else's assignment is valid but discarded by the filter before
 	// it is ever shown...
-	relay.send(t, eventFrame(when, "issue.assigned", "AG2904/github-activity-feed",
+	relay.send(t, eventFrame(when, "issue.assigned", "AG2904/github-activity-feed", "",
 		"someone.else", "Not maria's assignment", ptr("tomas.ferreira"), `["bug"]`,
 		"https://github.com/AG2904/github-activity-feed/issues/8"))
 	// ...and maria's merge is the one card the session shows.
@@ -719,7 +742,7 @@ func TestWatchFiltersByActor(t *testing.T) {
 	relay.waitConnected(t)
 
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
-	relay.send(t, eventFrame(when, "pr.merged", "other/repo", "someone.else", "Not maria's merge", nil, "[]", "https://github.com/other/repo/pull/2"))
+	relay.send(t, eventFrame(when, "pr.merged", "other/repo", "", "someone.else", "Not maria's merge", nil, "[]", "https://github.com/other/repo/pull/2"))
 	relay.send(t, mergedFrame(when))
 	relay.send(t, assignedFrame(when))
 
@@ -754,9 +777,9 @@ func TestWatchFiltersByRepository(t *testing.T) {
 	relay.waitConnected(t)
 
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
-	relay.send(t, eventFrame(when, "pr.merged", "other/repo", "maria.perez", "Other repo merge", nil, "[]", "https://github.com/other/repo/pull/3"))
+	relay.send(t, eventFrame(when, "pr.merged", "other/repo", "", "maria.perez", "Other repo merge", nil, "[]", "https://github.com/other/repo/pull/3"))
 	// A row stored before the repository column existed (ADR-0010).
-	relay.send(t, eventFrame(when, "pr.merged", "", "maria.perez", "Legacy merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/1"))
+	relay.send(t, eventFrame(when, "pr.merged", "", "", "maria.perez", "Legacy merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/1"))
 	relay.send(t, mergedFrame(when))
 
 	want := mergedOutput
@@ -774,7 +797,7 @@ func TestWatchFiltersCombineAsConjunction(t *testing.T) {
 
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
 	relay.send(t, assignedFrame(when))
-	relay.send(t, eventFrame(when, "issue.assigned", "other/repo", "someone.else", "Other repo assignment", ptr("lucia.gomez"), `["bug"]`, "https://github.com/other/repo/issues/9"))
+	relay.send(t, eventFrame(when, "issue.assigned", "other/repo", "", "someone.else", "Other repo assignment", ptr("lucia.gomez"), `["bug"]`, "https://github.com/other/repo/issues/9"))
 
 	want := "someone.else assigned to lucia.gomez\n" +
 		"  [bug] Other repo assignment\n" +
@@ -793,7 +816,7 @@ func TestWatchFiltersAreCaseSensitive(t *testing.T) {
 	relay.waitConnected(t)
 
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
-	relay.send(t, eventFrame(when, "pr.merged", "other/repo", "Maria.Perez", "Cased merge", nil, "[]", "https://github.com/other/repo/pull/4"))
+	relay.send(t, eventFrame(when, "pr.merged", "other/repo", "", "Maria.Perez", "Cased merge", nil, "[]", "https://github.com/other/repo/pull/4"))
 	relay.send(t, mergedFrame(when))
 
 	want := mergedOutput
@@ -848,7 +871,7 @@ func TestWatchBackfillLimitsToTheMostRecentEvents(t *testing.T) {
 	relay.setHistory(historyOf(
 		payloadOf(assignedFrame(when)),
 		payloadOf(mergedFrame(when)),
-		payloadOf(eventFrame(when, "pr.merged", "other/repo", "someone.else", "Oldest merge", nil, "[]", "https://github.com/other/repo/pull/5")),
+		payloadOf(eventFrame(when, "pr.merged", "other/repo", "", "someone.else", "Oldest merge", nil, "[]", "https://github.com/other/repo/pull/5")),
 	))
 
 	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color", "--backfill", "1")
@@ -886,7 +909,7 @@ func TestWatchBackfillHonoursTheFiltersBeforeTheLimit(t *testing.T) {
 	// The newest stored event is in another repository, so a limit applied
 	// before the filter would print nothing at all.
 	relay.setHistory(historyOf(
-		payloadOf(eventFrame(when, "pr.merged", "other/repo", "maria.perez", "Newer merge elsewhere", nil, "[]", "https://github.com/other/repo/pull/6")),
+		payloadOf(eventFrame(when, "pr.merged", "other/repo", "", "maria.perez", "Newer merge elsewhere", nil, "[]", "https://github.com/other/repo/pull/6")),
 		payloadOf(mergedFrame(when)),
 	))
 
@@ -916,7 +939,7 @@ func TestWatchBackfillsTenEventsByDefault(t *testing.T) {
 	// happen carries the highest number, so it comes first.
 	payloads := make([]string, 0, 12)
 	for i := 11; i >= 0; i-- {
-		payloads = append(payloads, payloadOf(eventFrame(when, "pr.merged", "AG2904/github-activity-feed",
+		payloads = append(payloads, payloadOf(eventFrame(when, "pr.merged", "AG2904/github-activity-feed", "",
 			"maria.perez", fmt.Sprintf("Merge %d", i), nil, "[]",
 			fmt.Sprintf("https://github.com/AG2904/github-activity-feed/pull/%d", 100+i))))
 	}
@@ -1084,7 +1107,7 @@ func TestHistoryFiltersByInvolvement(t *testing.T) {
 	relay := newFakeRelay(t)
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
 	relay.setHistory(historyOf(
-		payloadOf(eventFrame(when, "pr.merged", "AG2904/github-activity-feed", "someone.else", "Not maria's merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/8")),
+		payloadOf(eventFrame(when, "pr.merged", "AG2904/github-activity-feed", "", "someone.else", "Not maria's merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/8")),
 		payloadOf(assignedFrame(when)),
 		payloadOf(mergedFrame(when)),
 	))
@@ -1106,10 +1129,10 @@ func TestHistoryFiltersByRepository(t *testing.T) {
 	relay := newFakeRelay(t)
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
 	relay.setHistory(historyOf(
-		payloadOf(eventFrame(when, "pr.merged", "other/repo", "maria.perez", "Merge elsewhere", nil, "[]", "https://github.com/other/repo/pull/9")),
+		payloadOf(eventFrame(when, "pr.merged", "other/repo", "", "maria.perez", "Merge elsewhere", nil, "[]", "https://github.com/other/repo/pull/9")),
 		payloadOf(mergedFrame(when)),
 		// A row stored before the repository column existed (ADR-0010).
-		payloadOf(eventFrame(when, "pr.merged", "", "maria.perez", "Legacy merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/1")),
+		payloadOf(eventFrame(when, "pr.merged", "", "", "maria.perez", "Legacy merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/1")),
 	))
 
 	got := runFeed(t, nil, "history", "--relay", relay.URL, "--no-color", "--repo", "AG2904/github-activity-feed")
@@ -1129,7 +1152,7 @@ func TestHistoryFiltersCombineAsConjunction(t *testing.T) {
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
 	relay.setHistory(historyOf(
 		payloadOf(assignedFrame(when)),
-		payloadOf(eventFrame(when, "issue.assigned", "other/repo", "someone.else", "Other repo assignment", ptr("lucia.gomez"), `["bug"]`, "https://github.com/other/repo/issues/9")),
+		payloadOf(eventFrame(when, "issue.assigned", "other/repo", "", "someone.else", "Other repo assignment", ptr("lucia.gomez"), `["bug"]`, "https://github.com/other/repo/issues/9")),
 	))
 
 	got := runFeed(t, nil, "history", "--relay", relay.URL, "--no-color",
@@ -1154,7 +1177,7 @@ func TestHistoryGroupsByRepository(t *testing.T) {
 	// the order these groups were first seen in; grouping has to reorder them,
 	// and the order inside each group still has to survive.
 	relay.setHistory(historyOf(
-		payloadOf(eventFrame(when, "pr.merged", "other/repo", "someone.else", "Other repo merge", nil, "[]", "https://github.com/other/repo/pull/9")),
+		payloadOf(eventFrame(when, "pr.merged", "other/repo", "", "someone.else", "Other repo merge", nil, "[]", "https://github.com/other/repo/pull/9")),
 		payloadOf(mergedFrame(when)),
 		payloadOf(assignedFrame(when)),
 	))
@@ -1183,7 +1206,7 @@ func TestHistoryGroupsTheEventsWithoutARepositoryLast(t *testing.T) {
 	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
 	relay.setHistory(historyOf(
 		// A row stored before the column existed (ADR-0010).
-		payloadOf(eventFrame(when, "pr.merged", "", "maria.perez", "Legacy merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/1")),
+		payloadOf(eventFrame(when, "pr.merged", "", "", "maria.perez", "Legacy merge", nil, "[]", "https://github.com/AG2904/github-activity-feed/pull/1")),
 		payloadOf(mergedFrame(when)),
 	))
 
@@ -1261,11 +1284,11 @@ func TestHistoryFailsOnAResponseItCannotRead(t *testing.T) {
 
 // rawPayload is the relay's own bytes, with an ampersand that Go's encoder
 // would escape as \u0026 if the CLI re-marshalled instead of passing it through.
-const rawPayload = `{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"}`
+const rawPayload = `{"type":"pr.merged","repository":"AG2904/github-activity-feed","branch":"fix/memory-leak","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"}`
 
 // historyBody is an audit-history array with both event shapes, again carrying
 // an ampersand to make re-serialization visible.
-const historyBody = `[{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"},{"type":"issue.assigned","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Ship the onboarding checklist","assignee":"lucia.gomez","labels":["bug"],"url":"https://github.com/AG2904/github-activity-feed/issues/7","when":"2026-10-11T14:00:00.000Z"}]`
+const historyBody = `[{"type":"pr.merged","repository":"AG2904/github-activity-feed","branch":"fix/memory-leak","actor":"maria.perez","subject":"Fix parser & renderer","assignee":null,"labels":[],"url":"https://github.com/AG2904/github-activity-feed/pull/42","when":"2026-10-11T13:00:00.000Z"},{"type":"issue.assigned","repository":"AG2904/github-activity-feed","branch":null,"actor":"maria.perez","subject":"Ship the onboarding checklist","assignee":"lucia.gomez","labels":["bug"],"url":"https://github.com/AG2904/github-activity-feed/issues/7","when":"2026-10-11T14:00:00.000Z"}]`
 
 // The two rendered forms the fixtures below produce, all at "2h ago". A card is
 // the sentence, the title and the context; without colour the URL is a fourth
@@ -1273,7 +1296,7 @@ const historyBody = `[{"type":"pr.merged","repository":"AG2904/github-activity-f
 // bug label, so its line two is the reason before the what — the pin for a card
 // with no labels lives in its own test, on its own event.
 const (
-	mergedOutput = "maria.perez merged into main\n" +
+	mergedOutput = "maria.perez merged fix/memory-leak into main\n" +
 		"  [bug] Fix memory leak in parser component\n" +
 		"  AG2904/github-activity-feed · 2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
@@ -1287,7 +1310,7 @@ const (
 // the repository and the context line therefore does not. The labels still ride
 // with the title: the reason is not repository-scoped.
 const (
-	mergedGrouped = "maria.perez merged into main\n" +
+	mergedGrouped = "maria.perez merged fix/memory-leak into main\n" +
 		"  [bug] Fix memory leak in parser component\n" +
 		"  2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
@@ -1315,23 +1338,28 @@ func connectedLines(stderr string) int {
 }
 
 func mergedFrame(when time.Time) string {
-	return eventFrame(when, "pr.merged", "AG2904/github-activity-feed", "maria.perez",
-		"Fix memory leak in parser component", nil, `["bug"]`,
+	return eventFrame(when, "pr.merged", "AG2904/github-activity-feed", "fix/memory-leak",
+		"maria.perez", "Fix memory leak in parser component", nil, `["bug"]`,
 		"https://github.com/AG2904/github-activity-feed/pull/42")
 }
 
 func assignedFrame(when time.Time) string {
-	return eventFrame(when, "issue.assigned", "AG2904/github-activity-feed", "maria.perez",
-		"Ship the onboarding checklist", ptr("lucia.gomez"), `["bug"]`,
+	return eventFrame(when, "issue.assigned", "AG2904/github-activity-feed", "",
+		"maria.perez", "Ship the onboarding checklist", ptr("lucia.gomez"), `["bug"]`,
 		"https://github.com/AG2904/github-activity-feed/issues/7")
 }
 
-// eventFrame builds the relay's frame for one event. An empty repository is
-// the null of a row stored before the column existed; a nil assignee is null.
-func eventFrame(when time.Time, kind, repository, actor, subject string, assignee *string, labels, url string) string {
+// eventFrame builds the relay's frame for one event. An empty repository or
+// branch is the null of a row stored before that column existed; a nil assignee
+// is null.
+func eventFrame(when time.Time, kind, repository, branch, actor, subject string, assignee *string, labels, url string) string {
 	repo := "null"
 	if repository != "" {
 		repo = fmt.Sprintf("%q", repository)
+	}
+	ref := "null"
+	if branch != "" {
+		ref = fmt.Sprintf("%q", branch)
 	}
 	assigned := "null"
 	if assignee != nil {
@@ -1339,8 +1367,8 @@ func eventFrame(when time.Time, kind, repository, actor, subject string, assigne
 	}
 
 	return "data: " + fmt.Sprintf(
-		`{"type":%q,"repository":%s,"actor":%q,"subject":%q,"assignee":%s,"labels":%s,"url":%q,"when":"%s"}`+"\n\n",
-		kind, repo, actor, subject, assigned, labels, url, stamp(when),
+		`{"type":%q,"repository":%s,"branch":%s,"actor":%q,"subject":%q,"assignee":%s,"labels":%s,"url":%q,"when":"%s"}`+"\n\n",
+		kind, repo, ref, actor, subject, assigned, labels, url, stamp(when),
 	)
 }
 
