@@ -289,14 +289,20 @@ func startFeed(t *testing.T, env map[string]string, args ...string) *runningFeed
 	return startBinary(t, feedBinary, env, args...)
 }
 
-func startBinary(t *testing.T, binary string, env map[string]string, args ...string) *runningFeed {
+// startProcess is the shape both starts share: a cancellable context, the
+// scrubbed environment, stderr captured on the feed, and the child started and
+// registered for cleanup. Stdout is the one decision that differs between the
+// two starts, so the caller makes it and hands it in already wired — a
+// syncBuffer for the ordinary start, the write end of a pipe the test owns for
+// the broken-pipe start.
+func startProcess(t *testing.T, binary string, env map[string]string, stdout io.Writer, args ...string) *runningFeed {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Env = environment(env)
-	feed := &runningFeed{cmd: cmd, cancel: cancel, stdout: &syncBuffer{}, stderr: &syncBuffer{}}
-	cmd.Stdout = feed.stdout
+	feed := &runningFeed{cmd: cmd, cancel: cancel, stderr: &syncBuffer{}}
+	cmd.Stdout = stdout
 	cmd.Stderr = feed.stderr
 
 	if err := cmd.Start(); err != nil {
@@ -305,6 +311,40 @@ func startBinary(t *testing.T, binary string, env map[string]string, args ...str
 	}
 	t.Cleanup(feed.stop)
 	return feed
+}
+
+func startBinary(t *testing.T, binary string, env map[string]string, args ...string) *runningFeed {
+	t.Helper()
+
+	stdout := &syncBuffer{}
+	feed := startProcess(t, binary, env, stdout, args...)
+	feed.stdout = stdout
+	return feed
+}
+
+// startFeedWithPipeStdout starts `feed watch` with its stdout on a pipe the
+// test owns, so the test can break the pipe mid-session: the next write fails
+// and the watch leaves through the closed-stdout fatal path. The test owns the
+// read end and must close it; the feed carries no stdout buffer of its own.
+func startFeedWithPipeStdout(t *testing.T, args ...string) (*runningFeed, *os.File) {
+	t.Helper()
+
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("creating the stdout pipe: %v", err)
+	}
+	// Whichever path the start takes, the parent's handles must not outlive
+	// the test: closing an end twice is a harmless error here.
+	t.Cleanup(func() {
+		reader.Close()
+		writer.Close()
+	})
+
+	feed := startProcess(t, feedBinary, nil, writer, args...)
+	// The child carries its own handle; the parent's copy of the write end
+	// would only outlive it and hide the moment the last reader is gone.
+	writer.Close()
+	return feed, reader
 }
 
 func (f *runningFeed) stop() {
@@ -341,38 +381,6 @@ func (f *runningFeed) waitExit(t *testing.T) int {
 		t.Fatalf("waiting for feed: %v", err)
 	}
 	return exit.ExitCode()
-}
-
-// startFeedWithPipeStdout starts `feed watch` with its stdout on a pipe the
-// test owns, so the test can break the pipe mid-session: the next write fails
-// and the watch leaves through the closed-stdout fatal path. The test owns the
-// read end and must close it; the feed carries no stdout buffer of its own.
-func startFeedWithPipeStdout(t *testing.T, args ...string) (*runningFeed, *os.File) {
-	t.Helper()
-
-	reader, writer, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("creating the stdout pipe: %v", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, feedBinary, args...)
-	cmd.Env = environment(nil)
-	cmd.Stdout = writer
-	feed := &runningFeed{cmd: cmd, cancel: cancel, stderr: &syncBuffer{}}
-	cmd.Stderr = feed.stderr
-
-	if err := cmd.Start(); err != nil {
-		cancel()
-		reader.Close()
-		writer.Close()
-		t.Fatalf("starting feed %s: %v", strings.Join(args, " "), err)
-	}
-	// The child carries its own handle; the parent's copy of the write end
-	// would only outlive it and hide the moment the last reader is gone.
-	writer.Close()
-	t.Cleanup(feed.stop)
-	return feed, reader
 }
 
 func (f *runningFeed) waitStdout(t *testing.T, want string) {
