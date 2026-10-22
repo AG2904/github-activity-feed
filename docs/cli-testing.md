@@ -107,7 +107,7 @@ En otra, mandá el webhook de un merge a `main` (está completo, con la firma, e
 
 ```powershell
 $secret = "un-secreto-largo-de-prueba"
-$body = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Fix memory leak in parser component","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/github-activity-feed/pull/42","base":{"ref":"main"},"labels":[{"name":"bug"}]}}'
+$body = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Fix memory leak in parser component","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/github-activity-feed/pull/42","base":{"ref":"main"},"head":{"ref":"fix/memory-leak"},"labels":[{"name":"bug"}]}}'
 
 $h = New-Object System.Security.Cryptography.HMACSHA256
 $h.Key = [Text.Encoding]::UTF8.GetBytes($secret)
@@ -121,11 +121,16 @@ Invoke-WebRequest -Uri http://localhost:3000/ -Method Post -UseBasicParsing `
 La terminal del CLI muestra, en stdout:
 
 ```text
-maria.perez merged into main
+maria.perez merged fix/memory-leak into main
   [bug] Fix memory leak in parser component
   AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/pull/42
 ```
+
+La frase nombra la rama de origen que trae el evento (`head.ref` en el webhook). Una
+fila guardada antes de que existiera el campo, o un payload sin `head.ref` usable,
+mantiene `maria.perez merged into main`: la rama es suplementaria y nunca hace perder
+el evento (ADR-0013).
 
 Y en stderr, desde el arranque:
 
@@ -163,8 +168,12 @@ reformatear. Para probar que no re-serializa, mandá un evento cuyo `subject` te
 `&`:
 
 ```text
-{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix parser & renderer",…}
+{"type":"pr.merged","repository":"AG2904/github-activity-feed","branch":"fix/memory-leak","actor":"maria.perez","subject":"Fix parser & renderer",…}
 ```
+
+`branch` viaja en el payload porque lo puso el relay, no el CLI: una fila vieja manda
+`"branch":null`. El CLI sigue entregando los bytes tal cual, así que si la clave
+aparece reordenada o re-tipada, alguien re-serializó.
 
 El `&` tiene que seguir siendo `&`. Si ves `\u0026`, alguien pasó el payload por
 `encoding/json` y rompió el contrato.
@@ -323,6 +332,7 @@ El color codifica **roles**, no decoración:
 | `into` / `to` | gris tenue | conector, no información |
 | título | bold + hyperlink OSC 8 | el contenido |
 | repositorio | azul | ubicación |
+| rama | azul | ubicación: el mismo rol que el repositorio |
 | etiquetas | rojo bold | la razón de la interrupción |
 | `·` y el tiempo | gris tenue | contexto |
 
@@ -374,6 +384,7 @@ contexto cancelado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalEr
 | 04 — la conexión se sostiene | `no bytes` y reapertura | 9 | sí |
 | 04 — la conexión se sostiene | el heartbeat mantiene vivo el stream | 9 | sí |
 | 05 — filtrar para sí | actor, assignee, repo, AND, mayúsculas | 6 | sí |
+| rama — el merge nombra su rama | la tarjeta dice `merged <rama> into main`, o vuelve a `merged into main` si es `null` | 4, 5 | sí |
 | 06 — la primera conexión no es una pantalla en blanco | — | — | **pendiente** |
 | 07 — el historial responde | — | — | **pendiente** |
 | 08 — distribuir el binario | `--version` inyectada | 1 | parcial (sólo la inyección) |

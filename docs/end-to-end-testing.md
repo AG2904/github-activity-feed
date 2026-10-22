@@ -140,13 +140,13 @@ Con los dos procesos vivos, en la terminal del helper:
 ```powershell
 $when = "2026-10-16T12:00:00Z"
 
-$merge = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Fix memory leak in parser component","merged":true,"merged_at":"' + $when + '","html_url":"https://github.com/AG2904/github-activity-feed/pull/42","base":{"ref":"main"},"labels":[{"name":"bug"}]}}'
+$merge = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Fix memory leak in parser component","merged":true,"merged_at":"' + $when + '","html_url":"https://github.com/AG2904/github-activity-feed/pull/42","base":{"ref":"main"},"head":{"ref":"fix/memory-leak"},"labels":[{"name":"bug"}]}}'
 
 $assignment = '{"action":"assigned","sender":{"login":"lucia.gomez"},"assignee":{"login":"tomas.ferreira"},"repository":{"full_name":"AG2904/github-activity-feed"},"issue":{"title":"Ship the onboarding checklist","html_url":"https://github.com/AG2904/github-activity-feed/issues/7","updated_at":"' + $when + '","labels":[{"name":"bug"}],"assignees":[{"login":"tomas.ferreira"}]}}'
 
-$otherRepo = '{"action":"closed","sender":{"login":"someone.else"},"repository":{"full_name":"other/repo"},"pull_request":{"title":"Other repo merge","merged":true,"merged_at":"' + $when + '","html_url":"https://github.com/other/repo/pull/3","base":{"ref":"main"},"labels":[]}}'
+$otherRepo = '{"action":"closed","sender":{"login":"someone.else"},"repository":{"full_name":"other/repo"},"pull_request":{"title":"Other repo merge","merged":true,"merged_at":"' + $when + '","html_url":"https://github.com/other/repo/pull/3","base":{"ref":"main"},"head":{"ref":"other-work"},"labels":[]}}'
 
-$develop = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Merge into develop","merged":true,"merged_at":"' + $when + '","html_url":"https://github.com/AG2904/github-activity-feed/pull/43","base":{"ref":"develop"},"labels":[{"name":"bug"}]}}'
+$develop = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Merge into develop","merged":true,"merged_at":"' + $when + '","html_url":"https://github.com/AG2904/github-activity-feed/pull/43","base":{"ref":"develop"},"head":{"ref":"feature-x"},"labels":[{"name":"bug"}]}}'
 
 Send-Webhook $merge      'pull_request' 'e2e-1'   # 1. merge crítico
 Send-Webhook $merge      'pull_request' 'e2e-1'   # 2. la misma entrega, otra vez
@@ -161,9 +161,9 @@ En el CLI, exactamente una línea JSON por caso 1 y 4 —la duplicada no se impr
 una más por el merge de `other/repo`:
 
 ```text
-{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Fix memory leak in parser component","assignee":null,"labels":["bug"],…}
-{"type":"issue.assigned","repository":"AG2904/github-activity-feed","actor":"lucia.gomez","subject":"Ship the onboarding checklist","assignee":"tomas.ferreira","labels":["bug"],…}
-{"type":"pr.merged","repository":"other/repo","actor":"someone.else","subject":"Other repo merge","assignee":null,"labels":[],…}
+{"type":"pr.merged","repository":"AG2904/github-activity-feed","branch":"fix/memory-leak","actor":"maria.perez","subject":"Fix memory leak in parser component","assignee":null,"labels":["bug"],…}
+{"type":"issue.assigned","repository":"AG2904/github-activity-feed","branch":null,"actor":"lucia.gomez","subject":"Ship the onboarding checklist","assignee":"tomas.ferreira","labels":["bug"],…}
+{"type":"pr.merged","repository":"other/repo","branch":"other-work","actor":"someone.else","subject":"Other repo merge","assignee":null,"labels":[],…}
 ```
 
 Y en `/history`, **tres** filas, la más nueva primero (el merge de `other/repo`):
@@ -205,7 +205,7 @@ El mismo evento, con el CLI en modo terminal:
 ```
 
 ```text
-maria.perez merged into main
+maria.perez merged fix/memory-leak into main
   [bug] Fix memory leak in parser component
   AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/pull/42
@@ -217,11 +217,13 @@ lucia.gomez assigned to tomas.ferreira
 ```
 
 `2h ago` es relativo al momento de imprimir: con el `when` del ejemplo vas a ver los
-días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. Las etiquetas del
-evento van al frente del título, antes del texto que califican, y el contexto se queda
-con el repositorio y el tiempo. La cuarta línea, la URL, existe sólo sin hyperlink: en
-una terminal con color el título es el link OSC 8 y la tarjeta se queda en tres
-líneas. En un pipe no hay un solo escape.
+días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. La frase del merge
+nombra la rama de origen (`head.ref`); una fila guardada antes de que existiera el
+campo, o un payload sin `head.ref` usable, dice `maria.perez merged into main`
+(ADR-0013). Las etiquetas del evento van al frente del título, antes del texto que
+califican, y el contexto se queda con el repositorio y el tiempo. La cuarta línea, la
+URL, existe sólo sin hyperlink: en una terminal con color el título es el link OSC 8 y
+la tarjeta se queda en tres líneas. En un pipe no hay un solo escape.
 
 Las tarjetas van a stdout; la sesión entera va a stderr. Al cerrar con `Ctrl-C`, la
 línea de cuenta suma lo que se mostró, filtro incluido —en este recorrido,
@@ -332,7 +334,7 @@ entera.
 | una entrega repetida no duplica | 4 | sí, por separado |
 | el guardado llega al stream | 4 | sí, por separado |
 | el filtro es del cliente, no del relay | 5 | sí, por separado |
-| la forma de 8 campos es la misma en stream e historial | 4, 6 | sí, por separado |
+| la forma de 9 campos es la misma en stream e historial | 4, 6 | sí, por separado |
 | la reconexión no rellena el hueco | 7, 8 | sí, por separado |
 | el heartbeat mantiene viva la conexión | 10 | sí (relay y CLI por su lado) |
 | el historial sobrevive al reinicio | 9 | sí (relay) |

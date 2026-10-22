@@ -76,6 +76,7 @@ export function toAssignmentEvent(payload: IssuePayload): ActivityEvent | undefi
   return {
     type: 'issue.assigned',
     repository: repositoryName(payload?.repository),
+    branch: null,
     actor,
     subject,
     assignee: loginOf(payload.assignee) ?? reportedAssignees(issue)[0] ?? null,

@@ -9,7 +9,7 @@ degrades honestly for rows stored before it existed.
 
 **Blocked by:** none — 01 to 04 are done.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] A merge-to-main event carries the source branch: the relay maps
       `pull_request.head.ref` to `branch`. A payload whose head ref is missing or is
@@ -59,3 +59,15 @@ degrades honestly for rows stored before it existed.
   long and noisy (`dependabot/npm_and_yarn/…`) and there is still no wrapping by
   decision — the terminal wraps at the edge as it does today, and the phrase must
   not become a second title. No truncation is added by this ticket.
+- 2026-10-22: Done. La rama está en `cli-output-05`, con el registro de evidencia
+  en
+  [`docs/tickets/cli-output/05-the-merge-names-its-branch.md`](../../../docs/tickets/cli-output/05-the-merge-names-its-branch.md).
+  Relay 57/57 y cliente en verde (`go test -count=1 ./...`, 50.2 s). Lo que aportó
+  la revisión de dos ejes: el comentario de `activity.go` había invertido
+  `pr.merged` por `issue.assigned`, la entidad y el dominio describían mal la
+  nulabilidad de `branch`, y media docena de documentos —incluida la línea de
+  Scope del spec— seguían contando ocho campos; todo corregido en
+  `f903fa0`. Judgement calls aceptados con razón escrita: `eventFrame` de nueve
+  argumentos, el guard `nil || ""` del cliente, la interfaz `head` y los dos tests
+  de null. Pendiente honesto: el azul de la rama no se verificó en bytes —misma
+  frontera de color que el ticket 02—.

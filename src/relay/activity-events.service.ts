@@ -17,6 +17,7 @@ function fromStoredRow(row: ActivityEventEntity): ActivityEvent {
   return {
     type: row.type as ActivityEventType,
     repository: row.repository,
+    branch: row.branch,
     actor: row.actor,
     subject: row.subject,
     assignee: row.assignee,
