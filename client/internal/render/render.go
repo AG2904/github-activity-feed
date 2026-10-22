@@ -1,6 +1,7 @@
 // Package render turns an ActivityEvent into the terminal's card: a sentence,
-// the thing that happened, and its context. It knows nothing about flags:
-// whether colour is allowed is decided by the shell and handed in as a boolean.
+// the reason with the thing that happened, and its context. It knows nothing
+// about flags: whether colour is allowed is decided by the shell and handed in
+// as a boolean.
 package render
 
 import (
@@ -76,13 +77,13 @@ func (p Palette) card(w io.Writer, event activity.Event, now time.Time, shape li
 func (p Palette) headline(event activity.Event) string {
 	parts := []string{p.paint(cyan, event.Actor)}
 	switch event.Type {
-	case "pr.merged":
+	case activity.TypePRMerged:
 		parts = append(parts,
 			p.paint(green, "merged"),
 			p.paint(grey, "into"),
 			p.paint(green, "main"),
 		)
-	case "issue.assigned":
+	case activity.TypeIssueAssigned:
 		parts = append(parts, p.paint(amber, "assigned"))
 		if event.Assignee != nil && *event.Assignee != "" {
 			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, *event.Assignee))
@@ -93,26 +94,29 @@ func (p Palette) headline(event activity.Event) string {
 	return strings.Join(parts, " ")
 }
 
-// title is the thing itself, on its own line and bold so it does not compete
-// with the palette. With colour it is also the hyperlink, which is why the URL
-// line disappears.
+// title is the reason and the thing itself: the labels the event carries come
+// first, in brackets and one space apart, so the why arrives before the what; a
+// card with no labels starts at the title. The subject stays bold so it does
+// not compete with the palette, and with colour it is also the hyperlink, which
+// is why the URL line disappears.
 func (p Palette) title(event activity.Event) string {
-	if !p.Color {
-		return event.Subject
+	labels := ""
+	if len(event.Labels) > 0 {
+		labels = p.paint(red, "["+strings.Join(event.Labels, ", ")+"]") + " "
 	}
-	return bold + "\x1b]8;;" + event.URL + "\x1b\\" + event.Subject + "\x1b]8;;\x1b\\" + reset
+	if !p.Color {
+		return labels + event.Subject
+	}
+	return labels + bold + "\x1b]8;;" + event.URL + "\x1b\\" + event.Subject + "\x1b]8;;\x1b\\" + reset
 }
 
-// context is the repository, the labels and the freshness, in the order a
-// reader asks for them. A segment the event does not carry disappears instead
-// of printing an empty one.
+// context is the repository and the freshness, in the order a reader asks for
+// them. A segment the event does not carry disappears instead of printing an
+// empty one; the labels are not here — they ride with the title.
 func (p Palette) context(event activity.Event, now time.Time, shape lineShape) string {
-	parts := make([]string, 0, 3)
+	parts := make([]string, 0, 2)
 	if shape == withRepository && hasRepository(event) {
 		parts = append(parts, p.paint(blue, *event.Repository))
-	}
-	if len(event.Labels) > 0 {
-		parts = append(parts, p.paint(red, "["+strings.Join(event.Labels, ", ")+"]"))
 	}
 	parts = append(parts, p.paint(grey, relative(now, event.When)))
 	return strings.Join(parts, p.paint(grey, " · "))

@@ -49,6 +49,11 @@ func (e *fatalError) Unwrap() error { return e.err }
 // reopening it whenever it drops or falls silent. A relay that is unreachable
 // at startup is retried indefinitely: this is a watch, and dying because the
 // relay was restarting is worse than waiting.
+//
+// The session also narrates itself on stderr: the banner, one line after the
+// first connection, one line of account on exit. All three are plain text and
+// none may reach stdout, so a silent terminal reads as "nothing happened" and
+// not as "it hung", and the event feed stays a contract.
 func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
@@ -64,14 +69,33 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	base := strings.TrimRight(*relay, "/")
 	target := endpoint(base, "/stream")
 	historyURL := endpoint(base, "/history")
-	fmt.Fprintf(stderr, "watching %s\n", target)
+	// The banner is the first line of the session chrome: what this watch is
+	// watching and with which filters, on stderr and plain, before anything
+	// can fail. Filters come after the backfill count, each only when set.
+	fmt.Fprintf(stderr, "watching %s · backfill %d", target, *backfillFlag)
+	if *user != "" {
+		fmt.Fprintf(stderr, " · user %s", *user)
+	}
+	if *repository != "" {
+		fmt.Fprintf(stderr, " · repo %s", *repository)
+	}
+	fmt.Fprintln(stderr)
 
 	out := newEmitter(stdout, *noColor, activity.Filter{User: *user, Repository: *repository})
 	// The live feed is the one place --json changes how a single event is
 	// written, so it is the one place the emitter carries that flag.
 	out.json = *jsonOut
+	// The stop line is deferred, not written at each return: there is more
+	// than one way out of this function — Ctrl-C, an unusable URL, a closed
+	// stdout — and the session's account must speak on all of them.
+	defer out.summarize(stderr)
 	backoff := &backoff{}
-	attempts := 0
+	// The welcome belongs to the first connection the relay accepts, not to
+	// the first attempt: a relay that is unreachable or refuses at startup is
+	// retried by design, so the attempt that finally lands is still the
+	// session's first connection. Only a connection after an accepted one is a
+	// recovery, and only then does the reconnect notice speak.
+	accepted := false
 	filled := false
 
 	for {
@@ -92,11 +116,20 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		}
 
 		eventSeen, err := stream(ctx, target, out, func() {
-			// The first connection is the banner's job; every later one is a
-			// recovery worth naming, so silence and a dead relay differ.
-			if attempts > 0 {
+			// The first accepted connection is the only moment "is it alive?"
+			// has no other reply, so it answers in words: how much history
+			// printed, or that there is none. Every later connection is a
+			// recovery worth naming instead, so a reconnect never doubles as a
+			// second welcome and the affirmative line is printed exactly once.
+			switch {
+			case accepted:
 				fmt.Fprintln(stderr, "watch: reconnected")
+			case out.total > 0:
+				fmt.Fprintf(stderr, "connected · %d events from history\n", out.total)
+			default:
+				fmt.Fprintln(stderr, "connected · waiting for events")
 			}
+			accepted = true
 		})
 		if ctx.Err() != nil {
 			return 0
@@ -116,7 +149,6 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 
 		delay := backoff.delay()
 		fmt.Fprintf(stderr, "watch: reconnecting in %s: %v\n", delay, err)
-		attempts++
 
 		timer := time.NewTimer(delay)
 		select {
@@ -194,6 +226,12 @@ type emitter struct {
 	json    bool
 	filter  activity.Filter
 	printed bool
+	// The session's account of itself: what reached the reader, filter
+	// included, split by the two types that carry a human word. The backfill
+	// reads total as how much history printed; the stop line reads all three.
+	total    int
+	merged   int
+	assigned int
 }
 
 // newEmitter builds the output policy both commands hand their events to: the
@@ -229,8 +267,11 @@ func (e *emitter) paint(payload string, event activity.Event) error {
 	if e.json {
 		// Re-marshalling would reorder keys and could reshape null or the
 		// millisecond timestamp.
-		_, err := io.WriteString(e.out, payload+"\n")
-		return err
+		if _, err := io.WriteString(e.out, payload+"\n"); err != nil {
+			return err
+		}
+		e.count(event)
+		return nil
 	}
 	if e.printed {
 		if _, err := io.WriteString(e.out, "\n"); err != nil {
@@ -240,8 +281,37 @@ func (e *emitter) paint(payload string, event activity.Event) error {
 	if err := e.palette.Event(e.out, event, time.Now()); err != nil {
 		return err
 	}
+	e.count(event)
 	e.printed = true
 	return nil
+}
+
+// count records one event that reached the reader. Counting inside paint — the
+// one place the backfill, the live stream and --json all cross into stdout —
+// keeps a single account of what was shown; an event whose write failed is not
+// counted, because nothing was shown of it.
+func (e *emitter) count(event activity.Event) {
+	e.total++
+	switch event.Type {
+	case activity.TypePRMerged:
+		e.merged++
+	case activity.TypeIssueAssigned:
+		e.assigned++
+	}
+}
+
+// summarize closes the session on stderr with one line of account: the events
+// the reader saw, filter included, because the summary answers "what did I
+// see", not "what did the relay send". watch() defers it, so every path out of
+// the command — Ctrl-C, an unusable URL, a closed stdout — speaks once before
+// going. It is plain text like the rest of the chrome: one sentence of state,
+// no escape, never a heartbeat.
+func (e *emitter) summarize(w io.Writer) {
+	if e.total == 0 {
+		fmt.Fprintln(w, "stopped · no events")
+		return
+	}
+	fmt.Fprintf(w, "stopped · %d events · %d merged · %d assigned\n", e.total, e.merged, e.assigned)
 }
 
 // group writes the report shape: the same events, one section per repository.

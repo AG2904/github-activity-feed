@@ -127,8 +127,13 @@ cd client
 ```
 
 `--json` primero: muestra el contrato sin color, sin tiempo relativo y sin hyperlinks,
-así lo que ves se puede comparar byte a byte con `/history`. El renderizado de dos
-líneas se prueba después, en el paso 6.
+así lo que ves se puede comparar byte a byte con `/history`. El renderizado en
+tarjetas se prueba después, en el paso 6.
+
+En stderr, la sesión se nombra a sí misma: el banner `watching <url> · backfill 10`
+y, como la base arranca vacía, `connected · waiting for events`. Con una base que ya
+tiene historia, la segunda línea cuenta lo que imprimió: `connected · <n> events from
+history`.
 
 Con los dos procesos vivos, en la terminal del helper:
 
@@ -201,20 +206,27 @@ El mismo evento, con el CLI en modo terminal:
 
 ```text
 maria.perez merged into main
-  Fix memory leak in parser component
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug] Fix memory leak in parser component
+  AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/pull/42
 
 lucia.gomez assigned to tomas.ferreira
-  Ship the onboarding checklist
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug] Ship the onboarding checklist
+  AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/issues/7
 ```
 
 `2h ago` es relativo al momento de imprimir: con el `when` del ejemplo vas a ver los
-días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. La cuarta línea, la
-URL, existe sólo sin hyperlink: en una terminal con color el título es el link OSC 8 y
-la tarjeta se queda en tres líneas. En un pipe no hay un solo escape.
+días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. Las etiquetas del
+evento van al frente del título, antes del texto que califican, y el contexto se queda
+con el repositorio y el tiempo. La cuarta línea, la URL, existe sólo sin hyperlink: en
+una terminal con color el título es el link OSC 8 y la tarjeta se queda en tres
+líneas. En un pipe no hay un solo escape.
+
+Las tarjetas van a stdout; la sesión entera va a stderr. Al cerrar con `Ctrl-C`, la
+línea de cuenta suma lo que se mostró, filtro incluido —en este recorrido,
+`stopped · 2 events · 1 merged · 1 assigned`—, y `stopped · no events` cuando no se
+mostró nada.
 
 ## Paso 7 — Lo que no se repite
 
@@ -261,6 +273,10 @@ Dejá el `watch` conectado veinte o treinta segundos sin mandar webhooks.
   CLI los ignora).
 - No aparece `reconnecting`: un comentario cada quince segundos reinicia el timer de
   cinco minutos del cliente.
+- No aparece un heartbeat ni un spinner del CLI: la única línea afirmativa de la
+  sesión fue `connected · …` al conectar, y el silencio que sigue se queda en
+  silencio. La reconexión ya contesta a "¿sigue vivo?"; repetir una línea de
+  "acá estoy" en una terminal de append-only es spam con fecha de vencimiento.
 - El siguiente evento se imprime en la misma conexión.
 
 ## Paso 11 — Las dos suites

@@ -10,9 +10,11 @@ en [`docs/end-to-end-testing.md`](end-to-end-testing.md).
 
 ## Antes de empezar: tres ideas
 
-1. **stdout lleva eventos; stderr lleva todo lo demás.** El banner `watching <url>`,
-   los avisos de reconexión y los errores van a stderr. Si mezclás los dos, no podés
-   distinguir un evento de un aviso, y `feed watch | jq` deja de funcionar.
+1. **stdout lleva eventos; stderr lleva todo lo demás.** La sesión entera vive en
+   stderr y en texto plano: el banner `watching <url> · backfill <n>`, la línea
+   `connected` de la primera conexión, los avisos de reconexión, la línea `stopped`
+   de la salida y los errores. Si mezclás los dos, no podés distinguir un evento de
+   un aviso, y `feed watch | jq` deja de funcionar.
 2. **El CLI no decide qué es crítico.** El relay ya filtró: si un evento llegó al
    stream, es crítico. Lo que el CLI filtra es *para quién*, porque el relay hace
    broadcast y manda todo a todos (ADR-0001).
@@ -58,7 +60,7 @@ mismo mecanismo que va a usar el binario distribuido (ticket 08): si ves `dev`, 
 | --- | --- | --- | --- |
 | `./feed` | `2` | vacío | el uso completo |
 | `./feed bogus` | `2` | vacío | `feed: unknown command "bogus"` y el uso |
-| `./feed watch --relay ://bad` | `1` | vacío | `watching ://bad/stream` y `parse "://bad/stream": missing protocol scheme` |
+| `./feed watch --relay ://bad` | `1` | vacío | `watching ://bad/stream · backfill 10`, `parse "://bad/stream": missing protocol scheme` y `stopped · no events` |
 | `./feed history --relay http://127.0.0.1:1 --json` | `1` | vacío | `history: Get "…": … connection refused` |
 | `./feed history --relay http://127.0.0.1:1 --json --group-by-repo` | `2` | vacío | `history: --json and --group-by-repo cannot be combined: grouping is presentation, and raw output has none` |
 
@@ -66,7 +68,9 @@ Dos cosas que esta tabla enseña y conviene mirar de cerca:
 
 - **Una URL inusable es fatal, no reintentable.** `://bad` sale con `1` y sin una
   sola línea de `reconnecting`. Un relay apagado, en cambio, se reintenta para
-  siempre: esa diferencia es deliberada.
+  siempre: esa diferencia es deliberada. Aun así la sesión cierra con su línea de
+  cuenta —acá `stopped · no events`, porque no se mostró nada—: no hay camino de
+  salida del `watch` que se despidan en silencio.
 - **El conflicto de flags se detecta sin tocar la red.** El último caso no hace
   ningún request: es un error de uso, no del relay.
 
@@ -118,23 +122,35 @@ La terminal del CLI muestra, en stdout:
 
 ```text
 maria.perez merged into main
-  Fix memory leak in parser component
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug] Fix memory leak in parser component
+  AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/pull/42
 ```
 
 Y en stderr, desde el arranque:
 
 ```text
-watching http://localhost:3000/stream
+watching http://localhost:3000/stream · backfill 10
+connected · waiting for events
 ```
+
+El banner nombra qué se mira y con qué filtros —` · user <login>` y
+` · repo <owner/name>` se agregan en ese orden cuando los flags están puestos— y el
+backfill que va a intentar. `connected` es la única línea afirmativa de la sesión:
+cuenta la historia que imprimió el backfill (`connected · <n> events from history`)
+o dice que no había ninguna. Al terminar con `Ctrl-C`, la sesión cierra con una
+línea de cuenta, por ejemplo `stopped · 1 events · 1 merged · 0 assigned`.
 
 Detalles que importan: una tarjeta son tres líneas —la frase, el título y el
 contexto— más una cuarta con la URL cuando no hay hyperlink, que es el caso de un pipe
-o de `--no-color`. `2h ago` es **relativo al momento de imprimir**, no al `merged_at`.
-Las etiquetas entre corchetes son las del evento y son la razón por la que una
-asignación te interrumpió. En una terminal con color, el título es el link y la línea
-de la URL desaparece.
+o de `--no-color`. Las etiquetas del evento van **al frente del título**, entre
+corchetes y con un espacio antes del texto: `[bug] Fix memory leak…` es la razón antes
+que el qué, y una tarjeta sin etiquetas arranca directo con el título. El contexto se
+queda con el repositorio y el tiempo. `2h ago` es **relativo al momento de imprimir**,
+no al `merged_at`. En una terminal con color, las etiquetas van en rojo negrita, el
+título es el link y la línea de la URL desaparece. Las tres líneas de la sesión
+—banner, `connected` y `stopped`— van a stderr y nunca llevan color ni escape: la
+narración es de stderr y el texto plano es una decisión, no un descuido.
 
 ## Paso 5 — `--json`: el contrato crudo
 
@@ -202,6 +218,9 @@ y en la siguiente ventana aparece:
 ```text
 watch: reconnected
 ```
+
+Una reconexión **no** repite la línea `connected`: esa línea es de la primera
+conexión y sólo de esa. Lo que sí aparece son los eventos nuevos que se manden.
 
 Mandá otro webhook: se imprime. Los eventos que pasaron mientras estaba desconectado
 **no** se reproducen —el stream no guarda historia—, y el CLI tampoco manda
@@ -327,9 +346,18 @@ estructura que tiene.
 ## Paso 12 — Ctrl-C
 
 `Ctrl-C` cancela el contexto y el proceso sale con `0`: no es un error, es la forma
-normal de terminar un watch. Un segundo `Ctrl-C` mata igual un run colgado, porque el
-manejador se restaura apenas se cancela el contexto. La suite no automatiza un evento
-de consola, así que este es el único paso que se verifica a mano.
+normal de terminar un watch. Antes de irse, la sesión escribe en stderr su línea de
+cuenta —`stopped · <n> events · <k> merged · <l> assigned` si se mostró algo,
+`stopped · no events` si no—, y los conteos son de eventos **mostrados**, filtro
+incluido: un evento que el filtro descartó tampoco cuenta. Un segundo `Ctrl-C` mata
+igual un run colgado, porque el manejador se restaura apenas se cancela el contexto.
+La suite no automatiza el `Ctrl-C` apretado a mano en la terminal —en Windows no hay
+forma portable de mandárselo a un hijo, así que este paso se verifica a mano—, pero sí
+automatiza el camino que deja: en Unix manda `os.Interrupt` al proceso y el contexto
+cancelado escribe la misma línea de cuenta; en Windows ese camino llega por el stdout
+cerrado. Los caminos de salida automatizados —una URL inusable, un stdout cerrado y el
+contexto cancelado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalError` y
+`TestWatchSaysStoppedWithTheCountsItShowed`.
 
 ## Matriz de casos por ticket
 

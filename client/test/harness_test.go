@@ -30,6 +30,7 @@ type fakeRelay struct {
 	drop           chan struct{}
 	historyBody    string
 	historyFailing bool
+	streamFailures int
 	done           chan struct{}
 	doneOnce       sync.Once
 
@@ -50,6 +51,10 @@ func newFakeRelay(t *testing.T) *fakeRelay {
 		relay.record(r.URL.RequestURI())
 		switch r.URL.Path {
 		case "/stream":
+			if relay.streamFails() {
+				http.Error(w, "the relay refused the subscription", http.StatusInternalServerError)
+				return
+			}
 			relay.recordEventID(r.Header.Get("Last-Event-ID"))
 			w.Header().Set("Content-Type", "text/event-stream")
 			w.Header().Set("Cache-Control", "no-cache")
@@ -154,6 +159,27 @@ func (f *fakeRelay) historyFails() bool {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.historyFailing
+}
+
+// failStream makes the next n /stream requests answer 500, the way a relay that
+// is up but refusing this subscription would — enough to start a watch whose
+// first attempt fails and whose second is the one accepted.
+func (f *fakeRelay) failStream(n int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.streamFailures = n
+}
+
+// streamFails answers whether this /stream request is one of the refused ones,
+// counting it against the allowance either way.
+func (f *fakeRelay) streamFails() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.streamFailures == 0 {
+		return false
+	}
+	f.streamFailures--
+	return true
 }
 
 func (f *fakeRelay) hits(path string) int {
@@ -263,14 +289,20 @@ func startFeed(t *testing.T, env map[string]string, args ...string) *runningFeed
 	return startBinary(t, feedBinary, env, args...)
 }
 
-func startBinary(t *testing.T, binary string, env map[string]string, args ...string) *runningFeed {
+// startProcess is the shape both starts share: a cancellable context, the
+// scrubbed environment, stderr captured on the feed, and the child started and
+// registered for cleanup. Stdout is the one decision that differs between the
+// two starts, so the caller makes it and hands it in already wired — a
+// syncBuffer for the ordinary start, the write end of a pipe the test owns for
+// the broken-pipe start.
+func startProcess(t *testing.T, binary string, env map[string]string, stdout io.Writer, args ...string) *runningFeed {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Env = environment(env)
-	feed := &runningFeed{cmd: cmd, cancel: cancel, stdout: &syncBuffer{}, stderr: &syncBuffer{}}
-	cmd.Stdout = feed.stdout
+	feed := &runningFeed{cmd: cmd, cancel: cancel, stderr: &syncBuffer{}}
+	cmd.Stdout = stdout
 	cmd.Stderr = feed.stderr
 
 	if err := cmd.Start(); err != nil {
@@ -279,6 +311,40 @@ func startBinary(t *testing.T, binary string, env map[string]string, args ...str
 	}
 	t.Cleanup(feed.stop)
 	return feed
+}
+
+func startBinary(t *testing.T, binary string, env map[string]string, args ...string) *runningFeed {
+	t.Helper()
+
+	stdout := &syncBuffer{}
+	feed := startProcess(t, binary, env, stdout, args...)
+	feed.stdout = stdout
+	return feed
+}
+
+// startFeedWithPipeStdout starts `feed watch` with its stdout on a pipe the
+// test owns, so the test can break the pipe mid-session: the next write fails
+// and the watch leaves through the closed-stdout fatal path. The test owns the
+// read end and must close it; the feed carries no stdout buffer of its own.
+func startFeedWithPipeStdout(t *testing.T, args ...string) (*runningFeed, *os.File) {
+	t.Helper()
+
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("creating the stdout pipe: %v", err)
+	}
+	// Whichever path the start takes, the parent's handles must not outlive
+	// the test: closing an end twice is a harmless error here.
+	t.Cleanup(func() {
+		reader.Close()
+		writer.Close()
+	})
+
+	feed := startProcess(t, feedBinary, nil, writer, args...)
+	// The child carries its own handle; the parent's copy of the write end
+	// would only outlive it and hide the moment the last reader is gone.
+	writer.Close()
+	return feed, reader
 }
 
 func (f *runningFeed) stop() {
@@ -290,6 +356,31 @@ func (f *runningFeed) stop() {
 	f.stopped = true
 	f.cancel()
 	_ = f.cmd.Wait()
+}
+
+// waitExit waits for the feed to leave on its own — no cancel, no kill — and
+// returns the exit code it chose. It marks the feed stopped so the cleanup
+// does not wait a second time.
+func (f *runningFeed) waitExit(t *testing.T) int {
+	t.Helper()
+
+	f.mu.Lock()
+	if f.stopped {
+		f.mu.Unlock()
+		t.Fatalf("the feed was stopped before it could exit on its own")
+	}
+	f.stopped = true
+	f.mu.Unlock()
+
+	err := f.cmd.Wait()
+	if err == nil {
+		return 0
+	}
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) {
+		t.Fatalf("waiting for feed: %v", err)
+	}
+	return exit.ExitCode()
 }
 
 func (f *runningFeed) waitStdout(t *testing.T, want string) {
@@ -310,6 +401,37 @@ func (f *runningFeed) waitFor(t *testing.T, stream, want string, read func() str
 			t.Fatalf("%s never contained %q\nstdout: %q\nstderr: %q", stream, want, f.stdout.String(), f.stderr.String())
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// readUntil consumes a pipe up to and including the wanted suffix, so a test
+// can hold the session at a known card before breaking the pipe.
+func readUntil(t *testing.T, pipe *os.File, suffix string) string {
+	t.Helper()
+
+	done := make(chan string, 1)
+	go func() {
+		var seen strings.Builder
+		buf := make([]byte, 4096)
+		for {
+			n, err := pipe.Read(buf)
+			seen.Write(buf[:n])
+			if strings.Contains(seen.String(), suffix) || err != nil {
+				done <- seen.String()
+				return
+			}
+		}
+	}()
+
+	select {
+	case seen := <-done:
+		if !strings.Contains(seen, suffix) {
+			t.Fatalf("the pipe ended before carrying %q (saw %q)", suffix, seen)
+		}
+		return seen
+	case <-time.After(10 * time.Second):
+		t.Fatalf("the pipe never carried %q", suffix)
+		return ""
 	}
 }
 

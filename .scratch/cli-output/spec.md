@@ -133,7 +133,7 @@ what happened whether or not the terminal shows colour.
   three lines, all on stderr, all uncoloured:
   1. on start, the banner already printed today, extended: `watching <url> · backfill
      <n>`, with the `--user` / `--repo` filters appended when set (`watching <url> ·
-     user maria · repo AG2904/x · backfill 10`);
+     backfill 10 · user maria · repo AG2904/x`);
   2. after the first connection is accepted: `connected · <n> events from history` when
      the backfill printed some, `connected · waiting for events` when it printed none;
      a later reconnect keeps the existing `watch: reconnected` notice, so only the
@@ -289,3 +289,7 @@ what happened whether or not the terminal shows colour.
   notices already answer "did it die?". The table shape was checked against the
   evidence a second time and rejected for a reason now written down instead of
   remembered.
+- 2026-10-22: The session-chrome bullet's banner example was corrected to `watching
+  <url> · backfill 10 · user maria · repo AG2904/x`: the example had the segments in an
+  order that contradicted the prose beside it and ticket 03's checklist (backfill
+  first, then user, then repo), and the prose is what the code follows.
