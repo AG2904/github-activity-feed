@@ -351,9 +351,12 @@ cuenta —`stopped · <n> events · <k> merged · <l> assigned` si se mostró al
 `stopped · no events` si no—, y los conteos son de eventos **mostrados**, filtro
 incluido: un evento que el filtro descartó tampoco cuenta. Un segundo `Ctrl-C` mata
 igual un run colgado, porque el manejador se restaura apenas se cancela el contexto.
-La suite no automatiza un evento de consola, así que este es el único paso que se
-verifica a mano; los caminos de salida que sí se automatizan —una URL inusable y un
-stdout cerrado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalError` y
+La suite no automatiza el `Ctrl-C` apretado a mano en la terminal —en Windows no hay
+forma portable de mandárselo a un hijo, así que este paso se verifica a mano—, pero sí
+automatiza el camino que deja: en Unix manda `os.Interrupt` al proceso y el contexto
+cancelado escribe la misma línea de cuenta; en Windows ese camino llega por el stdout
+cerrado. Los caminos de salida automatizados —una URL inusable, un stdout cerrado y el
+contexto cancelado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalError` y
 `TestWatchSaysStoppedWithTheCountsItShowed`.
 
 ## Matriz de casos por ticket
