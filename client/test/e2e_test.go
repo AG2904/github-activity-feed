@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"net"
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -509,13 +510,6 @@ func TestWatchSaysStoppedWhenItLeavesThroughAFatalError(t *testing.T) {
 }
 
 func TestWatchSaysStoppedWithTheCountsItShowed(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		// On Unix a write to a pipe with no readers kills the process with
-		// SIGPIPE before the CLI can report anything; on Windows the broken
-		// write is an error the CLI handles, so the closed-stdout path can
-		// carry the stop line out.
-		t.Skip("a broken stdout pipe kills the process before the stop line on this platform")
-	}
 	relay := newFakeRelay(t)
 	feed, stdout := startFeedWithPipeStdout(t, "watch", "--relay", relay.URL, "--no-color")
 	relay.waitConnected(t)
@@ -524,18 +518,71 @@ func TestWatchSaysStoppedWithTheCountsItShowed(t *testing.T) {
 	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
 	readUntil(t, stdout, "https://github.com/AG2904/github-activity-feed/pull/42\n")
 
-	// ...and then the test breaks the pipe: the next card cannot be written,
-	// the failed write ends the watch, and the session must still account for
-	// the card it did show. The assignment that broke the pipe was never
-	// shown, so it is not in the account.
-	stdout.Close()
-	relay.send(t, assignedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+	// ...and then the session ends. The assignment is the card the end cannot
+	// show — Windows by breaking the pipe under its write — so it may never
+	// enter the account: the session must still account for the card it did.
+	endSession(t, feed, stdout, relay, assignedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+	wantStopped(t, feed, "stopped · 1 events · 1 merged · 0 assigned\n")
+}
 
-	if code := feed.waitExit(t); code != 1 {
-		t.Errorf("exit code = %d, want 1 (stderr: %q)", code, feed.stderr.String())
+// The account answers "what did I see": an event the filter dropped was never
+// shown, so it may not appear in the counts — not in the total, not in a
+// category.
+func TestWatchStoppedCountsLeaveOutWhatTheFilterDiscarded(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed, stdout := startFeedWithPipeStdout(t, "watch", "--relay", relay.URL,
+		"--no-color", "--user", "maria.perez")
+	relay.waitConnected(t)
+
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	// Somebody else's assignment is valid but discarded by the filter before
+	// it is ever shown...
+	relay.send(t, eventFrame(when, "issue.assigned", "AG2904/github-activity-feed",
+		"someone.else", "Not maria's assignment", ptr("tomas.ferreira"), `["bug"]`,
+		"https://github.com/AG2904/github-activity-feed/issues/8"))
+	// ...and maria's merge is the one card the session shows.
+	relay.send(t, mergedFrame(when))
+	readUntil(t, stdout, "https://github.com/AG2904/github-activity-feed/pull/42\n")
+
+	endSession(t, feed, stdout, relay, assignedFrame(when))
+
+	wantStopped(t, feed, "stopped · 1 events · 1 merged · 0 assigned\n")
+}
+
+// endSession ends a running watch with the exit path this platform supports,
+// and asserts the exit code that path promises. Windows cannot deliver Ctrl-C
+// to an arbitrary child — Process.Signal(os.Interrupt) is unimplemented there —
+// so the session ends the way the CLI can be stopped from outside: the test
+// breaks the stdout pipe and the failed write walks the closed-stdout fatal
+// path; stopFrame is the event whose write is that trigger, and it is never
+// shown. Everywhere else the interrupt main.go listens for cancels the context,
+// watch returns 0, and the deferred account speaks on the way out.
+func endSession(t *testing.T, feed *runningFeed, stdout *os.File, relay *fakeRelay, stopFrame string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		stdout.Close()
+		relay.send(t, stopFrame)
+		if code := feed.waitExit(t); code != 1 {
+			t.Errorf("exit code = %d, want 1 through the closed-stdout fatal path (stderr: %q)",
+				code, feed.stderr.String())
+		}
+		return
 	}
-	if got := feed.stderr.String(); !strings.Contains(got, "stopped · 1 events · 1 merged · 0 assigned\n") {
-		t.Errorf("stderr = %q, want the account of the one card that was shown", got)
+	if err := feed.cmd.Process.Signal(os.Interrupt); err != nil {
+		t.Fatalf("sending Ctrl-C to the feed: %v", err)
+	}
+	if code := feed.waitExit(t); code != 0 {
+		t.Errorf("exit code = %d, want 0 through the cancelled context (stderr: %q)",
+			code, feed.stderr.String())
+	}
+}
+
+// wantStopped asserts the session's closing account: on stderr, carrying
+// exactly the counts the test names.
+func wantStopped(t *testing.T, feed *runningFeed, want string) {
+	t.Helper()
+	if got := feed.stderr.String(); !strings.Contains(got, want) {
+		t.Errorf("stderr = %q, want it to carry %q", got, want)
 	}
 }
 
