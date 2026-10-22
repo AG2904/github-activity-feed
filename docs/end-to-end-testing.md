@@ -206,20 +206,22 @@ El mismo evento, con el CLI en modo terminal:
 
 ```text
 maria.perez merged into main
-  Fix memory leak in parser component
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug] Fix memory leak in parser component
+  AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/pull/42
 
 lucia.gomez assigned to tomas.ferreira
-  Ship the onboarding checklist
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug] Ship the onboarding checklist
+  AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/issues/7
 ```
 
 `2h ago` es relativo al momento de imprimir: con el `when` del ejemplo vas a ver los
-días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. La cuarta línea, la
-URL, existe sólo sin hyperlink: en una terminal con color el título es el link OSC 8 y
-la tarjeta se queda en tres líneas. En un pipe no hay un solo escape.
+días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. Las etiquetas del
+evento van al frente del título, antes del texto que califican, y el contexto se queda
+con el repositorio y el tiempo. La cuarta línea, la URL, existe sólo sin hyperlink: en
+una terminal con color el título es el link OSC 8 y la tarjeta se queda en tres
+líneas. En un pipe no hay un solo escape.
 
 Las tarjetas van a stdout; la sesión entera va a stderr. Al cerrar con `Ctrl-C`, la
 línea de cuenta suma lo que se mostró, filtro incluido —en este recorrido,
