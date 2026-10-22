@@ -75,14 +75,14 @@ El body se manda **raw**, sin reformatear entre firmar y enviar. Este es el de u
 merge a `main`, que es un evento crítico:
 
 ```json
-{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Prueba manual","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/github-activity-feed/pull/998","base":{"ref":"main"},"labels":[{"name":"bug"}]}}
+{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Prueba manual","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/github-activity-feed/pull/998","head":{"ref":"fix/memory-leak"},"base":{"ref":"main"},"labels":[{"name":"bug"}]}}
 ```
 
 ### Opción A — PowerShell (probado)
 
 ```powershell
 $secret = "un-secreto-largo-de-prueba"
-$body = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Prueba manual","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/github-activity-feed/pull/998","base":{"ref":"main"},"labels":[{"name":"bug"}]}}'
+$body = '{"action":"closed","sender":{"login":"maria.perez"},"repository":{"full_name":"AG2904/github-activity-feed"},"pull_request":{"title":"Prueba manual","merged":true,"merged_at":"2026-10-16T12:00:00Z","html_url":"https://github.com/AG2904/github-activity-feed/pull/998","head":{"ref":"fix/memory-leak"},"base":{"ref":"main"},"labels":[{"name":"bug"}]}}'
 
 $h = New-Object System.Security.Cryptography.HMACSHA256
 $h.Key = [Text.Encoding]::UTF8.GetBytes($secret)
@@ -137,13 +137,14 @@ curl http://localhost:3000/history
 ```
 
 ```json
-[{"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"maria.perez","subject":"Prueba manual","assignee":null,"labels":["bug"],"url":"https://github.com/AG2904/github-activity-feed/pull/998","when":"2026-10-16T12:00:00.000Z"}]
+[{"type":"pr.merged","repository":"AG2904/github-activity-feed","branch":"fix/memory-leak","actor":"maria.perez","subject":"Prueba manual","assignee":null,"labels":["bug"],"url":"https://github.com/AG2904/github-activity-feed/pull/998","when":"2026-10-16T12:00:00.000Z"}]
 ```
 
-Ocho campos, ni uno más: el identificador de entrega quedó en la fila y no se sirve
+Nueve campos, ni uno más: el identificador de entrega quedó en la fila y no se sirve
 (ADR-0005). El `repository` sale del `repository.full_name` del payload, no del `url`
-(ADR-0010). El `when` es el `merged_at` que mandaste, normalizado a UTC con
-milisegundos.
+(ADR-0010), y el `branch` sale del `pull_request.head.ref` (ADR-0013): si ese head ref
+falta o no sirve, el campo queda en `null` y el evento se guarda igual. El `when` es el
+`merged_at` que mandaste, normalizado a UTC con milisegundos.
 
 ## Paso 5 — El canal en vivo
 

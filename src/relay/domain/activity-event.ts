@@ -2,9 +2,9 @@
  * The single normalized shape the relay stores and serves (see GLOSSARY.md).
  *
  * Nine fields, no more. An ActivityEvent describes a *happening* — what
- * happened, where it landed, where it happened, to whom, where to look, and
- * when — so the identifiers that belong to a delivery or to a storage row
- * deliberately do not appear here (ADR-0005).
+ * happened, where it happened and which line of work it came from, to whom,
+ * where to look, and when — so the identifiers that belong to a delivery or
+ * to a storage row deliberately do not appear here (ADR-0005).
  */
 
 /** The critical happenings the relay knows how to normalize. A closed set. */

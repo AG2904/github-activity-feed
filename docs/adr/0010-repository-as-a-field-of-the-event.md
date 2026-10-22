@@ -1,5 +1,11 @@
 # The repository is a field of the event, and the shape is eight fields
 
+> **Amended by [ADR-0013](0013-branch-as-a-field-of-the-event.md).** This title counted
+> eight fields; the shape is now nine, with `branch` added. Everything else in this
+> decision stands unchanged: the repository is still a field read from
+> `repository.full_name`, still its own column, and still nullable only because of the
+> upgrade.
+
 `ActivityEvent` carries `repository` as `owner/name`, read from the webhook's `repository.full_name` and stored in its own column, and `GET /history` accepts a `repository` filter. This supersedes [ADR-0006](0006-repository-derived-from-the-url.md), which derived the same value from the event's `url`.
 
 ADR-0006's reasons were sound when it was written, and restating them is the point, because they are what changed. The shape was frozen: "seven fields, not one more" was written into the architecture document, enumerated in user story 10, and asserted by deep equality across the whole suite, so an eighth field meant reopening a completed phase and touching the storage schema. And grouping by repository looked like a *presentation* concern, which the client could serve without the relay ever knowing.

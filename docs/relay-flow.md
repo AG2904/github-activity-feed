@@ -122,7 +122,7 @@ GET /stream ──▶ stream.controller.events()
 
 ### 2.1 El `ActivityEvent` — el contrato
 
-`src/relay/domain/activity-event.ts`. **Ocho campos, ni uno más**, y el mismo shape
+`src/relay/domain/activity-event.ts`. **Nueve campos, ni uno más**, y el mismo shape
 sirve el stream y el historial para que un cliente parsee una sola cosa:
 
 | Campo | Tipo | Notas |
@@ -157,11 +157,15 @@ espera un instante canónico sin pasar por `isoInstant()`, que es el único prod
 | `deliveryId` | texto, **único**, nullable | la identidad de la *entrega*, no del evento; el índice único **es** el dedupe |
 | `type` · `repository` · `branch` · `actor` · `subject` · `assignee` · `labels` · `url` · `when` | — | los nueve campos del contrato |
 
-`repository` y `branch` son **nullable por obligación**, no por diseño: SQLite no puede agregar
-una columna `NOT NULL` a una tabla poblada, y TypeORM responde a un cambio de esquema
-recreando la tabla y copiando las filas, así que una columna `NOT NULL` hace fallar
-la copia y el relay no arranca. Está medido, y la suite lo prueba levantando una app
-contra una base escrita con el esquema viejo.
+`repository` y `branch` son **nullable**, pero no por la misma razón. Para `repository`
+es **solo por obligación**: SQLite no puede agregar una columna `NOT NULL` a una tabla
+poblada, y TypeORM responde a un cambio de esquema recreando la tabla y copiando las
+filas, así que una columna `NOT NULL` hace fallar la copia y el relay no arranca. Para
+`branch` es **por obligación y por diseño**: la misma mecánica de upgrade deja sin rama a
+una fila anterior a la columna, y además una asignación —o un merge cuyo payload no trae
+un `head.ref` usable— no tiene rama que nombrar, y el evento se guarda igual con
+`branch: null` (ADR-0013). Está medido, y la suite lo prueba levantando una app contra
+una base escrita con el esquema viejo.
 
 La tabla la crea `synchronize: true` al arrancar. **No hay migrations.**
 

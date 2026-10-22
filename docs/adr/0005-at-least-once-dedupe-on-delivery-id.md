@@ -1,5 +1,10 @@
 # At-least-once webhook delivery: dedupe on the delivery identifier
 
+> **Amended by [ADR-0013](0013-branch-as-a-field-of-the-event.md).** The shape now has
+> nine fields, not eight: ticket 05 added `branch`. Everything else in this decision
+> stands — the delivery identifier is still a row-level column, still outside the event
+> shape, and the unique index on it is still the whole dedupe.
+
 Delivery is at-least-once. GitHub does not automatically redeliver failed webhooks, but a delivery still arrives more than once when a timeout is retried or someone redelivers it by hand — and `X-GitHub-Delivery`, the per-delivery GUID, is **unchanged across redelivery**. So a duplicate is not evidence of an automatic retry; it is one delivery arriving again, carrying the same identifier.
 
 We persist that identifier on each ActivityEvent **row** under a unique index, and drop any incoming delivery whose identifier already exists, acknowledging it exactly as if it had been stored.
