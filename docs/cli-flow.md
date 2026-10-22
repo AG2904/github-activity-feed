@@ -30,7 +30,7 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │ despacho: watch | history
                               │ flags de watch: --relay --user --repo
                               │                 --backfill <n> --no-color --json
-                              │ banner "watching <url>" en stderr
+                              │ banner "watching <url> · backfill <n>" en stderr
                               ▼
                          internal/cli/watch.go · watch()
                               │
@@ -41,7 +41,8 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               loop
                               │
                               ├──▶ stream() ──▶ GET /stream (sin Last-Event-ID)
-                              │                      │
+                              │                      │ aceptada: "connected · …"
+                              │                      │ en stderr, la primera vez
                               │                      ▼
                               │                 idleReader(5 min)
                               │                      │
@@ -58,6 +59,9 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │                 stdout: el evento
                               │
                               └── error ──▶ backoff 1 → 30 s ──▶ vuelve al loop
+
+     Toda salida de watch() —Ctrl-C incluido— pasa por el defer que imprime
+     "stopped · …" en stderr: una línea de cuenta, no una despedida.
 ```
 
 Paso por paso:
@@ -71,11 +75,16 @@ Paso por paso:
    `--version`; los subcomandos parsean los suyos. `feed` a secas imprime el uso y
    sale con `2`, y un subcomando desconocido hace lo mismo, con el nombre entre
    comillas. El contrato de flujos es fijo: **stdout lleva eventos** (y la versión,
-   con `--version`), **stderr lleva el banner, los avisos y los errores**.
+   con `--version`), **stderr lleva el banner, las líneas de sesión, los avisos y los
+   errores**.
 3. **`watch()`** arma el destino (`--relay`, después `$RELAY_URL`, después
-   `http://localhost:3000`), escribe `watching <url>` en stderr y construye el
+   `http://localhost:3000`), escribe en stderr la primera línea de la sesión —el
+   banner `watching <url> · backfill <n>`, al que se agregan ` · user <login>` y
+   ` · repo <owner/name>` en ese orden cuando los flags están puestos— y construye el
    `emitter` con las tres decisiones que no cambian durante la vida del proceso:
-   paleta con o sin color, `--json` sí o no, y el filtro local.
+   paleta con o sin color, `--json` sí o no, y el filtro local. El `emitter` también
+   cuenta lo que se muestra; esa cuenta es lo que dice la línea `connected · …` tras
+   la primera conexión y lo que cierra la sesión con `stopped · …`.
 4. **`backfill()`** corre antes de la primera conexión y pide `/history` una sola vez,
    para que la terminal no arranque en blanco: imprime hasta `--backfill <n>` filas
    (diez por defecto, `0` lo apaga) y las pinta oldest first, así el vivo sigue abajo
@@ -92,11 +101,15 @@ Paso por paso:
    que la conexión está viva, aunque no se escriba nada. Si pasa, se imprime el
    payload tal cual (`--json`) o se renderiza como la tarjeta de tres líneas —la
    frase, el título con las etiquetas al frente, el contexto— más la URL cuando no
-   hay hyperlink.
+   hay hyperlink, y se suma a la cuenta de lo mostrado.
 7. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
-   cualquier punto, el retorno es `0`, no un error.
+   cualquier punto, el retorno es `0`, no un error. Cualquiera sea el camino de
+   salida —`Ctrl-C` incluido—, el `defer out.summarize(stderr)` imprime la última
+   línea de la sesión: `stopped · <n> events · <k> merged · <l> assigned` cuando se
+   mostró algo, `stopped · no events` cuando no. Los conteos son de eventos
+   **mostrados**, filtro incluido: la respuesta a "qué vi", no a "qué mandó el relay".
 8. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
    jitter de hasta un cuarto del paso. Una conexión que entregó al menos un evento
    válido resetea la escalera, así que un corte aislado vuelve a esperar un segundo.
@@ -258,8 +271,16 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 
 - **stdout es un contrato, no un log.** Lleva eventos y nada más (más la versión con
-  `--version`); el banner, los avisos de reconexión y los errores van a stderr. Eso es
-  lo que hace seguros `feed watch | jq` y `feed watch | tee`.
+  `--version`); el banner, la línea `connected` de la primera conexión, los avisos de
+  reconexión, la línea `stopped` de la salida y los errores van a stderr, en texto
+  plano y sin TTY-gating —una sesión redirigida a un log merece la misma narración
+  que una terminal—. Eso es lo que hace seguros `feed watch | jq` y `feed watch | tee`.
+- **La sesión se narra tres veces y nada más.** Un banner al arrancar, una sola
+  línea `connected` tras la primera conexión —una reconexión dice
+  `watch: reconnected`, nunca un segundo `connected`— y una línea de cuenta al salir.
+  No hay heartbeat ni spinner: repetir en una terminal de append-only es tinta
+  permanente, y el silencio ya está contestado por los avisos de reconexión y por el
+  tiempo de la última tarjeta.
 - **`--json` no re-serializa.** Escribe el payload tal como llegó. Pasar por
   `json.Marshal` reordenaría claves y podría cambiar la forma de un `null` o del
   timestamp en milisegundos.

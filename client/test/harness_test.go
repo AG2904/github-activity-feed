@@ -292,6 +292,63 @@ func (f *runningFeed) stop() {
 	_ = f.cmd.Wait()
 }
 
+// waitExit waits for the feed to leave on its own — no cancel, no kill — and
+// returns the exit code it chose. It marks the feed stopped so the cleanup
+// does not wait a second time.
+func (f *runningFeed) waitExit(t *testing.T) int {
+	t.Helper()
+
+	f.mu.Lock()
+	if f.stopped {
+		f.mu.Unlock()
+		t.Fatalf("the feed was stopped before it could exit on its own")
+	}
+	f.stopped = true
+	f.mu.Unlock()
+
+	err := f.cmd.Wait()
+	if err == nil {
+		return 0
+	}
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) {
+		t.Fatalf("waiting for feed: %v", err)
+	}
+	return exit.ExitCode()
+}
+
+// startFeedWithPipeStdout starts `feed watch` with its stdout on a pipe the
+// test owns, so the test can break the pipe mid-session: the next write fails
+// and the watch leaves through the closed-stdout fatal path. The test owns the
+// read end and must close it; the feed carries no stdout buffer of its own.
+func startFeedWithPipeStdout(t *testing.T, args ...string) (*runningFeed, *os.File) {
+	t.Helper()
+
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("creating the stdout pipe: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cmd := exec.CommandContext(ctx, feedBinary, args...)
+	cmd.Env = environment(nil)
+	cmd.Stdout = writer
+	feed := &runningFeed{cmd: cmd, cancel: cancel, stderr: &syncBuffer{}}
+	cmd.Stderr = feed.stderr
+
+	if err := cmd.Start(); err != nil {
+		cancel()
+		reader.Close()
+		writer.Close()
+		t.Fatalf("starting feed %s: %v", strings.Join(args, " "), err)
+	}
+	// The child carries its own handle; the parent's copy of the write end
+	// would only outlive it and hide the moment the last reader is gone.
+	writer.Close()
+	t.Cleanup(feed.stop)
+	return feed, reader
+}
+
 func (f *runningFeed) waitStdout(t *testing.T, want string) {
 	t.Helper()
 	f.waitFor(t, "stdout", want, f.stdout.String)
@@ -310,6 +367,37 @@ func (f *runningFeed) waitFor(t *testing.T, stream, want string, read func() str
 			t.Fatalf("%s never contained %q\nstdout: %q\nstderr: %q", stream, want, f.stdout.String(), f.stderr.String())
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// readUntil consumes a pipe up to and including the wanted suffix, so a test
+// can hold the session at a known card before breaking the pipe.
+func readUntil(t *testing.T, pipe *os.File, suffix string) string {
+	t.Helper()
+
+	done := make(chan string, 1)
+	go func() {
+		var seen strings.Builder
+		buf := make([]byte, 4096)
+		for {
+			n, err := pipe.Read(buf)
+			seen.Write(buf[:n])
+			if strings.Contains(seen.String(), suffix) || err != nil {
+				done <- seen.String()
+				return
+			}
+		}
+	}()
+
+	select {
+	case seen := <-done:
+		if !strings.Contains(seen, suffix) {
+			t.Fatalf("the pipe ended before carrying %q (saw %q)", suffix, seen)
+		}
+		return seen
+	case <-time.After(10 * time.Second):
+		t.Fatalf("the pipe never carried %q", suffix)
+		return ""
 	}
 }
 
