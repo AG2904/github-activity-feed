@@ -32,6 +32,19 @@ export class ActivityEventEntity {
   @Column({ type: 'text', nullable: true })
   repository!: string | null;
 
+  /**
+   * The source branch that landed, from the pull request's `head.ref`.
+   *
+   * Nullable, and only because of the upgrade, exactly like `repository`:
+   * SQLite cannot add a `NOT NULL` column to a populated table, and TypeORM
+   * answers a schema change by recreating the table and copying the rows, so a
+   * `NOT NULL` column makes the copy fail and the relay refuse to boot. A row
+   * written before this column existed has no recorded branch, and a merge
+   * whose payload carries no usable head ref has none to record (ADR-0013).
+   */
+  @Column({ type: 'text', nullable: true })
+  branch!: string | null;
+
   @Column()
   actor!: string;
 
