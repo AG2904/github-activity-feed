@@ -77,13 +77,13 @@ func (p Palette) card(w io.Writer, event activity.Event, now time.Time, shape li
 func (p Palette) headline(event activity.Event) string {
 	parts := []string{p.paint(cyan, event.Actor)}
 	switch event.Type {
-	case "pr.merged":
+	case activity.TypePRMerged:
 		parts = append(parts,
 			p.paint(green, "merged"),
 			p.paint(grey, "into"),
 			p.paint(green, "main"),
 		)
-	case "issue.assigned":
+	case activity.TypeIssueAssigned:
 		parts = append(parts, p.paint(amber, "assigned"))
 		if event.Assignee != nil && *event.Assignee != "" {
 			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, *event.Assignee))
