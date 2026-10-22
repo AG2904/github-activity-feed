@@ -118,8 +118,8 @@ La terminal del CLI muestra, en stdout:
 
 ```text
 maria.perez merged into main
-  Fix memory leak in parser component
-  AG2904/github-activity-feed · [bug] · 2h ago
+  [bug] Fix memory leak in parser component
+  AG2904/github-activity-feed · 2h ago
   https://github.com/AG2904/github-activity-feed/pull/42
 ```
 
@@ -131,10 +131,12 @@ watching http://localhost:3000/stream
 
 Detalles que importan: una tarjeta son tres líneas —la frase, el título y el
 contexto— más una cuarta con la URL cuando no hay hyperlink, que es el caso de un pipe
-o de `--no-color`. `2h ago` es **relativo al momento de imprimir**, no al `merged_at`.
-Las etiquetas entre corchetes son las del evento y son la razón por la que una
-asignación te interrumpió. En una terminal con color, el título es el link y la línea
-de la URL desaparece.
+o de `--no-color`. Las etiquetas del evento van **al frente del título**, entre
+corchetes y con un espacio antes del texto: `[bug] Fix memory leak…` es la razón antes
+que el qué, y una tarjeta sin etiquetas arranca directo con el título. El contexto se
+queda con el repositorio y el tiempo. `2h ago` es **relativo al momento de imprimir**,
+no al `merged_at`. En una terminal con color, las etiquetas van en rojo negrita, el
+título es el link y la línea de la URL desaparece.
 
 ## Paso 5 — `--json`: el contrato crudo
 

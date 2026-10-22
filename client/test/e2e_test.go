@@ -154,8 +154,8 @@ func TestWatchRendersAnAssignmentWithoutAnAssignee(t *testing.T) {
 		`["bug"]`, "https://github.com/AG2904/github-activity-feed/issues/7"))
 
 	want := "lucia.gomez assigned\n" +
-		"  Ship the onboarding checklist\n" +
-		"  AG2904/github-activity-feed · [bug] · 2h ago\n" +
+		"  [bug] Ship the onboarding checklist\n" +
+		"  AG2904/github-activity-feed · 2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
 	feed.waitStdout(t, want)
 
@@ -175,8 +175,8 @@ func TestWatchRendersEveryLabel(t *testing.T) {
 		"https://github.com/AG2904/github-activity-feed/issues/7"))
 
 	want := "lucia.gomez assigned to tomas.ferreira\n" +
-		"  Ship the onboarding checklist\n" +
-		"  AG2904/github-activity-feed · [bug, feedback] · 2h ago\n" +
+		"  [bug, feedback] Ship the onboarding checklist\n" +
+		"  AG2904/github-activity-feed · 2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
 	feed.waitStdout(t, want)
 
@@ -191,19 +191,20 @@ func TestWatchRendersALegacyRowWithoutARepository(t *testing.T) {
 	relay.waitConnected(t)
 
 	// An empty repository is the null of a row stored before the column existed
-	// (ADR-0010): the context line starts at the label instead of inventing one.
+	// (ADR-0010): the context line is the time alone, and the label rides with
+	// the title instead of filling the repository's place.
 	relay.send(t, eventFrame(time.Now().Add(-2*time.Hour-30*time.Minute), "pr.merged",
 		"", "maria.perez", "Legacy merge", nil, `["bug"]`,
 		"https://github.com/AG2904/github-activity-feed/pull/1"))
 
 	want := "maria.perez merged into main\n" +
-		"  Legacy merge\n" +
-		"  [bug] · 2h ago\n" +
+		"  [bug] Legacy merge\n" +
+		"  2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/1\n"
 	feed.waitStdout(t, want)
 
 	if got := feed.stdout.String(); got != want {
-		t.Errorf("stdout = %q, want a context line starting at the label %q", got, want)
+		t.Errorf("stdout = %q, want a context line of just the time %q", got, want)
 	}
 }
 
@@ -537,8 +538,8 @@ func TestWatchFiltersCombineAsConjunction(t *testing.T) {
 	relay.send(t, eventFrame(when, "issue.assigned", "other/repo", "someone.else", "Other repo assignment", ptr("lucia.gomez"), `["bug"]`, "https://github.com/other/repo/issues/9"))
 
 	want := "someone.else assigned to lucia.gomez\n" +
-		"  Other repo assignment\n" +
-		"  other/repo · [bug] · 2h ago\n" +
+		"  [bug] Other repo assignment\n" +
+		"  other/repo · 2h ago\n" +
 		"  https://github.com/other/repo/issues/9\n"
 	feed.waitStdout(t, want)
 
@@ -899,8 +900,8 @@ func TestHistoryFiltersCombineAsConjunction(t *testing.T) {
 		t.Fatalf("exit code = %d, want 0 (stderr: %q)", got.code, got.stderr)
 	}
 	want := "someone.else assigned to lucia.gomez\n" +
-		"  Other repo assignment\n" +
-		"  other/repo · [bug] · 2h ago\n" +
+		"  [bug] Other repo assignment\n" +
+		"  other/repo · 2h ago\n" +
 		"  https://github.com/other/repo/issues/9\n"
 	if got.stdout != want {
 		t.Errorf("stdout = %q, want user and repository to combine as a conjunction %q", got.stdout, want)
@@ -1029,28 +1030,31 @@ const historyBody = `[{"type":"pr.merged","repository":"AG2904/github-activity-f
 
 // The two rendered forms the fixtures below produce, all at "2h ago". A card is
 // the sentence, the title and the context; without colour the URL is a fourth
-// line, because there is no hyperlink to carry it.
+// line, because there is no hyperlink to carry it. The merged event carries no
+// labels, so its line two starts at the title: no empty "[]" ever reaches the
+// terminal.
 const (
 	mergedOutput = "maria.perez merged into main\n" +
 		"  Fix memory leak in parser component\n" +
 		"  AG2904/github-activity-feed · 2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
 	assignedOutput = "maria.perez assigned to lucia.gomez\n" +
-		"  Ship the onboarding checklist\n" +
-		"  AG2904/github-activity-feed · [bug] · 2h ago\n" +
+		"  [bug] Ship the onboarding checklist\n" +
+		"  AG2904/github-activity-feed · 2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
 )
 
 // The same two events inside a grouped report, where the header already named
-// the repository and the context line therefore does not.
+// the repository and the context line therefore does not. The labels still ride
+// with the title: the reason is not repository-scoped.
 const (
 	mergedGrouped = "maria.perez merged into main\n" +
 		"  Fix memory leak in parser component\n" +
 		"  2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/pull/42\n"
 	assignedGrouped = "maria.perez assigned to lucia.gomez\n" +
-		"  Ship the onboarding checklist\n" +
-		"  [bug] · 2h ago\n" +
+		"  [bug] Ship the onboarding checklist\n" +
+		"  2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
 )
 
