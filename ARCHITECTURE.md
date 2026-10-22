@@ -147,6 +147,7 @@ github-activity-feed/
 {
   "type": "pr.merged",
   "repository": "AG2904/github-activity-feed",
+  "branch": "fix/memory-leak",
   "actor": "maria.perez",
   "subject": "Fix memory leak in parser component",
   "assignee": null,
@@ -156,7 +157,7 @@ github-activity-feed/
 }
 ```
 
-Ocho campos, ni uno más. `type` es un conjunto cerrado de literales (`pr.merged`, `issue.assigned`); `repository` es `owner/name` tal como lo reporta GitHub, y es `null` sólo para un evento guardado antes de que la columna existiera (ticket 09); `assignee` es `null` cuando el evento no tiene ninguno, nunca cadena vacía; `when` es UTC en ISO-8601 con milisegundos (`toISOString()`), forma canónica fijada por test. El mismo shape sirve el stream y el historial, para que el cliente parsee una sola cosa.
+Nueve campos, ni uno más. `type` es un conjunto cerrado de literales (`pr.merged`, `issue.assigned`); `repository` es `owner/name` tal como lo reporta GitHub, y es `null` sólo para un evento guardado antes de que la columna existiera (ticket 09); `branch` es la rama de origen de un merge (`head.ref`), y es `null` en una asignación, en una fila anterior a la columna o cuando el payload no trae una usable (ADR-0013); `assignee` es `null` cuando el evento no tiene ninguno, nunca cadena vacía; `when` es UTC en ISO-8601 con milisegundos (`toISOString()`), forma canónica fijada por test. El mismo shape sirve el stream y el historial, para que el cliente parsee una sola cosa.
 
 El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este contrato: es una columna de la fila, junto al id de storage, y ninguno de los dos llega al cable (ADR-0005).
 

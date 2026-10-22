@@ -46,6 +46,10 @@ _Avoid_: allocation, ownership
 The GitHub project an ActivityEvent happened in; the unit the CLI groups and filters by.
 _Avoid_: project, codebase, origin
 
+**Branch**:
+The line of work a merge brought into `main`: the pull request's source branch, carried by the event when GitHub reports one. It is a location, not a person or a state, and it is supplementary — an event without one is still an event.
+_Avoid_: ref, source, head
+
 **Actor**:
 The GitHub user who caused the event — who merged the pull request, or who assigned the issue.
 _Avoid_: author, user, committer

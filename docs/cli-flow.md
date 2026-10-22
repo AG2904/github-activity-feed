@@ -168,13 +168,14 @@ porque el relay estaba reiniciando es peor que esperar.
 
 ### 2.1 `activity.Event` — el contrato, del lado del cliente
 
-`client/internal/activity/activity.go`. Los mismos ocho campos que emite el relay,
-con dos diferencias de representación:
+`client/internal/activity/activity.go`. Los mismos nueve campos que emite el relay,
+con diferencias de representación:
 
 | Campo | Tipo en Go | Notas |
 | --- | --- | --- |
 | `Type` | `string` | `pr.merged` o `issue.assigned`; el CLI no valida el conjunto |
 | `Repository` | `*string` | `nil` sólo para una fila anterior a la columna |
+| `Branch` | `*string` | `nil` en una asignación, en una fila anterior a la columna, o si el payload no traía `head.ref` usable (ADR-0013) |
 | `Actor` | `string` | |
 | `Subject` | `string` | |
 | `Assignee` | `*string` | `nil` cuando el evento no tiene uno |
@@ -184,7 +185,9 @@ con dos diferencias de representación:
 
 `Parse()` es la única puerta: rechaza un payload que no sea JSON, uno al que le falte
 `type`, `actor`, `subject`, `url` o `when`, y uno cuyo `when` no parsea. Un evento a
-medio llenar no se renderiza: se descarta. `labels` ausente queda `nil`, distinto de
+medio llenar no se renderiza: se descarta. `branch` y `repository` son suplementarios:
+ausentes o `null` no rechazan el evento, y el renderer cae en la frase derivada del
+tipo. `labels` ausente queda `nil`, distinto de
 una lista vacía sólo en el modelo: el renderizador lee la longitud, así que las dos
 formas imprimen el título sin un `[]` vacío.
 
@@ -311,8 +314,9 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 - **CI y release**: no hay workflow que compile el cliente ni publique artefactos;
   los binarios salen de `npm run cli:dist`, a mano.
 - **El detalle de los colores**: la paleta por rol vive en `render.go` —cian para las
-  personas, verde para la integración, ámbar para la asignación, azul para el
-  repositorio, rojo para las etiquetas y gris para el contexto— y no cambia el flujo.
+  personas, verde para la integración, ámbar para la asignación, azul para las
+  ubicaciones —el repositorio y la rama—, rojo para las etiquetas y gris para el
+  contexto— y no cambia el flujo.
 - **La elección del relay**: `--relay` o `$RELAY_URL`; el resto de la configuración
   es del lado del relay.
 
