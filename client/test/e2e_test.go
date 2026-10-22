@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"net"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -85,8 +86,99 @@ func TestWatchUsesEnvironmentWhenNoFlagIsGiven(t *testing.T) {
 func TestWatchDefaultsToLocalhost3000(t *testing.T) {
 	banner := firstWatchBanner(t)
 
-	if !strings.Contains(banner, "watching http://localhost:3000/stream") {
-		t.Errorf("banner = %q, want the default relay", banner)
+	if !strings.Contains(banner, "watching http://localhost:3000/stream · backfill 10\n") {
+		t.Errorf("banner = %q, want the default relay with its default backfill", banner)
+	}
+}
+
+func TestWatchBannerNamesTheBackfillAndFilters(t *testing.T) {
+	relay := newFakeRelay(t)
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL,
+		"--backfill", "3", "--user", "maria.perez", "--repo", "AG2904/github-activity-feed")
+	relay.waitConnected(t)
+
+	want := "watching " + relay.URL + "/stream · backfill 3 · user maria.perez · repo AG2904/github-activity-feed\n"
+	feed.waitStderr(t, want)
+
+	// The banner is messaging: it never reaches stdout and never carries an
+	// escape, --json or not, terminal or pipe.
+	if got := feed.stdout.String(); got != "" {
+		t.Errorf("stdout = %q, want empty while only the chrome has spoken", got)
+	}
+	if strings.ContainsRune(feed.stderr.String(), '\x1b') {
+		t.Errorf("stderr contains an escape sequence in the chrome: %q", feed.stderr.String())
+	}
+}
+
+func TestWatchSaysConnectedAfterTheFirstConnection(t *testing.T) {
+	relay := newFakeRelay(t)
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.setHistory(historyOf(payloadOf(mergedFrame(when)), payloadOf(assignedFrame(when))))
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	want := cards(assignedOutput, mergedOutput)
+	feed.waitStdout(t, want)
+	feed.waitStderr(t, "connected · 2 events from history\n")
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want the cards untouched by the chrome %q", got, want)
+	}
+	// Exactly one affirmative line: the count is of what the backfill printed,
+	// after the filter, not of what the relay stored.
+	if got := strings.Count(feed.stderr.String(), "connected · "); got != 1 {
+		t.Errorf("stderr carries %d connection lines, want exactly 1\nstderr: %q", got, feed.stderr.String())
+	}
+	if strings.ContainsRune(feed.stderr.String(), '\x1b') {
+		t.Errorf("stderr contains an escape sequence in the chrome: %q", feed.stderr.String())
+	}
+}
+
+func TestWatchSaysWaitingWhenTheBackfillPrintedNothing(t *testing.T) {
+	relay := newFakeRelay(t)
+
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+	feed.waitStderr(t, "connected · waiting for events\n")
+
+	// The line is about the history, not about the session: a live event later
+	// does not turn it into a count.
+	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+	feed.waitStdout(t, mergedOutput)
+
+	if got := strings.Count(feed.stderr.String(), "connected · "); got != 1 {
+		t.Errorf("stderr carries %d connection lines, want exactly 1\nstderr: %q", got, feed.stderr.String())
+	}
+}
+
+func TestWatchSaysConnectedOnceAcrossReconnects(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+	feed.waitStderr(t, "connected · waiting for events\n")
+
+	relay.dropStream(t)
+	feed.waitReconnects(t, 1)
+	relay.waitConnected(t)
+	feed.waitStderr(t, "watch: reconnected\n")
+
+	// A healthy quiet relay heartbeats in comments: the affirmative line
+	// answered the only moment "is it alive?" had no other reply, so the
+	// silence that follows stays silent.
+	for i := 0; i < 3; i++ {
+		relay.send(t, ": heartbeat\n\n")
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// The banner, the one connection line, and the reconnecting/reconnected
+	// pair of the drop: nothing else may reach stderr.
+	if lines := nonEmptyLines(feed.stderr.String()); len(lines) != 4 {
+		t.Errorf("stderr has %d lines, want banner, connected and the reconnect pair\n%v", len(lines), lines)
+	}
+	if got := strings.Count(feed.stderr.String(), "connected · "); got != 1 {
+		t.Errorf("stderr carries %d connection lines, want exactly 1\nstderr: %q", got, feed.stderr.String())
 	}
 }
 
@@ -280,6 +372,9 @@ func TestWatchJSONWritesTheFramePayloadVerbatim(t *testing.T) {
 	if strings.ContainsRune(feed.stdout.String(), '\x1b') {
 		t.Errorf("stdout contains an escape sequence in --json mode: %q", feed.stdout.String())
 	}
+	// The chrome still narrates on stderr: --json changes the shape of stdout,
+	// not stderr's job.
+	feed.waitStderr(t, "connected · waiting for events")
 }
 
 func TestHistoryJSONHandsOverTheRelayBytes(t *testing.T) {
@@ -367,6 +462,53 @@ func TestWatchFailsOnAnUnusableRelayURL(t *testing.T) {
 	}
 	if strings.Contains(got.stderr, "reconnecting") {
 		t.Errorf("stderr = %q, want an unusable URL to be fatal, not retried", got.stderr)
+	}
+}
+
+func TestWatchSaysStoppedWhenItLeavesThroughAFatalError(t *testing.T) {
+	got := runFeed(t, nil, "watch", "--relay", "://bad")
+
+	if got.code != 1 {
+		t.Fatalf("exit code = %d, want 1 (stderr: %q)", got.code, got.stderr)
+	}
+	// The URL was unusable before a single event could be shown, so the
+	// account says nothing was — and it is the last word on stderr.
+	if !strings.HasSuffix(got.stderr, "stopped · no events\n") {
+		t.Errorf("stderr = %q, want it to end with the account of a session that showed nothing", got.stderr)
+	}
+	if got.stdout != "" {
+		t.Errorf("stdout = %q, want empty", got.stdout)
+	}
+}
+
+func TestWatchSaysStoppedWithTheCountsItShowed(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		// On Unix a write to a pipe with no readers kills the process with
+		// SIGPIPE before the CLI can report anything; on Windows the broken
+		// write is an error the CLI handles, so the closed-stdout path can
+		// carry the stop line out.
+		t.Skip("a broken stdout pipe kills the process before the stop line on this platform")
+	}
+	relay := newFakeRelay(t)
+	feed, stdout := startFeedWithPipeStdout(t, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	// The first card crosses the pipe while the readers are still there...
+	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+	readUntil(t, stdout, "https://github.com/AG2904/github-activity-feed/pull/42\n")
+
+	// ...and then the test breaks the pipe: the next card cannot be written,
+	// the failed write ends the watch, and the session must still account for
+	// the card it did show. The assignment that broke the pipe was never
+	// shown, so it is not in the account.
+	stdout.Close()
+	relay.send(t, assignedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
+
+	if code := feed.waitExit(t); code != 1 {
+		t.Errorf("exit code = %d, want 1 (stderr: %q)", code, feed.stderr.String())
+	}
+	if got := feed.stderr.String(); !strings.Contains(got, "stopped · 1 events · 1 merged · 0 assigned\n") {
+		t.Errorf("stderr = %q, want the account of the one card that was shown", got)
 	}
 }
 
