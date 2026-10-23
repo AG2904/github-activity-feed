@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# The suites only need the checkout: neither one talks to GitHub or to a real
+# relay. No repository secrets are involved.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Relay and client are independent on purpose: they share the event contract
+  # and nothing else, so a red relay suite must not hide a red client suite.
+  relay:
+    name: Relay (NestJS)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test (end-to-end)
+        run: npm test
+
+  client:
+    name: Client (Go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.27
+        uses: actions/setup-go@v5
+        with:
+          # client/go.mod declares `go 1.27.0`; let the module be the source of
+          # truth instead of repeating the version here.
+          go-version-file: client/go.mod
+          # The built-in cache keys on go.sum, which this module does not have
+          # (it has no external dependencies). The explicit cache below keys on
+          # go.mod instead and never fails for a missing go.sum.
+          cache: false
+
+      - name: Cache Go modules and build output
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-${{ hashFiles('client/go.mod') }}
+          restore-keys: |
+            go-${{ runner.os }}-
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Check formatting
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt found files that need formatting:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Test (end-to-end)
+        # -count=1 is load-bearing: the e2e package builds the binary in
+        # TestMain, so without it Go can return a cached pass when only
+        # internal/ changed.
+        run: go test -count=1 ./...
