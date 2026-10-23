@@ -152,7 +152,7 @@ o de `--no-color`. Las etiquetas del evento van **al frente del título**, entre
 corchetes y con un espacio antes del texto: `[bug] Fix memory leak…` es la razón antes
 que el qué, y una tarjeta sin etiquetas arranca directo con el título. El contexto se
 queda con el repositorio y el tiempo. `2h ago` es **relativo al momento de imprimir**,
-no al `merged_at`. En una terminal con color, las etiquetas van en rojo negrita, el
+no al `merged_at`. En una terminal con color, las etiquetas van en magenta y el
 título es el link y la línea de la URL desaparece. Las tres líneas de la sesión
 —banner, `connected` y `stopped`— van a stderr y nunca llevan color ni escape: la
 narración es de stderr y el texto plano es una decisión, no un descuido.
@@ -326,15 +326,15 @@ El color codifica **roles**, no decoración:
 
 | Elemento | Color | Por qué |
 | --- | --- | --- |
-| actor y assignee | cian bold | las dos personas de la frase |
-| `merged` y `main` | verde bold | integración: algo llegó a `main` |
-| `assigned` | ámbar bold | atención: trabajo nuevo |
-| `into` / `to` | gris tenue | conector, no información |
+| actor y assignee | cian | las dos personas de la frase |
+| `merged` y `main` | verde | integración: algo llegó a `main` |
+| `assigned` | amarillo | atención: trabajo nuevo |
+| `into` / `to` | gris | conector, no información |
 | título | bold + hyperlink OSC 8 | el contenido |
-| repositorio | azul | ubicación |
-| rama | azul | ubicación: el mismo rol que el repositorio |
-| etiquetas | rojo bold | la razón de la interrupción |
-| `·` y el tiempo | gris tenue | contexto |
+| rama | azul | la ubicación que importa: lo que llegó |
+| repositorio | gris | contexto, el mismo rol que el tiempo |
+| etiquetas | magenta | la razón de la interrupción; cálida sin la alarma del rojo |
+| `·` y el tiempo | gris | contexto |
 
 El gris es *bright black* (`90`), no *faint* (`2`): conhost con VT ignora el atributo
 *faint*, así que el contexto perdería su énfasis justo en la consola que la paleta toma
@@ -343,15 +343,21 @@ como límite.
 Qué se puede verificar y qué no: la suite corre con stdout en un pipe, así que no puede
 afirmar los tonos. Sí puede afirmar la ausencia de escapes, y de dos maneras: hay casos
 que los buscan explícitamente, y los fixtures sin color comparan la salida exacta, así
-que cualquier `\x1b` filtrado los rompe. La presencia y los matices se miran a mano en
-una terminal: `./feed watch --relay http://localhost:3000` y comparar contra la tabla.
+que cualquier `\x1b` filtrado los rompe. La presencia y los matices se miran a mano:
+`./feed watch --relay http://localhost:3000` y comparar contra la tabla. Hacelo en dos
+consolas, porque cada tema pinta los RGB concretos y el rol es lo único que el binario
+elige: **Windows Terminal** y un **conhost con VT** —una consola clásica con
+`ENABLE_VIRTUAL_TERMINAL_PROCESSING` habilitado—. Si en alguna de las dos un rol se
+pierde o el texto queda ilegible, el problema es la ranura, no el tema.
 
 En Windows, además, el color exige que la consola acepte secuencias ANSI: el binario
 prende `ENABLE_VIRTUAL_TERMINAL_PROCESSING`; si la consola lo rechaza, no emite escapes
 en vez de imprimir basura.
 
 El reporte agrupado pinta el encabezado del repositorio en azul bold, porque es la única
-estructura que tiene.
+estructura que tiene el documento. No contradice el gris del repositorio en la tarjeta:
+ahí el repositorio es contexto, y en el encabezado el azul —el rol de ubicación que
+lleva la rama— es estructura, la única línea que organiza el reporte.
 
 ## Paso 12 — Ctrl-C
 

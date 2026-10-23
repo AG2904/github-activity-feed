@@ -14,17 +14,21 @@ import (
 )
 
 // The palette carries roles, not decoration: two states, the people, the place,
-// and the reason. Sixteen-colour codes, because the binary ships to terminals
-// that are not Windows Terminal.
+// and the reason. Every role is a regular weight; bold is structure and belongs
+// to the title and the grouped heading. Grey is context: the repository, the
+// connectors and the time. The branch carries the location blue, the states keep
+// green and yellow, and the reason is magenta — warm without red's alarm.
+// Sixteen-colour codes, because the binary ships to terminals that are not
+// Windows Terminal.
 const (
-	reset = "\x1b[0m"
-	bold  = "\x1b[1m"
-	grey  = "\x1b[90m"
-	cyan  = "\x1b[1;36m"
-	green = "\x1b[1;32m"
-	amber = "\x1b[1;33m"
-	blue  = "\x1b[34m"
-	red   = "\x1b[1;31m"
+	reset   = "\x1b[0m"
+	bold    = "\x1b[1m"
+	grey    = "\x1b[90m"
+	cyan    = "\x1b[36m"
+	green   = "\x1b[32m"
+	yellow  = "\x1b[33m"
+	blue    = "\x1b[34m"
+	magenta = "\x1b[35m"
 )
 
 // Palette renders one event per call. Color enables ANSI colour, bold, and OSC
@@ -89,7 +93,7 @@ func (p Palette) headline(event activity.Event) string {
 			p.paint(green, "main"),
 		)
 	case activity.TypeIssueAssigned:
-		parts = append(parts, p.paint(amber, "assigned"))
+		parts = append(parts, p.paint(yellow, "assigned"))
 		if event.Assignee != nil && *event.Assignee != "" {
 			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, *event.Assignee))
 		}
@@ -107,7 +111,7 @@ func (p Palette) headline(event activity.Event) string {
 func (p Palette) title(event activity.Event) string {
 	labels := ""
 	if len(event.Labels) > 0 {
-		labels = p.paint(red, "["+strings.Join(event.Labels, ", ")+"]") + " "
+		labels = p.paint(magenta, "["+strings.Join(event.Labels, ", ")+"]") + " "
 	}
 	if !p.Color {
 		return labels + event.Subject
@@ -121,7 +125,7 @@ func (p Palette) title(event activity.Event) string {
 func (p Palette) context(event activity.Event, now time.Time, shape lineShape) string {
 	parts := make([]string, 0, 2)
 	if shape == withRepository && hasRepository(event) {
-		parts = append(parts, p.paint(blue, *event.Repository))
+		parts = append(parts, p.paint(grey, *event.Repository))
 	}
 	parts = append(parts, p.paint(grey, relative(now, event.When)))
 	return strings.Join(parts, p.paint(grey, " · "))
