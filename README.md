@@ -74,8 +74,9 @@ de esta guía usan `npm.cmd`, que funciona sin cambiar esa política.
 
 ## CLI: arranque rápido
 
-1. Compilar el binario. La opción integrada en npm genera el binario de la plataforma
-   anfitriona en `client/dist/`:
+1. Compilar el binario. El bloque siguiente se ejecuta desde la raíz del repositorio y
+   la opción integrada en npm deja el binario de la plataforma anfitriona en
+   `client/dist/`:
 
    ```powershell
    npm.cmd run cli:build
@@ -84,45 +85,61 @@ de esta guía usan `npm.cmd`, que funciona sin cambiar esa política.
    La salida nombra el archivo producido, por ejemplo
    `feed: dist/feed-windows-amd64.exe  windows/amd64  1.0.0+<commit>`.
 
-   Como alternativa, se puede compilar con Go dentro de `client/`. En Windows el
-   nombre del ejecutable debe incluir la extensión:
+   Como alternativa se puede compilar directamente con Go. Este segundo camino se
+   queda en `client\` para compilar y para ejecutar. En Windows el nombre del
+   ejecutable debe incluir la extensión:
 
    ```powershell
    cd client
    go build -o feed.exe ./cmd/feed
    ```
 
-2. Con el relay en marcha, escuchar los eventos en vivo:
+2. Con el relay en marcha, escuchar los eventos en vivo. El comando depende del camino
+   de compilación y cada bloque indica desde dónde se ejecuta.
+
+   Opción npm, desde la raíz del repositorio:
+
+   ```powershell
+   .\client\dist\feed-windows-amd64.exe watch --relay http://localhost:3000
+   ```
+
+   Opción Go, desde `client\`, el directorio en el que quedó la shell tras el `cd client`
+   del paso 1:
 
    ```powershell
    .\feed.exe watch --relay http://localhost:3000
    ```
-
-   Si se usó `npm run cli:build`, el binario está en `client\dist\` y se invoca desde
-   allí (`.\feed-windows-amd64.exe watch --relay http://localhost:3000`).
 
 3. Qué se ve. Los eventos van a **stdout**; la narración de la sesión va a **stderr**:
 
    - stdout: una tarjeta por evento, por ejemplo
      `maria.perez merged fix/memory-leak into main`, con el título, las etiquetas, el
      repositorio, el tiempo relativo y la URL.
-   - stderr: el banner `watching <url> · backfill <n>`, la línea `connected · …`, los
-     avisos de reconexión y la línea `stopped · …` al salir con `Ctrl-C`.
+   - stderr: el banner `watching <url>/stream · backfill <n>`, la línea `connected · …`,
+     los avisos de reconexión y la línea `stopped · …` al salir con `Ctrl-C`.
+     `<url>` es la base del relay: el CLI le agrega `/stream` para abrir el stream. Con
+     los filtros locales, el banner suma ` · user <login>` y ` · repo <owner/name>`
+     (véase [`docs/cli-testing.md`](docs/cli-testing.md)).
 
    Esa separación es deliberada: `feed watch | jq` recibe sólo eventos.
 
 4. Para ver el contrato sin formato, una línea JSON por evento, tal como lo emite el
-   relay:
+   relay. Con el binario de npm, desde la raíz del repositorio:
 
    ```powershell
-   .\feed.exe watch --relay http://localhost:3000 --json
+   .\client\dist\feed-windows-amd64.exe watch --relay http://localhost:3000 --json
    ```
+
+   Con el binario de Go, el mismo comando se escribe `.\feed.exe …` dentro de `client\`.
 
 5. Para consultar lo ya almacenado:
 
    ```powershell
-   .\feed.exe history --relay http://localhost:3000 --json
+   .\client\dist\feed-windows-amd64.exe history --relay http://localhost:3000 --json
    ```
+
+   Desde `client\` con el binario de Go, el equivalente es
+   `.\feed.exe history --relay http://localhost:3000 --json`.
 
    Contra un relay recién arrancado, la salida es `[]`. Sin `--json`, el historial se
    pinta con las mismas tarjetas del modo en vivo.
