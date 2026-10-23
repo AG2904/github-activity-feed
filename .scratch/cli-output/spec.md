@@ -122,7 +122,7 @@ what happened whether or not the terminal shows colour.
   object (`Compiling serde v1.0.203`). The old decision to parse and ignore them was
   already reversed; this amendment moves them out of the context line because a reason
   the reader reaches last is a reason they scan past. An assignment without labels is
-  unchanged, and the bold-red-on-bold pair survives conhost: the reset between the two
+  unchanged, and the magenta-before-bold pair survives conhost: the reset between the two
   segments keeps them distinct.
 - **Time keeps four human boundaries**: `just now` under a minute, `Nm ago` under an
   hour, `Nh ago` under a day, **`yesterday` from 24 to 48 hours**, `Nd ago` beyond
@@ -165,16 +165,16 @@ what happened whether or not the terminal shows colour.
 
   | Element | Colour | Why |
   | --- | --- | --- |
-  | actor | bold cyan | the person who acted |
-  | `merged` | bold green | integration: something reached `main` |
-  | `assigned` | bold amber | attention: work landed on someone |
-  | `main` | bold green | the destination of the same fact |
-  | assignee | bold cyan | the other person in the sentence |
+  | actor | cyan | the person who acted |
+  | `merged` | green | integration: something reached `main` |
+  | `assigned` | yellow | attention: work landed on someone |
+  | `main` | green | the destination of the same fact |
+  | assignee | cyan | the other person in the sentence |
   | `into` / `to` | grey | the connector is grammar, not information |
   | title | bold, default, OSC 8 | the content; it does not compete |
-  | repository | blue | a location, the way a path is shown |
-  | branch | blue | a location, the way a path is shown |
-  | labels | bold red | the reason it interrupted you |
+  | branch | blue | the location that matters: what landed |
+  | repository | grey | context, the same role as the time |
+  | labels | magenta | the reason it interrupted you; the only warm note |
   | `·` and the time | grey | context |
 
   Sixteen colours, not 256: the binary is distributed to terminals that are not Windows
@@ -312,3 +312,13 @@ what happened whether or not the terminal shows colour.
   <url> · backfill 10 · user maria · repo AG2904/x`: the example had the segments in an
   order that contradicted the prose beside it and ticket 03's checklist (backfill
   first, then user, then repo), and the prose is what the code follows.
+- 2026-10-23: **Amendment — the palette settles on `soft reason`.** Chosen by eye from
+  the prototype branch `prototype/palette-options` (commit `ea100ee`), variant
+  `soft reason`, and recorded in ticket 06. The old table is retired because four of
+  the six roles were bold (`1;3x`), which most terminals render as *bright*, and five
+  hues competed inside a three-line card. The new mapping keeps every rule above —
+  sixteen colours, colour never the only signal, the title's bold + OSC 8, the escape
+  discipline — and changes only the slots: the two states keep green and yellow, the
+  people cyan, the branch keeps the location blue, the repository drops to the grey of
+  the time, and the reason moves red → magenta, so the interruption is still the only
+  warm note without the alarm hue.

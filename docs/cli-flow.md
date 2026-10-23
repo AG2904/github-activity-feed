@@ -314,9 +314,9 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 - **CI y release**: no hay workflow que compile el cliente ni publique artefactos;
   los binarios salen de `npm run cli:dist`, a mano.
 - **El detalle de los colores**: la paleta por rol vive en `render.go` —cian para las
-  personas, verde para la integración, ámbar para la asignación, azul para las
-  ubicaciones —el repositorio y la rama—, rojo para las etiquetas y gris para el
-  contexto— y no cambia el flujo.
+  personas, verde para la integración, amarillo para la asignación, azul para la rama
+  —la ubicación que importa—, magenta para las etiquetas —la única nota cálida— y gris
+  para el repositorio, el conector y el tiempo— y no cambia el flujo.
 - **La elección del relay**: `--relay` o `$RELAY_URL`; el resto de la configuración
   es del lado del relay.
 

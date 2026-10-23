@@ -14,17 +14,19 @@ import (
 )
 
 // The palette carries roles, not decoration: two states, the people, the place,
-// and the reason. Sixteen-colour codes, because the binary ships to terminals
-// that are not Windows Terminal.
+// and the reason. Every role is a regular weight — only the title keeps bold —
+// and the grey takes the place (the repository), the time and the grammar, so
+// the single warm note left is the magenta reason. Sixteen-colour codes,
+// because the binary ships to terminals that are not Windows Terminal.
 const (
-	reset = "\x1b[0m"
-	bold  = "\x1b[1m"
-	grey  = "\x1b[90m"
-	cyan  = "\x1b[1;36m"
-	green = "\x1b[1;32m"
-	amber = "\x1b[1;33m"
-	blue  = "\x1b[34m"
-	red   = "\x1b[1;31m"
+	reset   = "\x1b[0m"
+	bold    = "\x1b[1m"
+	grey    = "\x1b[90m"
+	cyan    = "\x1b[36m"
+	green   = "\x1b[32m"
+	amber   = "\x1b[33m"
+	blue    = "\x1b[34m"
+	magenta = "\x1b[35m"
 )
 
 // Palette renders one event per call. Color enables ANSI colour, bold, and OSC
@@ -107,7 +109,7 @@ func (p Palette) headline(event activity.Event) string {
 func (p Palette) title(event activity.Event) string {
 	labels := ""
 	if len(event.Labels) > 0 {
-		labels = p.paint(red, "["+strings.Join(event.Labels, ", ")+"]") + " "
+		labels = p.paint(magenta, "["+strings.Join(event.Labels, ", ")+"]") + " "
 	}
 	if !p.Color {
 		return labels + event.Subject
@@ -121,7 +123,7 @@ func (p Palette) title(event activity.Event) string {
 func (p Palette) context(event activity.Event, now time.Time, shape lineShape) string {
 	parts := make([]string, 0, 2)
 	if shape == withRepository && hasRepository(event) {
-		parts = append(parts, p.paint(blue, *event.Repository))
+		parts = append(parts, p.paint(grey, *event.Repository))
 	}
 	parts = append(parts, p.paint(grey, relative(now, event.When)))
 	return strings.Join(parts, p.paint(grey, " · "))
