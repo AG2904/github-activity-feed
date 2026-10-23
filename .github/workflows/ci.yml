@@ -64,15 +64,16 @@ jobs:
           # go.mod instead and never fails for a missing go.sum.
           cache: false
 
-      - name: Cache Go modules and build output
+      - name: Cache Go build output
         uses: actions/cache@v4
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
+          # Only the build cache is cached. The module cache (~/go/pkg/mod)
+          # stays empty because this module has no external dependencies, so
+          # there is nothing to restore. The key is derived from a single
+          # constant file, so restore-keys would only widen a key that already
+          # matches and buy nothing.
+          path: ~/.cache/go-build
           key: go-${{ runner.os }}-${{ hashFiles('client/go.mod') }}
-          restore-keys: |
-            go-${{ runner.os }}-
 
       - name: Build
         run: go build ./...
