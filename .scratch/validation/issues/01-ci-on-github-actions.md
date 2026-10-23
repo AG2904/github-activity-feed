@@ -7,7 +7,7 @@ request targeting `main`, with pinned versions and caches.
 
 **Blocked by:** none.
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [ ] `.github/workflows/ci.yml` exists and triggers on `push` and `pull_request`
       targeting `main`, as two independent jobs.
@@ -30,3 +30,13 @@ request targeting `main`, with pinned versions and caches.
 - 2026-10-23: `-count=1` is load-bearing. The e2e package builds the binary in
   `TestMain`, so without it Go returns cached results when only `internal/` changed —
   a trap this repository already hit twice.
+- 2026-10-23: Implementación terminada y mergeada en `validation`, con el registro de
+  evidencia en
+  [`docs/tickets/validation/01-ci-on-github-actions.md`](../../../docs/tickets/validation/01-ci-on-github-actions.md).
+  Los comandos del workflow corren verdes a mano y el YAML parsea, pero **la corrida
+  real de Actions no se ejecutó**: no hay runner local y el AC de rojo/verde sólo se
+  observa al pushear `main`. Por eso el ticket queda `ready-for-human` y no `done`;
+  se cierra cuando exista la corrida y su resultado quede en el registro. Desviación
+  aceptada: Go se pinnea vía `go-version-file` (`1.27.0` exacto) en vez de `1.27.x`
+  escrito en el workflow, para que el workflow no pueda declarar otra versión que la
+  del módulo.

@@ -6,7 +6,7 @@ and where the runbooks are. Spanish, like the rest of the repository's documenta
 
 **Blocked by:** none.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `README.md` exists at the root and opens with what the project is and who it is
       for: a relay that turns critical GitHub deliveries into an activity feed, and a
@@ -32,3 +32,11 @@ and where the runbooks are. Spanish, like the rest of the repository's documenta
 - 2026-10-23: The README is Spanish because every other document in the repository is
   (the architecture, the runbooks, the ticket records); code and code comments stay
   English.
+- 2026-10-23: Done. El README está en `validation`, con el registro de evidencia en
+  [`docs/tickets/validation/02-the-readme.md`](../../../docs/tickets/validation/02-the-readme.md).
+  Se verificó siguiéndolo al pie de la letra: relay con `--env-file`, los dos caminos
+  de build y ejecución, el banner con `/stream`, y `/history` → `[]`. Dos diferencias
+  con el texto del ticket, documentadas en el propio README: `npm start` a secas no
+  lee `.env` (el relay lee variables de entorno, no el archivo), y en Windows
+  `go build -o feed` produce un archivo sin extensión que no se ejecuta; el README
+  usa `--env-file .env` y `-o feed.exe`.
