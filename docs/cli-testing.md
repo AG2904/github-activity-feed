@@ -333,7 +333,7 @@ El color codifica **roles**, no decoración:
 | título | bold + hyperlink OSC 8 | el contenido |
 | rama | azul | la ubicación que importa: lo que llegó |
 | repositorio | gris | contexto, el mismo rol que el tiempo |
-| etiquetas | magenta | la razón de la interrupción; la única nota cálida |
+| etiquetas | magenta | la razón de la interrupción; cálida sin la alarma del rojo |
 | `·` y el tiempo | gris | contexto |
 
 El gris es *bright black* (`90`), no *faint* (`2`): conhost con VT ignora el atributo
@@ -355,7 +355,9 @@ prende `ENABLE_VIRTUAL_TERMINAL_PROCESSING`; si la consola lo rechaza, no emite 
 en vez de imprimir basura.
 
 El reporte agrupado pinta el encabezado del repositorio en azul bold, porque es la única
-estructura que tiene.
+estructura que tiene el documento. No contradice el gris del repositorio en la tarjeta:
+ahí el repositorio es contexto, y en el encabezado el azul —el rol de ubicación que
+lleva la rama— es estructura, la única línea que organiza el reporte.
 
 ## Paso 12 — Ctrl-C
 
