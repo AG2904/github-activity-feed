@@ -1,6 +1,6 @@
 # Documento de Arquitectura y Diseño: GitHub Activity Feed CLI & Relay
 
-> **Estado:** Diseño actualizado tras la migración de plataforma a GitHub (§2 y §9). El Relay (Fase 1) y la CLI (Fase 2) están implementados y en `main`; la Fase 3 (CI y demo) queda pendiente.
+> **Estado:** Diseño actualizado tras la migración de plataforma a GitHub (§2 y §9). El Relay (Fase 1) y la CLI (Fase 2) están implementados y en `main`; la Fase 3 (CI y demo) está en curso.
 > **Fecha original:** 11 de Octubre, 2026. **Actualizado:** 18 de Octubre, 2026.
 
 ---
@@ -210,5 +210,5 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
 - [x] `GLOSSARY.md` actualizado a la terminología de GitHub. Los ADRs también: ADR-0002 y ADR-0005 reescritos, ADR-0003 corregido.
 - [x] Los tres tickets del filtro están en `main`: merge a `main` (ticket 02, PR #4), asignación crítica (ticket 03) y el barrido negativo con el fix del ingress (ticket 04). El 03 y el 04 aterrizaron directo en `main`, sin rama de feature: es un proyecto personal y el PR no aportaba.
 - [x] **Fase 2 (el CLI en Go) implementada y en `main`**: los ocho tickets de `.scratch/cli/`, con la suite del cliente en 46 casos sobre el límite del proceso y los cuatro binarios estáticos construibles con `npm run cli:dist`. Con esto la Fase 2 queda cerrada; lo que sigue es CI, publicación y demo (§7).
-- [ ] README del repositorio — **no existe todavía**. Este item lo daba por pendiente de actualizar, pero nunca hubo un README que actualizar; o se escribe uno, o el §6 de este documento sigue siendo la referencia pública del contrato.
-- [ ] CI (GitHub Actions) configurado.
+- [x] README del repositorio — escrito en el ticket 02 (23 de Octubre, 2026): arranque del relay y del CLI, contrato delegado al §6 y estado de las fases.
+- [ ] CI (GitHub Actions) configurado. El workflow ya existe (ticket 01, `.github/workflows/ci.yml`); la primera corrida real en Actions queda pendiente del push.
