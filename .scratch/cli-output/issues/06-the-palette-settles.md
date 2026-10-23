@@ -9,7 +9,7 @@ slots, not new ones.
 
 **Blocked by:** none — 01 to 05 are done.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The spec's palette table is replaced by the chosen slots — actor and assignee
       `36`, `merged` and `main` `32`, `assigned` `33`, branch `34`, repository and the
@@ -37,8 +37,8 @@ slots, not new ones.
 
 - 2026-10-23: Asked by Andrés after living with the feed: the palette felt too
   strong. Diagnosis: four of the six roles used bold codes (`1;3x`), which most
-  terminals render as *bright*, and five hues competed inside a three-line card. The
-  choice was made by eye from the prototype branch `prototype/palette-options`
+  terminals render as *bright*, and the bold-red labels were the loudest element in the
+  card. The choice was made by eye from the prototype branch `prototype/palette-options`
   (commit `ea100ee`), variant `soft reason`: regular weights, grey repository,
   magenta reason, blue branch.
 - 2026-10-23: What stays and why: 16 colours still (the binary ships to terminals
@@ -46,7 +46,7 @@ slots, not new ones.
   signal, and the title keeps bold + OSC 8. What changes is the mapping: the two
   states keep green and yellow, the people keep cyan, the branch keeps the location
   blue, the repository becomes context grey, and the reason moves red → magenta, so
-  the interruption is still the only warm note without the alarm hue.
+  the reason stays warm without red's alarm.
 - 2026-10-23: Rejected alternatives, all visible in the prototype: drop-bold-only
   (`soft`, barely moves), two hues (`quieter`, loses the people), one accent
   (`minimal`, loses the states), bright slots (`bright`, theme-dependent), and 256
@@ -55,3 +55,13 @@ slots, not new ones.
 - 2026-10-23: Honest limit: the suite cannot assert colour — a pipe has no TTY. The
   bytes are checked with a throwaway program and the hue pass stays manual in two
   consoles, exactly as ticket 02 established.
+- 2026-10-23: Done. La paleta `soft reason` está en `cli-output-06`, con el registro
+  de evidencia en
+  [`docs/tickets/cli-output/06-the-palette-settles.md`](../../../docs/tickets/cli-output/06-the-palette-settles.md).
+  Cliente en verde (`go test -count=1 ./...`, 45.8 s) y relay sin tocar. La revisión
+  de dos ejes encontró prosa que no coincidía con los slots —el comentario de roles,
+  `amber` contra `yellow`, las menciones de "la única nota cálida" y la frase del
+  ticket 05 que ubicaba la rama "en el rol de lugar del repositorio"—; todo corregido
+  en `6f0290e`. El tono real queda para el paso manual: Windows Terminal y conhost
+  con VT. La rama del prototipo se conserva como registro (`prototype/palette-options`,
+  `ea100ee`).
