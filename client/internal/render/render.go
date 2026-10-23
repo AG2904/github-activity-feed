@@ -14,17 +14,19 @@ import (
 )
 
 // The palette carries roles, not decoration: two states, the people, the place,
-// and the reason. Every role is a regular weight — only the title keeps bold —
-// and the grey takes the place (the repository), the time and the grammar, so
-// the single warm note left is the magenta reason. Sixteen-colour codes,
-// because the binary ships to terminals that are not Windows Terminal.
+// and the reason. Every role is a regular weight; bold is structure and belongs
+// to the title and the grouped heading. Grey is context: the repository, the
+// connectors and the time. The branch carries the location blue, the states keep
+// green and yellow, and the reason is magenta — warm without red's alarm.
+// Sixteen-colour codes, because the binary ships to terminals that are not
+// Windows Terminal.
 const (
 	reset   = "\x1b[0m"
 	bold    = "\x1b[1m"
 	grey    = "\x1b[90m"
 	cyan    = "\x1b[36m"
 	green   = "\x1b[32m"
-	amber   = "\x1b[33m"
+	yellow  = "\x1b[33m"
 	blue    = "\x1b[34m"
 	magenta = "\x1b[35m"
 )
@@ -91,7 +93,7 @@ func (p Palette) headline(event activity.Event) string {
 			p.paint(green, "main"),
 		)
 	case activity.TypeIssueAssigned:
-		parts = append(parts, p.paint(amber, "assigned"))
+		parts = append(parts, p.paint(yellow, "assigned"))
 		if event.Assignee != nil && *event.Assignee != "" {
 			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, *event.Assignee))
 		}
