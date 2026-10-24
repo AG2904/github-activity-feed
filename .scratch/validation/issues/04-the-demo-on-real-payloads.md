@@ -39,5 +39,7 @@ decision first: which GitHub instance sends the webhooks (the corporate instance
   `issuePayload` in `test/app.e2e-spec.ts`), and the CLI's suite speaks to a fake relay
   with a frozen format. Both are good tests and neither can catch a wire change — the
   demo is the only validation that can.
-- 2026-10-23: The capture is small on purpose: two deliveries, sanitized, kept next to
-  the evidence. It does not become a corpus, and it does not become a test data set.
+- 2026-10-24: The instance is confirmed: **github.com**. The repository lives there,
+  and the demo's captures will come from a real delivery of a github.com repository;
+  no Enterprise Server is in the picture, so the relay can be exposed with the
+  documented tunnel and no corporate-network allow-listing is needed.

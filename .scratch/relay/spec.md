@@ -73,7 +73,7 @@ A relay that runs inside the corporate network, as a plain Node process on SQLit
 
 - Webhook delivery is at-least-once: a delivery that misses the 10-second response budget can be retried, and GitHub's own UI can redeliver one by hand. GitHub does not automatically redeliver failed deliveries, so a duplicate is not evidence of an automatic retry — and `X-GitHub-Delivery` stays the same across redelivery, which is exactly what makes it a sound dedupe key.
 - A delivery that doesn't get a 2xx response within 10 seconds is recorded as a failure, and manual redelivery only covers the last three days. A slow or crashing endpoint therefore loses events for good, which is why the handler does nothing between validation and the SQLite write.
-- The instance that will send the webhooks is expected to be the corporate GitHub instance, but this must be confirmed before Phase 3.
+- The instance that will send the webhooks is **github.com**, confirmed on 24 October 2026 (validation ticket 04); no Enterprise Server is involved, so no corporate-network allow-listing applies.
 
 ## Comments
 
