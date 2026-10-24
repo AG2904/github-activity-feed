@@ -40,10 +40,15 @@ if (targets.length === 0) {
   process.exit(1);
 }
 
-// The version a distributed binary reports: the package's own, plus the commit
-// it was built from when there is a repository to ask. A tarball without git
-// still builds; it just cannot say more than the package version.
+// The version a distributed binary reports: an explicit FEED_VERSION wins, so the
+// release workflow can pass the tag without anyone hand-editing package.json; a
+// local build falls back to the package's own version plus the commit it was
+// built from when there is a repository to ask. A tarball without git still
+// builds; it just cannot say more than the package version.
 const version = () => {
+  if (process.env.FEED_VERSION) {
+    return process.env.FEED_VERSION;
+  }
   const { version: packageVersion } = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
   const described = git(['describe', '--always', '--dirty', '--abbrev=7']);
   return described ? `${packageVersion}+${described}` : packageVersion;
