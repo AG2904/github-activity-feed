@@ -1,0 +1,72 @@
+name: Release
+
+# A release is cut by pushing a tag, never by hand-uploading files: the tag the
+# maintainer pushes is the version the binaries report and the name of the
+# GitHub Release they land in.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  # Creating the Release and attaching assets is a write to this repository.
+  contents: write
+
+concurrency:
+  # One release per tag, never two racing to create the same Release.
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release binaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - name: Set up Go 1.27
+        # The build script shells out to `go build`; the version comes from the
+        # module, exactly as CI does it.
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: client/go.mod
+          cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the four binaries
+        # FEED_VERSION makes the binary report the tag. package.json is not
+        # bumped per release, so the version can never drift from the tag that
+        # cut it.
+        env:
+          FEED_VERSION: ${{ github.ref_name }}
+        run: npm run cli:dist
+
+      - name: Publish the Release
+        # The tag name is untrusted input: it travels through the environment,
+        # never interpolated into the shell. The Release is created as a draft
+        # with the four assets attached and only then published, so a failed
+        # upload cannot leave a published, partial Release.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          gh release create "$REF_NAME" \
+            client/dist/feed-windows-amd64.exe \
+            client/dist/feed-linux-amd64 \
+            client/dist/feed-darwin-amd64 \
+            client/dist/feed-darwin-arm64 \
+            --title "$REF_NAME" \
+            --notes "Binaries for $REF_NAME. Built by the release workflow, with the tag as the reported version." \
+            --verify-tag \
+            --draft
+          gh release edit "$REF_NAME" --draft=false
