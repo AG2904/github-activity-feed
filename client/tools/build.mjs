@@ -46,8 +46,9 @@ if (targets.length === 0) {
 // built from when there is a repository to ask. A tarball without git still
 // builds; it just cannot say more than the package version.
 const version = () => {
-  if (process.env.FEED_VERSION) {
-    return process.env.FEED_VERSION;
+  const explicit = (process.env.FEED_VERSION ?? '').trim();
+  if (explicit) {
+    return explicit;
   }
   const { version: packageVersion } = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
   const described = git(['describe', '--always', '--dirty', '--abbrev=7']);

@@ -52,16 +52,21 @@ jobs:
         run: npm run cli:dist
 
       - name: Publish the Release
-        # gh runs on the hosted runner and creates the Release for the tag that
-        # triggered this workflow. If the build above failed, this step never
-        # runs, so a partial Release cannot be published.
+        # The tag name is untrusted input: it travels through the environment,
+        # never interpolated into the shell. The Release is created as a draft
+        # with the four assets attached and only then published, so a failed
+        # upload cannot leave a published, partial Release.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          gh release create "${{ github.ref_name }}" \
+          gh release create "$REF_NAME" \
             client/dist/feed-windows-amd64.exe \
             client/dist/feed-linux-amd64 \
             client/dist/feed-darwin-amd64 \
             client/dist/feed-darwin-arm64 \
-            --title "${{ github.ref_name }}" \
-            --notes "Binaries for ${{ github.ref_name }}. Built by the release workflow, with the tag as the reported version."
+            --title "$REF_NAME" \
+            --notes "Binaries for $REF_NAME. Built by the release workflow, with the tag as the reported version." \
+            --verify-tag \
+            --draft
+          gh release edit "$REF_NAME" --draft=false
