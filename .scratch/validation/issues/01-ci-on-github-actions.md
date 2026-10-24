@@ -7,7 +7,7 @@ request targeting `main`, with pinned versions and caches.
 
 **Blocked by:** none.
 
-**Status:** ready-for-human
+**Status:** done
 
 - [ ] `.github/workflows/ci.yml` exists and triggers on `push` and `pull_request`
       targeting `main`, as two independent jobs.
@@ -40,3 +40,8 @@ request targeting `main`, with pinned versions and caches.
   aceptada: Go se pinnea vía `go-version-file` (`1.27.0` exacto) en vez de `1.27.x`
   escrito en el workflow, para que el workflow no pueda declarar otra versión que la
   del módulo.
+- 2026-10-24: Done. La primera corrida real existe: **verde** en `main` (run
+  `40050526347`, push de `7108150`, 1 m 31 s, relay 22 s y cliente 87 s) y **roja** en
+  un PR descartable (run `40051037419`, rama `ci-probe-red` / PR #8, cerrado sin
+  merge) fallando exactamente en `Check formatting`, el gate de `gofmt`. Las dos
+  corridas quedaron en el registro de evidencia.

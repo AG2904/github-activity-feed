@@ -211,4 +211,6 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
 - [x] Los tres tickets del filtro están en `main`: merge a `main` (ticket 02, PR #4), asignación crítica (ticket 03) y el barrido negativo con el fix del ingress (ticket 04). El 03 y el 04 aterrizaron directo en `main`, sin rama de feature: es un proyecto personal y el PR no aportaba.
 - [x] **Fase 2 (el CLI en Go) implementada y en `main`**: los ocho tickets de `.scratch/cli/`, con la suite del cliente en 46 casos sobre el límite del proceso y los cuatro binarios estáticos construibles con `npm run cli:dist`. Con esto la Fase 2 queda cerrada; lo que sigue es CI, publicación y demo (§7).
 - [x] README del repositorio — escrito en el ticket 02 (23 de Octubre, 2026): arranque del relay y del CLI, contrato delegado al §6 y estado de las fases.
-- [ ] CI (GitHub Actions) configurado. El workflow ya existe (ticket 01, `.github/workflows/ci.yml`); la primera corrida real en Actions queda pendiente del push.
+- [x] CI (GitHub Actions) configurado y verificado: primera corrida verde en `main`
+  (run `40050526347`, 24 de Octubre de 2026) y corrida roja en un PR descartable
+  (run `40051037419`, falla en `Check formatting`).

@@ -6,9 +6,9 @@ El repositorio estrena CI en GitHub Actions con dos jobs independientes: `relay`
 (`npm ci`, build, lint, suite e2e) y `client` (`go build`, `go vet`, gate de `gofmt`,
 suite e2e con `-count=1`). Node queda pinneado en 24 y Go se toma del módulo
 (`go-version-file`), así que la versión del workflow no puede divergir de la que
-compila el cliente. Los comandos se verificaron localmente uno por uno; la corrida
-real en Actions —y con ella el AC de rojo/verde— queda **pendiente del primer push**,
-y está registrada como gap explícito, no como hecho.
+compila el cliente. Los comandos se verificaron localmente uno por uno, y el AC de
+rojo/verde se cerró con dos corridas reales: una verde en `main` y una roja en un PR
+descartable con el gate de formato fallando.
 
 ## Cambios Realizados
 
@@ -57,12 +57,20 @@ listó, así que la condición de falla funciona. El YAML parsea con PyYAML (job
   cache de Go y se anotó que el typecheck de la Fase 3 lo cubre `npm run build`
   (`nest build` → `tsc`).
 
-**No verificado — gap explícito**: la corrida real en GitHub Actions. No hay runner
-local (ni Docker ni `act`) y el AC de "una rama rota se ve roja, la misma sin el
-error se ve verde" sólo se puede observar después del primer push a `main`. Por eso
-el ticket queda `ready-for-human` con este comentario; se cierra cuando la corrida
-exista y su resultado quede registrado acá. Tampoco se verificó el comportamiento de
-los caches en un runner.
+**Corridas reales en GitHub Actions** (el AC que no se puede ejecutar localmente):
+
+- **Verde** — run `40050526347`, evento `push` a `main`, commit `7108150`:
+  `success` en 1 m 31 s. `Relay (NestJS)` 22 s y `Client (Go)` 87 s, con todos sus
+  pasos en verde (install, build, lint, test; setup, cache, build, vet, formato,
+  test).
+- **Rojo** — run `40051037419`, evento `pull_request`, rama `ci-probe-red` (PR #8,
+  draft, cerrado sin merge): `failure`. `Relay (NestJS)` en verde y `Client (Go)`
+  fallando **exactamente** en `Check formatting`, que es el gate de `gofmt`; el
+  archivo de prueba se borró con la rama.
+
+**No verificado**: el comportamiento de los caches en un runner (no se inspeccionó
+hit/miss en estas dos corridas), y el camino de una suite roja —el rojo se forzó por
+formato, que es el gate más barato de probar, no por un test fallando.
 
 ## Acceptance Criteria
 
@@ -76,6 +84,7 @@ los caches en un runner.
   `client/go.mod` (`1.27.0` exacto, no `1.27.x`). Diferencia aceptada con el texto
   del ticket: atar la versión al módulo evita que el workflow y el proyecto
   declaren versiones distintas. Caches configurados.
-- ⚠️ AC5: la corrida roja/verde **no se ejecutó** — gap explícito hasta el primer
-  push; el ticket no se marca `done` por eso.
+- ✅ AC5: la corrida roja/verde se ejecutó y quedó registrada arriba — verde en
+  `main` (`40050526347`) y rojo en el PR descartable (`40051037419`, falla en
+  `Check formatting`).
 - ✅ AC6: el workflow no necesita secretos.
