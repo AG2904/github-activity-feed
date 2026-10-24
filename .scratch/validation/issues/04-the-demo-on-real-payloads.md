@@ -9,7 +9,7 @@ CLI spec's known gap: a frozen fake relay cannot notice the wire drifting.
 decision first: which GitHub instance sends the webhooks (the corporate instance or
 `github.com`) — `.scratch/relay/spec.md` requires it confirmed before this phase.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] The GitHub instance that will send webhooks is recorded in the ticket before
       any capture (a dated comment), and the captured payloads come from that
@@ -43,3 +43,12 @@ decision first: which GitHub instance sends the webhooks (the corporate instance
   and the demo's captures will come from a real delivery of a github.com repository;
   no Enterprise Server is in the picture, so the relay can be exposed with the
   documented tunnel and no corporate-network allow-listing is needed.
+- 2026-10-24: Done. El demo corrió sobre payloads reales de `github.com` con un repo
+  descartable y está en `main`, con el registro en
+  [`docs/tickets/validation/04-the-demo-on-real-payloads.md`](../../../docs/tickets/validation/04-the-demo-on-real-payloads.md).
+  El webhook apuntaba primero a `/webhook` y GitHub registró `404`; corregido a la raíz
+  del túnel, las entregas devolvieron `200` y el relay almacenó el merge y la
+  asignación. Los payloads quedaron en `docs/demo/` —sin secretos, tokens ni correos—,
+  el replay firmado devolvió `200`, y `feed history --json`, el reporte agrupado y
+  `watch` mostraron las tarjetas. El repo de demo y el webhook se borraron después. El
+  "known gap" del spec del CLI quedó marcado como cerrado con nota fechada.
