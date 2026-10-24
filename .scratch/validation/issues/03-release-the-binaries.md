@@ -6,7 +6,7 @@ attaches them to a GitHub Release. No goreleaser, no installers.
 
 **Blocked by:** none.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `.github/workflows/release.yml` triggers on tags `v*` (a release is cut by
       pushing a tag, never by hand-uploading files).
@@ -30,3 +30,14 @@ attaches them to a GitHub Release. No goreleaser, no installers.
 - 2026-10-23: The version comes from the tag, not from `package.json` — bumping the
   package for every release is a step someone forgets, and the binary would then lie
   about where it came from.
+- 2026-10-24: Done. El release por tag está en `main`, con el registro de evidencia
+  en
+  [`docs/tickets/validation/03-release-the-binaries.md`](../../../docs/tickets/validation/03-release-the-binaries.md).
+  Verificación real con `v0.0.0-test`: run `40052648012` verde, Release publicado con
+  los cuatro assets y la versión del tag adentro; el Release y el tag de prueba se
+  borraron después. La revisión corrigió la inyección del nombre de tag en el shell
+  (ahora por `env`), la publicación parcial (`--draft` y luego `--draft=false`) y
+  agregó `--verify-tag` y el `trim()` de `FEED_VERSION`. Salvedad honesta: el asset
+  descargado no se pudo ejecutar en esta máquina (Windows lo bloquea con "Access is
+  denied" sin MOTW); el build local del mismo commit con el mismo `FEED_VERSION`
+  corre y responde el tag.
