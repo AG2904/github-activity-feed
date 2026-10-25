@@ -1,6 +1,6 @@
 # Validation and demo — the relay proves itself against real GitHub
 
-Status: ready-for-agent
+Status: done — tickets 01 to 04 verified and closed; 05 (optional deployment) still open.
 
 ## Problem Statement
 

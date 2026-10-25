@@ -8,16 +8,16 @@ attaches them to a GitHub Release. No goreleaser, no installers.
 
 **Status:** done
 
-- [ ] `.github/workflows/release.yml` triggers on tags `v*` (a release is cut by
+- [x] `.github/workflows/release.yml` triggers on tags `v*` (a release is cut by
       pushing a tag, never by hand-uploading files).
-- [ ] The workflow checks out, pins Node 24, runs `npm ci`, builds with
+- [x] The workflow checks out, pins Node 24, runs `npm ci`, builds with
       `npm run cli:dist` (or the equivalent invocation) and passes the tag as the
-      version — `package.json`'s version is not hand-edited for a release.
-- [ ] The four artifacts produced by the script (`windows/amd64`, `linux/amd64`,
+      version â€” `package.json`'s version is not hand-edited for a release.
+- [x] The four artifacts produced by the script (`windows/amd64`, `linux/amd64`,
       `darwin/amd64`, `darwin/arm64`) are attached to the GitHub Release created for
       the tag, using the runner's `gh` and `GITHUB_TOKEN`.
-- [ ] A failed build fails the workflow; no partial release is published.
-- [ ] Verification: pushing a test tag produces a Release with four downloadable
+- [x] A failed build fails the workflow; no partial release is published.
+- [x] Verification: pushing a test tag produces a Release with four downloadable
       assets; a downloaded binary answers `--version` with the tag (not `dev`), and
       runs on its platform. The transcript goes in the ticket record.
 
@@ -27,17 +27,17 @@ attaches them to a GitHub Release. No goreleaser, no installers.
   `-trimpath` and the version injected by `-ldflags`; the ticket 08 record
   deliberately left goreleaser to this phase. Reusing the script keeps one build path
   instead of two, and adds no dependency.
-- 2026-10-23: The version comes from the tag, not from `package.json` — bumping the
+- 2026-10-23: The version comes from the tag, not from `package.json` â€” bumping the
   package for every release is a step someone forgets, and the binary would then lie
   about where it came from.
-- 2026-10-24: Done. El release por tag está en `main`, con el registro de evidencia
+- 2026-10-24: Done. El release por tag estÃ¡ en `main`, con el registro de evidencia
   en
   [`docs/tickets/validation/03-release-the-binaries.md`](../../../docs/tickets/validation/03-release-the-binaries.md).
-  Verificación real con `v0.0.0-test`: run `40052648012` verde, Release publicado con
-  los cuatro assets y la versión del tag adentro; el Release y el tag de prueba se
-  borraron después. La revisión corrigió la inyección del nombre de tag en el shell
-  (ahora por `env`), la publicación parcial (`--draft` y luego `--draft=false`) y
-  agregó `--verify-tag` y el `trim()` de `FEED_VERSION`. Salvedad honesta: el asset
-  descargado no se pudo ejecutar en esta máquina (Windows lo bloquea con "Access is
+  VerificaciÃ³n real con `v0.0.0-test`: run `40052648012` verde, Release publicado con
+  los cuatro assets y la versiÃ³n del tag adentro; el Release y el tag de prueba se
+  borraron despuÃ©s. La revisiÃ³n corrigiÃ³ la inyecciÃ³n del nombre de tag en el shell
+  (ahora por `env`), la publicaciÃ³n parcial (`--draft` y luego `--draft=false`) y
+  agregÃ³ `--verify-tag` y el `trim()` de `FEED_VERSION`. Salvedad honesta: el asset
+  descargado no se pudo ejecutar en esta mÃ¡quina (Windows lo bloquea con "Access is
   denied" sin MOTW); el build local del mismo commit con el mismo `FEED_VERSION`
   corre y responde el tag.

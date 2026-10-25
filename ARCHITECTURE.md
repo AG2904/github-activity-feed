@@ -1,6 +1,6 @@
 # Documento de Arquitectura y Diseño: GitHub Activity Feed CLI & Relay
 
-> **Estado:** Diseño actualizado tras la migración de plataforma a GitHub (§2 y §9). El Relay (Fase 1) y la CLI (Fase 2) están implementados y en `main`; la Fase 3 (CI y demo) está en curso.
+> **Estado:** Diseño actualizado tras la migración de plataforma a GitHub (§2 y §9). El Relay (Fase 1) y la CLI (Fase 2) están implementados y en `main`; la Fase 3 (CI, README, release y demo) está completa; el deploy opcional queda pendiente.
 > **Fecha original:** 11 de Octubre, 2026. **Actualizado:** 18 de Octubre, 2026.
 
 ---
