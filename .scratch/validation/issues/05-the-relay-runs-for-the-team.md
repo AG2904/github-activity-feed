@@ -27,3 +27,7 @@ server, a secret and a reachable URL that a maintainer holds.
 - 2026-10-23: Kept `ready-for-human` because it needs infrastructure and credentials
   an agent does not have, and because `ARCHITECTURE.md` §7 lists deployment as
   optional. The phase's definition of done in the spec excludes it.
+- 2026-10-25: Deferred by the maintainer: the phase closes without the deployment, as
+  this ticket's last criterion already anticipated. It stays `ready-for-human` for
+  whoever has the host, the secret and a reachable URL; nothing in the phase depends
+  on it.
