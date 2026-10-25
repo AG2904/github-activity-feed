@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Cómo el CLI llama al relay — watch e history",
+    "locale": "es",
+    "output": ".archify/sequence-cli-relay-20261025-122635/cli-relay.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AG2904/github-activity-feed.git",
+      "provider": "github",
+      "revision": "58be5ade49a8985fed7efb78f217e24f18a48d9d"
+    }
+  },
+  "participants": [
+    {
+      "id": "cli",
+      "type": "frontend",
+      "label": "CLI feed (Go)",
+      "sublabel": "watch · history",
+      "sources": [
+        { "path": "client/cmd/feed/main.go", "line": 21, "end_line": 33 },
+        { "path": "client/internal/cli/watch.go", "line": 57, "end_line": 161 },
+        { "path": "client/internal/cli/history.go", "line": 17, "end_line": 81 }
+      ]
+    },
+    {
+      "id": "relay",
+      "type": "backend",
+      "label": "Relay (NestJS)",
+      "sublabel": "webhook · history · stream",
+      "sources": [
+        { "path": "src/relay/webhook.controller.ts", "line": 63, "end_line": 85 },
+        { "path": "src/relay/history.controller.ts", "line": 17, "end_line": 23 },
+        { "path": "src/relay/stream.controller.ts", "line": 30, "end_line": 38 }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "activity_events",
+      "sources": [
+        { "path": "src/relay/activity-events.service.ts", "line": 85, "end_line": 95 },
+        { "path": "src/relay/activity-events.service.ts", "line": 107, "end_line": 114 },
+        { "path": "src/app.module.ts", "line": 9, "end_line": 16 }
+      ]
+    },
+    {
+      "id": "github",
+      "type": "external",
+      "label": "GitHub",
+      "sublabel": "webhook deliveries"
+    }
+  ],
+  "segments": [
+    { "from": 160, "to": 280, "label": "Ingesta (fuera del CLI)" },
+    { "from": 300, "to": 450, "label": "Arranque: backfill" },
+    { "from": 470, "to": 745, "label": "En vivo: SSE" },
+    { "from": 775, "to": 865, "label": "Reconexión" },
+    { "from": 890, "to": 1045, "label": "feed history (una vez)" }
+  ],
+  "messages": [
+    {
+      "id": "webhook",
+      "from": "github",
+      "to": "relay",
+      "y": 170,
+      "label": "POST / · X-Hub-Signature-256",
+      "note": "verifica el HMAC sobre los bytes crudos, normaliza y descarta lo no crítico; responde 200 igual",
+      "variant": "default"
+    },
+    {
+      "id": "store",
+      "from": "relay",
+      "to": "db",
+      "y": 240,
+      "label": "INSERT activity_events",
+      "note": "deliveryId único: una reentrega choca y no se guarda",
+      "variant": "emphasis"
+    },
+    {
+      "id": "backfill",
+      "from": "cli",
+      "to": "relay",
+      "y": 310,
+      "label": "GET /history",
+      "note": "solo si --backfill > 0; una vez por sesión; sin ?user ni ?repository",
+      "variant": "emphasis"
+    },
+    {
+      "id": "backfill-read",
+      "from": "relay",
+      "to": "db",
+      "y": 370,
+      "label": "SELECT · ORDER BY id DESC",
+      "variant": "default"
+    },
+    {
+      "id": "backfill-rows",
+      "from": "relay",
+      "to": "cli",
+      "y": 425,
+      "label": "200 · array JSON (más nuevo primero)",
+      "note": "el CLI filtra local, toma N y los imprime viejo→nuevo",
+      "variant": "return"
+    },
+    {
+      "id": "stream",
+      "from": "cli",
+      "to": "relay",
+      "y": 490,
+      "label": "GET /stream · Accept: text/event-stream",
+      "variant": "emphasis"
+    },
+    {
+      "id": "heartbeat",
+      "from": "relay",
+      "to": "cli",
+      "y": 545,
+      "label": "comment: heartbeat",
+      "note": "cada 15 s (STREAM_HEARTBEAT_MS); un comentario no es un evento",
+      "variant": "dashed"
+    },
+    {
+      "id": "webhook-live",
+      "from": "github",
+      "to": "relay",
+      "y": 610,
+      "label": "POST / · evento crítico",
+      "variant": "default"
+    },
+    {
+      "id": "store-live",
+      "from": "relay",
+      "to": "db",
+      "y": 665,
+      "label": "INSERT (dedupe por delivery)",
+      "variant": "default"
+    },
+    {
+      "id": "frame",
+      "from": "relay",
+      "to": "cli",
+      "y": 725,
+      "label": "data: ActivityEvent",
+      "note": "parsea, filtra y renderiza por stdout",
+      "variant": "emphasis"
+    },
+    {
+      "id": "reconnect",
+      "from": "cli",
+      "to": "relay",
+      "y": 790,
+      "label": "GET /stream (otra vez)",
+      "note": "corte o 5 min sin bytes; backoff 1→30 s; sin Last-Event-ID",
+      "variant": "dashed"
+    },
+    {
+      "id": "reconnect-ok",
+      "from": "relay",
+      "to": "cli",
+      "y": 845,
+      "label": "200 · SSE",
+      "variant": "return"
+    },
+    {
+      "id": "history",
+      "from": "cli",
+      "to": "relay",
+      "y": 905,
+      "label": "GET /history (una vez)",
+      "note": "mismo endpoint; el CLI filtra local",
+      "variant": "emphasis"
+    },
+    {
+      "id": "history-read",
+      "from": "relay",
+      "to": "db",
+      "y": 960,
+      "label": "SELECT · ORDER BY id DESC",
+      "variant": "default"
+    },
+    {
+      "id": "history-rows",
+      "from": "relay",
+      "to": "cli",
+      "y": 1015,
+      "label": "200 · array JSON",
+      "note": "--json escribe el array verbatim; agrupado o sin color lo renderiza",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Filtros en el cliente",
+      "items": [
+        "El CLI no manda ?user ni ?repository: pide /history completo y filtra localmente.",
+        "El relay sí soporta ambos query params; el CLI no los usa, para que watch e history coincidan.",
+        "watch: el backfill toma los N más nuevos y los imprime viejo→nuevo."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Ingesta y dedupe",
+      "items": [
+        "El relay verifica el HMAC antes de parsear; un payload no crítico se ackea y se descarta.",
+        "deliveryId es único: una reentrega choca con el índice y no llega al stream.",
+        "El stream emite solo lo que se acaba de guardar."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Reconexión y salida",
+      "items": [
+        "Sin Last-Event-ID: un corte reabre /stream con backoff 1→30 s.",
+        "El backfill corre una sola vez por sesión; una reconexión no lo repite.",
+        "Ctrl-C imprime stopped · … en stderr; el chrome nunca toca stdout."
+      ]
+    }
+  ]
+}

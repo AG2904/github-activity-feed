@@ -8,13 +8,15 @@ vive en [`docs/adr/`](adr/) y en [`ARCHITECTURE.md`](../ARCHITECTURE.md)—.
 El relay está del otro lado del cable y tiene su propio mapa:
 [`docs/relay-flow.md`](relay-flow.md).
 
-Si preferís ver antes de leer, hay dos diagramas versionados:
+Si preferís ver antes de leer, hay tres diagramas versionados:
 
 - `.archify/architecture-cli-20261019-141819/cli.html` — los roles del CLI y cómo se
   conectan con el relay.
 - `.archify/architecture-file-calls-cli-20261019-141819/file-calls.html` — cada
   archivo de `client/` como nodo y cada flecha con el nombre de la llamada que la
   cruza.
+- `.archify/sequence-cli-relay-20261025-122635/cli-relay.html` — la secuencia de
+  llamadas entre el CLI y el relay: backfill, stream, reconexión y `history`.
 
 ## 1. Los dos recorridos
 
