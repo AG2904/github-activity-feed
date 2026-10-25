@@ -12,8 +12,9 @@ server, a secret and a reachable URL that a maintainer holds.
 
 - [ ] A host or internal server runs the relay with `GITHUB_WEBHOOK_SECRET` set and a
       persistent `DATABASE_PATH`, reachable from the team's machines.
-- [ ] The webhook for the confirmed instance points at the relay's `/webhook` with
-      the same secret, and a real delivery arrives end to end.
+- [ ] The webhook for the confirmed instance points at the relay's root — the
+      `Payload URL` with a trailing slash, not a `/webhook` path — with the same
+      secret, and a real delivery arrives end to end.
 - [ ] The three developers run the released client against the relay (from the README,
       not from a private note) for a short trial, and their findings are recorded.
 - [ ] What was deployed, where, and how it is restarted is written down — a runbook
