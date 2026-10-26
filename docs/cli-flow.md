@@ -52,11 +52,12 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │                 internal/sse · Reader.Next()
                               │                      │ data:
                               │                      ▼
-                              │                 emitter.emit()
+                              │                 emitter.accept()
                               │                   ├─ activity.Parse()
                               │                   ├─ Filter.Match()
-                              │                   └─ render.Palette.Event()
-                              │                      │  o payload crudo (--json)
+                              │                   └─ emitter.paint()
+                              │                      ├─ render.Palette.Event()
+                              │                      └─ o payload crudo (--json)
                               │                      ▼
                               │                 stdout: el evento
                               │
@@ -95,15 +96,16 @@ Paso por paso:
    se leyó no se pide dos veces.
 5. **`stream()`** hace el `GET /stream` y sostiene esa conexión hasta que se cae, el
    relay se calla, o el contexto se cancela. Envuelve el body en un `idleReader` y le
-   pasa el lector al parser SSE. Cada `Next()` produce un payload y `emitter.emit()`
-   decide qué hacer con él.
-6. **`emitter.emit()`** es la política de salida en un solo lugar. Un payload que no
-   parsea **no es un error**: devuelve `false` y se ignora, porque un frame roto no
-   puede tumbar un watch. Un evento que el filtro descarta devuelve `true`: prueba
-   que la conexión está viva, aunque no se escriba nada. Si pasa, se imprime el
-   payload tal cual (`--json`) o se renderiza como la tarjeta de tres líneas —la
-   frase, el título con las etiquetas al frente, el contexto— más la URL cuando no
-   hay hyperlink, y se suma a la cuenta de lo mostrado.
+   pasa el lector al parser SSE. Cada `Next()` produce un payload y el `emitter`
+   decide qué hacer con él: `accept()` qué es, `paint()` cómo se escribe.
+6. **`emitter`** (en `emitter.go`) es la política de salida en un solo lugar. `accept()`
+   responde dos cosas distintas: si el payload es **válido** —parseó como evento,
+   aunque el filtro lo descarte, y eso es lo que resetea el backoff— y si se **muestra**
+   —lo decide `Filter.Match()`—. Un payload que no parsea **no es un error**: es
+   inválido y se ignora, porque un frame roto no puede tumbar un watch. Si se muestra,
+   `paint()` imprime el payload tal cual (`--json`) o lo renderiza como la tarjeta de
+   tres líneas —la frase, el título con las etiquetas al frente, el contexto— más la
+   URL cuando no hay hyperlink, y lo suma a la cuenta de lo mostrado.
 7. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
@@ -256,10 +258,13 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 | --- | --- | --- |
 | `client/cmd/feed/main.go` | proceso: señales, `cli.Run`, código de salida | la shell |
 | `client/internal/cli/cli.go` | `Run`, despacho, `--version`, `colorEnabled` | `main.go` |
-| `client/internal/cli/watch.go` | `watch`, `stream`, `emitter`, `idleReader`, `backoff` | `cli.Run` |
+| `client/internal/cli/watch.go` | `watch`, `stream`: el flujo de la conexión en vivo | `cli.Run` |
 | `client/internal/cli/history.go` | `history`: una request, filtro local y las tres salidas | `cli.Run` |
+| `client/internal/cli/emitter.go` | `emitter`: la política de salida (`accept`, `shown`, `paint`, `summarize`, `group`) | `watch`, `history`, `backfill` |
+| `client/internal/cli/retry.go` | `backoff` y `fatalError`: cuánto esperar y qué no se reintenta | `watch` |
+| `client/internal/cli/idle.go` | `idleReader` e `idleTimeout`: la conexión muda se da por muerta | `stream` |
 | `client/internal/cli/backfill.go` | `backfill`: la primera conexión llena la pantalla | `watch` |
-| `client/internal/cli/stored.go` | `storedHistory`, `storedRows`, `emitter.shown` | `history`, `backfill` |
+| `client/internal/cli/stored.go` | `storedHistory`, `storedRows`: el historial como filas crudas | `history`, `backfill` |
 | `client/internal/cli/terminal_windows.go` | `isTerminal` + VT en Windows | `colorEnabled` |
 | `client/internal/cli/terminal_other.go` | `isTerminal` en el resto | `colorEnabled` |
 | `client/internal/sse/sse.go` | `Reader.Next()`: frames SSE a payloads | `watch.go` |
@@ -332,8 +337,8 @@ funciona:
    lo demás.
 2. `client/internal/sse/sse.go` — sesenta y seis líneas de protocolo, y el lugar donde
    un cambio de frame rompe todo.
-3. `client/internal/cli/watch.go` — el camino completo: request, lectura, emisión,
-   reconexión y backoff.
+3. `client/internal/cli/watch.go` — el flujo: request, lectura, reconexión. Y al lado
+   `emitter.go`, `retry.go` e `idle.go`, que son los tres mecanismos que usa.
 4. `client/internal/cli/history.go` y `stored.go` — el otro camino: una request, el
    mismo filtro y las tres salidas.
 5. `client/internal/render/render.go` — cómo un evento se vuelve una tarjeta.
