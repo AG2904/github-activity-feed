@@ -1,5 +1,17 @@
 # GitHub Activity Feed
 
+[![CI](https://github.com/AG2904/github-activity-feed/actions/workflows/ci.yml/badge.svg)](https://github.com/AG2904/github-activity-feed/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/AG2904/github-activity-feed)](https://github.com/AG2904/github-activity-feed/releases)
+[![Go](https://img.shields.io/github/go-mod/go-version/AG2904/github-activity-feed/client)](client/go.mod)
+[![Node](https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white)](package.json)
+[![License](https://img.shields.io/github/license/AG2904/github-activity-feed)](LICENSE)
+
+![El CLI en acción: feed history --group-by-repo devuelve el historial agrupado y feed watch imprime una asignación apenas llega](docs/demo/demo.gif)
+
+Grabación real de punta a punta: el relay con una base temporal, los dos payloads
+capturados de github.com en [`docs/demo/`](docs/demo/) reenviados con su firma, y el
+binario compilado. El `.cast` del que sale el GIF está versionado al lado.
+
 Un sistema que convierte las entregas críticas de GitHub en una fuente de actividad
 para un equipo de desarrollo, y un CLI que la muestra en la terminal.
 

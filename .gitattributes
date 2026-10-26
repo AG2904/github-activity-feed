@@ -1,1 +1,4 @@
 * text=auto eol=lf
+*.gif binary
+*.exe binary
+*.cast text eol=lf

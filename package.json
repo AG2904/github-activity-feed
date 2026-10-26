@@ -1,7 +1,9 @@
 {
   "name": "github-activity-feed",
   "version": "1.0.0",
-  "description": "",
+  "description": "Critical GitHub events as a terminal activity feed: a signed webhook relay (NestJS + SQLite) streaming over SSE, and a Go CLI that renders it.",
+  "author": "AG2904",
+  "license": "MIT",
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -24,7 +26,16 @@
     "type": "git",
     "url": "git+https://github.com/AG2904/github-activity-feed.git"
   },
-  "keywords": [],
+  "keywords": [
+    "github",
+    "webhooks",
+    "sse",
+    "cli",
+    "golang",
+    "nestjs",
+    "sqlite",
+    "terminal"
+  ],
   "type": "module",
   "bugs": {
     "url": "https://github.com/AG2904/github-activity-feed/issues"
