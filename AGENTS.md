@@ -10,7 +10,8 @@ from `client/` and `npm` commands run from the root.
 - **The terminal client** — dispatch, `watch`, `history`, rendering: `docs/cli-flow.md`;
   code in `client/internal/{cli,activity,render,sse}/`.
 - **Running the two together** — `docs/manual-testing.md` for the relay and a
-  signed webhook, `docs/end-to-end-testing.md` for both halves at once.
+  signed webhook, `docs/end-to-end-testing.md` for both halves at once, or
+  `docs/docker.md` to run both in containers with no local toolchain.
 
 ### CodeGraph
 

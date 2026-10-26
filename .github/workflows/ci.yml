@@ -96,3 +96,39 @@ jobs:
         # TestMain, so without it Go can return a cached pass when only
         # internal/ changed.
         run: go test -count=1 ./...
+
+  # Dockerfile is not exercised by the two suites above: a broken relay stage
+  # and a broken feed stage fail in different places, and a broken Dockerfile
+  # is invisible to both. This job builds each image and proves it runs.
+  docker:
+    name: Images (Docker)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Build the relay image
+        run: docker build --target relay -t relay:ci .
+
+      - name: Build the feed image
+        run: docker build --target feed -t feed:ci .
+
+      - name: Smoke the feed image
+        # The binary is static: if this prints a version, the runtime stage
+        # has what it needs and the entrypoint is right.
+        run: docker run --rm feed:ci --version
+
+      - name: Smoke the relay image
+        # A relay that boots without a secret throws, and one that cannot open
+        # SQLite throws next. /history answering proves both happened.
+        run: |
+          docker run -d --name relay -e GITHUB_WEBHOOK_SECRET=ci -p 3000:3000 relay:ci
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/history > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::the relay image never answered /history"
+          docker logs relay
+          exit 1

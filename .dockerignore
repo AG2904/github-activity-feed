@@ -1,0 +1,23 @@
+.git
+.gitignore
+.github
+.atl
+.archify
+.scratch
+
+# Dependencies and build output: both stages produce their own. Copying the
+# host's into the build context is the single biggest way to make a docker
+# build slow.
+node_modules
+dist
+*.tsbuildinfo
+client/dist
+client/feed
+client/feed.exe
+
+# The database is a volume at runtime, never build input. .env carries the
+# webhook secret and is not what the image should learn it from.
+*.db
+.env
+
+docs

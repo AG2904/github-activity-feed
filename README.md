@@ -157,6 +157,20 @@ La justificación del diseño, el contrato y el estado del proyecto están en
 El flujo completo —firma del webhook incluida— está en
 [`docs/end-to-end-testing.md`](docs/end-to-end-testing.md).
 
+## Todo junto en Docker
+
+Si no querés instalar Node, Go ni SQLite, los dos procesos caben en dos imágenes:
+
+```bash
+cp .env.example .env      # y reemplazá change-me por un secret real
+docker compose up -d --build relay
+docker compose run --rm feed watch
+```
+
+El relay queda en `127.0.0.1:3000` con el SQLite sobre un volumen, así que el
+historial sobrevive a los reinicios. Las versiones de Node y Go están fijadas a
+releases parcheados y la tabla de por qué está en [`docs/docker.md`](docs/docker.md).
+
 ## Contrato y runbooks
 
 El contrato es único y no se duplica en este documento. La forma canónica de nueve

@@ -1,0 +1,56 @@
+# The relay runs as a service; the CLI does not. A watch is a foreground
+# process attached to your terminal, so it sits behind the "tools" profile and
+# starts only when asked for. See docs/docker.md.
+
+name: github-activity-feed
+
+services:
+  relay:
+    build:
+      context: .
+      target: relay
+    image: github-activity-feed/relay:local
+    environment:
+      # :? fails the run with this message instead of booting a relay that
+      # would then refuse to start for the same reason, one layer down.
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:?set GITHUB_WEBHOOK_SECRET in .env or the environment}
+      PORT: 3000
+      DATABASE_PATH: /data/relay.db
+      STREAM_HEARTBEAT_MS: ${STREAM_HEARTBEAT_MS:-15000}
+    ports:
+      # Localhost only by default: the webhook needs a tunnel, not an open
+      # port, and /history and /stream are unauthenticated by design
+      # (ADR-0001).
+      - "127.0.0.1:${RELAY_PORT:-3000}:3000"
+    volumes:
+      - relay-data:/data
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  feed:
+    profiles: ["tools"]
+    build:
+      context: .
+      target: feed
+      args:
+        FEED_VERSION: ${FEED_VERSION:-docker}
+    image: github-activity-feed/feed:local
+    environment:
+      RELAY_URL: ${RELAY_URL:-http://relay:3000}
+    depends_on:
+      relay:
+        condition: service_healthy
+    # A watch holds the terminal open; a history prints and exits. Both need a
+    # stdin/tty for Ctrl-C and for colour to survive.
+    stdin_open: true
+    tty: true
+    command: ["watch"]
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  relay-data:
