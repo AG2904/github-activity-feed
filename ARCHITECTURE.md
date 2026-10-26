@@ -87,10 +87,10 @@ Ambos eventos **se pueden expresar** en Actions (`pull_request: types: [closed]`
 
        ▼
 
-[ CLI en Go ] ──> (pinta la notificación en la terminal del dev)
+[ CLI en Go ] ──> (muestra la notificación en la terminal del dev)
 ```
 
-**Nota de alcance:** los webhooks de GitHub son *push-only* (GitHub llama a tu endpoint; no existe modo pull oficial). Para las demos y el desarrollo se usan payloads de prueba/fixtures y, opcionalmente, un túnel temporal; un despliegue con webhook real requiere un endpoint alcanzable desde internet.
+**Nota de alcance:** los webhooks de GitHub son *push-only* (GitHub llama al endpoint; no existe modo pull oficial). Para las demos y el desarrollo se usan payloads de prueba/fixtures y, opcionalmente, un túnel temporal; un despliegue con webhook real requiere un endpoint alcanzable desde internet.
 
 ---
 
@@ -105,7 +105,7 @@ github-activity-feed/
 │       ├── domain/                 # modelo de dominio: sin TypeORM, sin HTTP, sin payloads
 │       │   ├── activity-event.ts   # el shape normalizado (§6)
 │       │   └── critical.ts         # la regla: qué hace crítico a un evento
-│       ├── github/                 # la frontera del payload: sólo acá se conoce GitHub
+│       ├── github/                 # la frontera del payload: solo aquí se conoce GitHub
 │       │   ├── payload.ts          # lectura defensiva de payloads
 │       │   ├── to-activity-event.ts    # única entrada: payload -> ActivityEvent | undefined
 │       │   ├── merge-to-main.ts        # filtro + normalización del merge
@@ -161,7 +161,7 @@ github-activity-feed/
 }
 ```
 
-Nueve campos, ni uno más. `type` es un conjunto cerrado de literales (`pr.merged`, `issue.assigned`); `repository` es `owner/name` tal como lo reporta GitHub, y es `null` sólo para un evento guardado antes de que la columna existiera (ticket 09); `branch` es la rama de origen de un merge (`head.ref`), y es `null` en una asignación, en una fila anterior a la columna o cuando el payload no trae una usable (ADR-0013); `assignee` es `null` cuando el evento no tiene ninguno, nunca cadena vacía; `when` es UTC en ISO-8601 con milisegundos (`toISOString()`), forma canónica fijada por test. El mismo shape sirve el stream y el historial, para que el cliente parsee una sola cosa.
+Nueve campos, ni uno más. `type` es un conjunto cerrado de literales (`pr.merged`, `issue.assigned`); `repository` es `owner/name` tal como lo reporta GitHub, y es `null` solo para un evento guardado antes de que la columna existiera (ticket 09); `branch` es la rama de origen de un merge (`head.ref`), y es `null` en una asignación, en una fila anterior a la columna o cuando el payload no trae una usable (ADR-0013); `assignee` es `null` cuando el evento no tiene ninguno, nunca cadena vacía; `when` es UTC en ISO-8601 con milisegundos (`toISOString()`), forma canónica fijada por test. El mismo shape sirve el stream y el historial, para que el cliente parsee una sola cosa.
 
 El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este contrato: es una columna de la fila, junto al id de storage, y ninguno de los dos llega al cable (ADR-0005).
 

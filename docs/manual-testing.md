@@ -2,8 +2,8 @@
 
 Guía para levantar el relay y verificar con las manos lo que los tickets 01 a 09
 construyeron. La suite e2e prueba lo mismo de forma automatizada (54 casos sobre la
-misma seam HTTP); esto es para cuando querés ver el cable, probar un payload propio o
-mostrarle el sistema a alguien.
+misma seam HTTP); esto es para cuando se quiere ver el cable, probar un payload propio
+o mostrarle el sistema a alguien.
 
 Este documento cubre el relay solo. El CLI tiene su propia guía en
 [`docs/cli-testing.md`](cli-testing.md), y el recorrido de punta a punta —relay y CLI
@@ -13,7 +13,7 @@ juntos— en [`docs/end-to-end-testing.md`](end-to-end-testing.md).
 
 1. **La firma es sobre los bytes exactos del body.** `X-Hub-Signature-256` lleva
    `sha256=` más el HMAC-SHA256 en hex, calculado con el secreto sobre el cuerpo tal
-   como se envía. Si cambiás el body, la firma cambia: no se puede hardcodear el
+   como se envía. Si se cambia el body, la firma cambia: no se puede hardcodear el
    header (ADR-0002).
 2. **`POST /` responde `200` aunque descarte el evento.** Ese `200 {"received":true}`
    significa "recibido", no "guardado". El único otro código es `401`, y es para la
@@ -41,8 +41,8 @@ Bash:
 GITHUB_WEBHOOK_SECRET=un-secreto-largo-de-prueba npm start
 ```
 
-El secreto es tuyo: cualquier texto largo sirve, siempre que sea el mismo que uses
-para firmar. No se commitea.
+El secreto es propio: cualquier texto largo sirve, siempre que sea el mismo que se
+use para firmar. No se commitea.
 
 **Aviso sobre `.env`:** el relay carga `.env` al arrancar con el loader nativo de
 Node (no hay `dotenv`). Las variables exportadas en la shell tienen prioridad sobre
@@ -65,8 +65,8 @@ Con la base vacía:
 []
 ```
 
-Si ves eso, el relay está arriba y escuchando. Cualquier otro resultado (conexión
-rechazada, `500`) es un problema de arranque, no de la prueba.
+Si se ve eso, el relay está arriba y escuchando. Cualquier otro resultado
+(conexión rechazada, `500`) es un problema de arranque, no de la prueba.
 
 ## Paso 3 — Mandar un webhook firmado
 
@@ -97,7 +97,7 @@ body tiene comillas dobles adentro, así que tiene que ir entre simples.
 
 ### Opción B — Postman
 
-1. Un Environment con `baseUrl` = `http://localhost:3000` y `secret` = tu secreto.
+1. Un Environment con `baseUrl` = `http://localhost:3000` y `secret` = el secreto.
 2. `POST {{baseUrl}}/`, Body → **raw → JSON** con el body de arriba.
 3. Headers: `X-Hub-Signature-256` (lo completa el script), `X-GitHub-Event:
    pull_request`, `X-GitHub-Delivery: {{$guid}}`, `Content-Type: application/json`.
@@ -111,9 +111,9 @@ pm.request.headers.upsert({
 });
 ```
 
-El script recalcula la firma en cada envío: si editás el body, la firma sigue válida.
-`{{$guid}}` genera un identificador de entrega nuevo por request, así que cada envío
-guarda un evento; para probar el duplicado, poné un valor fijo.
+El script recalcula la firma en cada envío: si se edita el body, la firma sigue
+válida. `{{$guid}}` genera un identificador de entrega nuevo por request, así que cada
+envío guarda un evento; para probar el duplicado, hay que poner un valor fijo.
 
 ### Cualquier otro cliente
 
@@ -151,14 +151,14 @@ falta o no sirve, el campo queda en `null` y el evento se guarda igual. El `when
 curl -N http://localhost:3000/stream
 ```
 
-`-N` desactiva el buffering de curl: sin él, curl junta la respuesta y no ves nada
+`-N` desactiva el buffering de curl: sin él, curl junta la respuesta y no se ve nada
 hasta que la conexión se cierre, y esta conexión no se cierra. Ese es el detalle
-importante del paso, y vale para cualquier cliente: **usá uno que muestre la respuesta
-a medida que llega**. `Invoke-WebRequest` de PowerShell, por ejemplo, se cuelga
-esperando que el body termine.
+importante del paso, y vale para cualquier cliente: **hay que usar uno que muestre la
+respuesta a medida que llega**. `Invoke-WebRequest` de PowerShell, por ejemplo, se
+cuelga esperando que el body termine.
 
-Con el stream abierto, mandá otro webhook desde otra terminal (paso 3) y vas a ver el
-frame:
+Con el stream abierto, hay que mandar otro webhook desde otra terminal (paso 3) y se
+ve el frame:
 
 ```text
 id: 1
@@ -167,14 +167,14 @@ data: {"type":"pr.merged","repository":"AG2904/github-activity-feed","actor":"ma
 
 Es el mismo evento que sirve `/history`, con el mismo shape, para que el cliente
 parsee una sola cosa (user story 16). El canal es en vivo: lo que se guardó antes de
-que te conectaras no se reproduce.
+conectarse no se reproduce.
 
 ## Paso 6 — Los casos que demuestran cada comportamiento
 
 Cada fila corresponde a un caso que la suite e2e ya prueba; repetirlos a mano es para
-ver el cable. Después de cada uno, mirá `/history`.
+ver el cable. Después de cada uno, hay que mirar `/history`.
 
-| Qué probás | Cómo | Qué esperar |
+| Qué se prueba | Cómo | Qué esperar |
 | --- | --- | --- |
 | Firma inválida (ticket 01) | el mismo POST con otro `$secret` | `401` y `/history` sin cambios |
 | Merge a `main` (02) | el body del paso 3 | `200 {"received":true}` y una fila |
@@ -184,10 +184,10 @@ ver el cable. Después de cada uno, mirá `/history`.
 | Entrega duplicada (05) | el mismo body dos veces con el mismo `X-GitHub-Delivery` | dos `200` y **una sola** fila |
 | Asignación con label crítica (03) | el body de abajo | `200` y una fila con `type":"issue.assigned"` |
 | Asignación sin label crítica (04) | el mismo body con `"labels":[{"name":"chore"}]` | `200` y ninguna fila nueva |
-| Filtro por usuario (07) | `curl "http://localhost:3000/history?user=maria.perez"` | sólo los eventos donde es actor o assignee |
+| Filtro por usuario (07) | `curl "http://localhost:3000/history?user=maria.perez"` | solo los eventos donde es actor o assignee |
 | Usuario sin eventos (07) | `curl "http://localhost:3000/history?user=nadie"` | `[]` con `200`, nunca un error |
 | Filtro vacío (07) | `curl "http://localhost:3000/history?user="` | el registro completo |
-| Persistencia (21) | pará el servidor y levantalo de nuevo | las filas siguen ahí |
+| Persistencia (21) | detener el servidor y levantarlo de nuevo | las filas siguen ahí |
 
 El body de asignación, para el caso de arriba:
 
@@ -198,7 +198,7 @@ El body de asignación, para el caso de arriba:
 ## Paso 7 — Empezar de cero
 
 `Ctrl-C` apaga el servidor. El historial queda en el archivo SQLite
-(`relay.db` por defecto, o donde apunte `DATABASE_PATH`), así que si querés una base
+(`relay.db` por defecto, o donde apunte `DATABASE_PATH`), así que si se quiere una base
 limpia:
 
 ```powershell
@@ -206,5 +206,5 @@ Remove-Item relay.db        # PowerShell
 rm relay.db                 # bash
 ```
 
-Y si querés probar los pasos con otro puerto, alcanza con `$env:PORT = 3001` antes de
-arrancar.
+Y si se quieren probar los pasos con otro puerto, alcanza con `$env:PORT = 3001`
+antes de arrancar.

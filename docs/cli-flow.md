@@ -8,7 +8,7 @@ vive en [`docs/adr/`](adr/) y en [`ARCHITECTURE.md`](../ARCHITECTURE.md)—.
 El relay está del otro lado del cable y tiene su propio mapa:
 [`docs/relay-flow.md`](relay-flow.md).
 
-Si preferís ver antes de leer, hay tres diagramas versionados:
+Si se prefiere ver antes de leer, hay tres diagramas versionados:
 
 - `.archify/architecture-cli-20261019-141819/cli.html` — los roles del CLI y cómo se
   conectan con el relay.
@@ -74,7 +74,7 @@ Paso por paso:
    El interior nunca llama a `os.Exit`: si lo hiciera, ningún test podría ejercitarlo
    sin matar el proceso de test. Un segundo `Ctrl-C` vuelve a poner el manejador por
    defecto, así que un run colgado se puede matar igual.
-2. **`client/internal/cli/cli.go`** es el despachador. El flag set raíz sólo conoce
+2. **`client/internal/cli/cli.go`** es el despachador. El flag set raíz solo conoce
    `--version`; los subcomandos parsean los suyos. `feed` a secas imprime el uso y
    sale con `2`, y un subcomando desconocido hace lo mismo, con el nombre entre
    comillas. El contrato de flujos es fijo: **stdout lleva eventos** (y la versión,
@@ -90,7 +90,7 @@ Paso por paso:
    la primera conexión y lo que cierra la sesión con `stopped · …`.
 4. **`backfill()`** corre antes de la primera conexión y pide `/history` una sola vez,
    para que la terminal no arranque en blanco: imprime hasta `--backfill <n>` filas
-   (diez por defecto, `0` lo apaga) y las pinta oldest first, así el vivo sigue abajo
+   (diez por defecto, `0` lo apaga) y las muestra oldest first, así el vivo sigue abajo
    en orden. Es best-effort a propósito: un relay que todavía no contesta deja la
    terminal como está y la conexión siguiente vuelve a preguntar; un historial que sí
    se leyó no se pide dos veces.
@@ -149,7 +149,7 @@ terminal ──feed history──▶ cli.Run ──▶ internal/cli/history.go �
   orden en que el relay los sirvió. Cada elemento son los bytes que llegaron: nada se
   re-serializa, así que claves, `null` y el timestamp en milisegundos quedan intactos.
   El filtro igual se aplica, porque crudo es una forma y no una exención.
-- **Sin `--json` el historial se pinta**, newest first: la misma tarjeta
+- **Sin `--json` el historial se muestra**, newest first: la misma tarjeta
   `Palette.Event()` que usa el vivo, porque un reporte se lee desde arriba.
 - **`--group-by-repo`** reemplaza ese render por uno agrupado: un encabezado por
   repositorio en orden alfabético, y las filas sin repositorio al final, sin encabezado,
@@ -178,7 +178,7 @@ con diferencias de representación:
 | Campo | Tipo en Go | Notas |
 | --- | --- | --- |
 | `Type` | `string` | `pr.merged` o `issue.assigned`; el CLI no valida el conjunto |
-| `Repository` | `*string` | `nil` sólo para una fila anterior a la columna |
+| `Repository` | `*string` | `nil` solo para una fila anterior a la columna |
 | `Branch` | `*string` | `nil` en una asignación, en una fila anterior a la columna, o si el payload no traía `head.ref` usable (ADR-0013) |
 | `Actor` | `string` | |
 | `Subject` | `string` | |
@@ -192,7 +192,7 @@ con diferencias de representación:
 medio llenar no se renderiza: se descarta. `branch` y `repository` son suplementarios:
 ausentes o `null` no rechazan el evento, y el renderer cae en la frase derivada del
 tipo. `labels` ausente queda `nil`, distinto de
-una lista vacía sólo en el modelo: el renderizador lee la longitud, así que las dos
+una lista vacía solo en el modelo: el renderizador lee la longitud, así que las dos
 formas imprimen el título sin un `[]` vacío.
 
 ### 2.2 `activity.Filter` — el filtro local
@@ -215,7 +215,7 @@ y `feed history --user` contestarían cosas distintas sobre la misma persona.
 `client/internal/sse/sse.go` es el único código de protocolo del CLI, y el único
 lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 
-- **Sólo importa `data:`.** El parser junta las líneas `data:` de un frame y las une
+- **Solo importa `data:`.** El parser junta las líneas `data:` de un frame y las une
   con `\n`, como manda el formato. `id:`, `event:`, `retry:` y los comentarios se
   ignoran. Un frame que termina en EOF sin su línea en blanco igual cuenta.
 - **El `id:` se ignora a propósito.** Nest lo escribe en cada mensaje con un contador
@@ -231,7 +231,7 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
   o un relay que deja de escribir sin cerrar el socket.
 - **La reconexión es del cliente.** Backoff exponencial de 1 a 30 segundos con
   jitter, reset cuando llegó un evento válido. El relay no guarda historia por
-  conexión, así que reconectar deja un hueco que sólo `/history` puede llenar.
+  conexión, así que reconectar deja un hueco que solo `/history` puede llenar.
 - **No hay timeout de request.** La conexión es por definición larga; el único reloj
   es el del `idleReader`.
 
@@ -258,7 +258,7 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 | --- | --- | --- |
 | `client/cmd/feed/main.go` | el borde del proceso: señales y código de salida | la shell |
 | `client/internal/cli/cli.go` | el despacho, los códigos de salida y la regla de color | el proceso |
-| `client/internal/cli/watch.go` | la conexión en vivo: abrir, leer, pintar, reconectar | el despacho |
+| `client/internal/cli/watch.go` | la conexión en vivo: abrir, leer, mostrar, reconectar | el despacho |
 | `client/internal/cli/history.go` | la consulta puntual: una request y sus tres salidas | el despacho |
 | `client/internal/cli/emitter.go` | la política de salida: qué se muestra y cómo se escribe | los dos comandos y el backfill |
 | `client/internal/cli/retry.go` | la política de reconexión: cuánto esperar, qué no se reintenta | la conexión en vivo |
@@ -335,8 +335,8 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 
 ## 8. Por dónde empezar a leer
 
-Si tenés veinte minutos y querés entender el cliente de punta a punta, este orden
-funciona:
+Si se cuenta con veinte minutos y se quiere entender el cliente de punta a punta,
+este orden funciona:
 
 1. `client/internal/activity/activity.go` — el contrato, que es de lo que habla todo
    lo demás.
@@ -352,7 +352,7 @@ funciona:
 7. `client/test/e2e_test.go` y `harness_test.go` — la suite es la especificación
    ejecutable: un `fakeRelay` de `httptest` y binarios reales, nunca imports internos.
 
-Para ejecutarlo con tus ojos, desde `client/`:
+Para ejecutarlo y ver el resultado, desde `client/`:
 
 ```bash
 go build -o feed ./cmd/feed          # o, desde la raíz: npm run cli:build

@@ -35,7 +35,7 @@ eso re-crearía el gap que la demo existe para cerrar.
 Qué corre en la grabación: el relay levantado con una base temporal, el binario de
 Windows compilado en `client/dist/` y los dos payloads de arriba reenviados con su
 firma HMAC. Primero `feed history --group-by-repo` con la entrega del merge ya
-almacenada; después `feed watch --backfill 0`, que anuncia el stream y pinta la
+almacenada; después `feed watch --backfill 0`, que anuncia el stream y muestra la
 asignación en vivo cuando llega.
 
 Para regenerar la imagen no hace falta el relay: el cast ya contiene la sesión. En

@@ -5,7 +5,7 @@ invariantes sostienen el conjunto. Está escrito para alguien que abre el repo p
 primera vez y quiere entender el código, no para justificar decisiones —eso último
 vive en [`docs/adr/`](adr/) y en [`ARCHITECTURE.md`](../ARCHITECTURE.md)—.
 
-Si preferís ver antes de leer, hay dos diagramas versionados:
+Para ver antes de leer, hay dos diagramas versionados:
 
 - `.archify/architecture-relay-20261017-193000/relay.html` — la arquitectura por
   componentes.
@@ -50,7 +50,7 @@ Paso por paso:
    `undefined` en los dos casos en que no hay evento —payload no crítico, o crítico
    que no se puede normalizar—. Desde afuera son indistinguibles a propósito: los
    dos se acusan con `200` y ninguno se guarda.
-4. **`merge-to-main.ts` / `issue-assignment.ts`** aplican el filtro y normalizan. Acá
+4. **`merge-to-main.ts` / `issue-assignment.ts`** aplican el filtro y normalizan. Aquí
    es donde se leen `base.ref`, `issue.assignees` y las etiquetas, y donde el
    repositorio sale de `repository.full_name` (nunca del `url`).
 5. **`github/payload.ts`** y **`domain/`** son las hojas compartidas: lectura
@@ -89,7 +89,7 @@ GET /history?user=&repository= ──▶ history.controller.listAuditHistory()
 - Un filtro ausente **o vacío** (`?user=`) pide el registro completo, no cero filas.
 - **`fromStoredRow()`** es la frontera de confianza del almacenamiento: la fila
   guarda `type` y `when` como texto, y el dominio los recibe tipados. El `id` de
-  storage y el `deliveryId` **nunca** salen de acá.
+  storage y el `deliveryId` **nunca** salen de aquí.
 - El orden es `id DESC` —lo más nuevo primero— y **no** hay paginación.
 
 ### 1.3 Una conexión al canal en vivo
@@ -247,8 +247,8 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 - **Un payload que no se puede normalizar se ignora, no es un error.** Es la misma
   postura que con un hook desconocido: una integración ajena encendida en GitHub no
   puede romper el relay.
-- **La forma es una sola.** Si agregás un campo al `ActivityEvent`, hay aserciones de
-  igualdad profunda en la suite que fallan a propósito para obligarte a decidirlo
+- **La forma es una sola.** Si se agrega un campo al `ActivityEvent`, hay aserciones de
+  igualdad profunda en la suite que fallan a propósito para obligar a decidirlo
   (ADR-0005, ADR-0010).
 
 ## 7. Qué no está en este mapa
@@ -257,13 +257,13 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   [`docs/cli-flow.md`](cli-flow.md).
 - **CI, README y distribución de binarios** (Fase 3).
 - **La elección de qué repositorios escucha el relay**: se configura del lado de
-  GitHub, no acá.
+  GitHub, no aquí.
 - **Retención o purgado del historial**: los eventos se guardan indefinidamente.
 
 ## 8. Por dónde empezar a leer
 
-Si tenés veinte minutos y querés entender el sistema de punta a punta, este orden
-funciona:
+Si se dispone de veinte minutos y se quiere entender el sistema de punta a punta, este
+orden funciona:
 
 1. `src/relay/domain/activity-event.ts` — el contrato, que es de lo que habla todo lo
    demás.
@@ -273,7 +273,7 @@ funciona:
 4. `src/relay/activity-events.service.ts` — el almacenamiento, el dedupe y los filtros.
 5. `src/relay/stream.controller.ts` y `stream-heartbeat.ts` — la parte en vivo.
 6. `test/app.e2e-spec.ts` — la suite es la especificación ejecutable: si algo no está
-   claro arriba, acá está el comportamiento esperado, escrito como una aserción.
+   claro arriba, aquí está el comportamiento esperado, escrito como una aserción.
 
-Para **ejecutarlo y verlo con tus ojos**, [`docs/manual-testing.md`](manual-testing.md)
+Para **ejecutarlo y verlo por uno mismo**, [`docs/manual-testing.md`](manual-testing.md)
 tiene los pasos con los comandos y la salida esperada de cada uno.

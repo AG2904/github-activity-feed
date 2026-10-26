@@ -12,11 +12,11 @@ probar: cada una usa un doble del otro lado del cable.
 
 ## Camino corto
 
-1. Compilá los dos lados: `npm run build` y `cd client && go build -o feed ./cmd/feed`.
-2. Levantá el relay con un secreto y una base limpia.
+1. Compilar los dos lados: `npm run build` y `cd client && go build -o feed ./cmd/feed`.
+2. Levantar el relay con un secreto y una base limpia.
 3. En otra terminal: `./feed watch --relay http://localhost:3000 --json`.
-4. Mandá los webhooks del [paso 4](#paso-4--el-recorrido-completo).
-5. Esperá **tres** líneas en el CLI y **tres** filas en `/history`. Si coinciden, el
+4. Mandar los webhooks del [paso 4](#paso-4--el-recorrido-completo).
+5. Esperar **tres** líneas en el CLI y **tres** filas en `/history`. Si coinciden, el
    sistema completo funciona.
 
 ## Antes de empezar
@@ -36,8 +36,8 @@ Tres ideas que ordenan todo lo que sigue:
    oráculo es siempre `/history`.
 2. **El stream es en vivo.** Lo que se publicó antes de que el CLI se conectara no se
    reproduce.
-3. **El relay no sabe quién sos.** Manda todo a todos; el filtro por usuario o repo
-   es del CLI (ADR-0001).
+3. **El relay no sabe quién es el cliente.** Manda todo a todos; el filtro por usuario
+   o repo es del CLI (ADR-0001).
 
 ## Paso 1 — Compilar los dos lados
 
@@ -49,7 +49,7 @@ npm run build
 cd client && go build -o feed ./cmd/feed && cd ..
 ```
 
-En Windows el binario queda en `client\feed.exe`. Si `npm run build` cuelga en tu
+En Windows el binario queda en `client\feed.exe`. Si `npm run build` cuelga en esta
 máquina, son los shims locales de la raíz: en este repo ya no están, y el arreglo es
 borrarlos, no rodearlos.
 
@@ -71,7 +71,7 @@ GITHUB_WEBHOOK_SECRET=un-secreto-largo-de-prueba DATABASE_PATH=./sistema.db npm 
 arrancar con el loader nativo de Node, pero las variables exportadas en la shell
 ganan: por eso las de arriba se aplican aunque exista un `.env`.
 
-Confirmá que está arriba antes de seguir:
+Confirmar que está arriba antes de seguir:
 
 ```bash
 curl http://localhost:3000/history
@@ -83,8 +83,8 @@ curl http://localhost:3000/history
 
 ## Paso 3 — El script que firma y envía
 
-Todo el recorrido usa el mismo helper. Pegalo en la terminal de PowerShell que va a
-mandar los webhooks:
+Todo el recorrido usa el mismo helper. Hay que pegarlo en la terminal de PowerShell que
+va a mandar los webhooks:
 
 ```powershell
 $secret = "un-secreto-largo-de-prueba"
@@ -106,7 +106,7 @@ function Send-Webhook($body, $event, $delivery) {
 
 Lo que importa del helper:
 
-- **La firma es sobre los bytes exactos del body.** Si reformateás el JSON entre
+- **La firma es sobre los bytes exactos del body.** Si se reformatea el JSON entre
   firmar y enviar, la firma deja de servir (ADR-0002).
 - **`X-GitHub-Delivery` es la identidad de la entrega**, no del evento. Es lo que el
   relay deduplica: dos envíos con el mismo valor son una sola fila.
@@ -114,13 +114,13 @@ Lo que importa del helper:
   `pull_request`; para una asignación, `issues`.
 
 En bash el equivalente para firmar es `printf '%s' "$body" | openssl dgst -sha256
--hmac "$secret" | sed 's/^.* //'` y después `curl` con el header `sha256=<hex>`. Usá
+-hmac "$secret" | sed 's/^.* //'` y después `curl` con el header `sha256=<hex>`. Usar
 `printf`, nunca `echo`: el salto de línea final cambia el HMAC. *(Este bloque no se
 probó en esta máquina, que no tiene bash; el de PowerShell sí.)*
 
 ## Paso 4 — El recorrido completo
 
-Abrí una segunda terminal y dejá el CLI conectado **antes** de mandar nada:
+Abrir una segunda terminal y dejar el CLI conectado **antes** de mandar nada:
 
 ```bash
 cd client
@@ -128,7 +128,7 @@ cd client
 ```
 
 `--json` primero: muestra el contrato sin color, sin tiempo relativo y sin hyperlinks,
-así lo que ves se puede comparar byte a byte con `/history`. El renderizado en
+así lo que se ve se puede comparar byte a byte con `/history`. El renderizado en
 tarjetas se prueba después, en el paso 6.
 
 En stderr, la sesión se nombra a sí misma: el banner `watching <url> · backfill 10`
@@ -182,13 +182,13 @@ visible el broadcast: el relay no filtra por repositorio, el CLI sí.
 
 ## Paso 5 — El filtro es del cliente
 
-Dejá el `watch --json` del paso 4 corriendo y abrí un segundo:
+Dejar el `watch --json` del paso 4 corriendo y abrir un segundo:
 
 ```bash
 ./feed watch --relay http://localhost:3000 --repo other/repo --json
 ```
 
-Mandá un merge nuevo a `AG2904/github-activity-feed` con `X-GitHub-Delivery: e2e-5`:
+Mandar un merge nuevo a `AG2904/github-activity-feed` con `X-GitHub-Delivery: e2e-5`:
 
 - el primer cliente lo imprime,
 - el segundo **no** imprime nada y sigue conectado,
@@ -217,13 +217,13 @@ lucia.gomez assigned to tomas.ferreira
   https://github.com/AG2904/github-activity-feed/issues/7
 ```
 
-`2h ago` es relativo al momento de imprimir: con el `when` del ejemplo vas a ver los
+`2h ago` es relativo al momento de imprimir: con el `when` del ejemplo se ven los
 días que hayan pasado desde el 16 de octubre, no siempre `2h ago`. La frase del merge
 nombra la rama de origen (`head.ref`); una fila guardada antes de que existiera el
 campo, o un payload sin `head.ref` usable, dice `maria.perez merged into main`
 (ADR-0013). Las etiquetas del evento van al frente del título, antes del texto que
 califican, y el contexto se queda con el repositorio y el tiempo. La cuarta línea, la
-URL, existe sólo sin hyperlink: en una terminal con color el título es el link OSC 8 y
+URL, existe solo sin hyperlink: en una terminal con color el título es el link OSC 8 y
 la tarjeta se queda en tres líneas. En un pipe no hay un solo escape.
 
 Las tarjetas van a stdout; la sesión entera va a stderr. Al cerrar con `Ctrl-C`, la
@@ -233,7 +233,7 @@ mostró nada.
 
 ## Paso 7 — Lo que no se repite
 
-Cerrá el CLI (`Ctrl-C`), mandá un webhook nuevo y volvé a conectarte:
+Cerrar el CLI (`Ctrl-C`), mandar un webhook nuevo y volver a conectarse:
 
 - el evento nuevo **no** aparece al reconectar: el stream no guarda historia y el CLI
   no manda `Last-Event-ID` (ADR-0007);
@@ -252,14 +252,14 @@ watch: reconnecting in 2.042726645s: Get "http://localhost:3000/stream": … con
 watch: reconnecting in 4.783724298s: …
 ```
 
-Volvé a levantarlo (mismo `DATABASE_PATH`) y en la siguiente ventana aparece
-`watch: reconnected`. Mandá un webhook: llega. Los que se mandaron con el relay caído
+Volver a levantarlo (mismo `DATABASE_PATH`) y en la siguiente ventana aparece
+`watch: reconnected`. Mandar un webhook: llega. Los que se mandaron con el relay caído
 no existen —nunca entraron—, y los que entraron mientras el CLI estaba desconectado
-sólo están en `/history`.
+solo están en `/history`.
 
 ## Paso 9 — La persistencia es del relay
 
-Pará el relay y levantalo de nuevo con el mismo `DATABASE_PATH`:
+Parar el relay y levantarlo de nuevo con el mismo `DATABASE_PATH`:
 
 ```bash
 curl http://localhost:3000/history
@@ -270,7 +270,7 @@ vacío. El CLI no guarda nada: es un cliente.
 
 ## Paso 10 — El silencio no rompe nada
 
-Dejá el `watch` conectado veinte o treinta segundos sin mandar webhooks.
+Dejar el `watch` conectado veinte o treinta segundos sin mandar webhooks.
 
 - No aparece ninguna línea nueva (el heartbeat del relay es un comentario SSE, y el
   CLI los ignora).
@@ -279,7 +279,7 @@ Dejá el `watch` conectado veinte o treinta segundos sin mandar webhooks.
 - No aparece un heartbeat ni un spinner del CLI: la única línea afirmativa de la
   sesión fue `connected · …` al conectar, y el silencio que sigue se queda en
   silencio. La reconexión ya contesta a "¿sigue vivo?"; repetir una línea de
-  "acá estoy" en una terminal de append-only es spam con fecha de vencimiento.
+  "estoy vivo" en una terminal de append-only es spam con fecha de vencimiento.
 - El siguiente evento se imprime en la misma conexión.
 
 ## Paso 11 — Las dos suites
@@ -303,12 +303,12 @@ relay real y el CLI real se hablan es este documento**.
 
 ## Paso 12 — GitHub de verdad (opcional)
 
-Hasta acá todo fue simulado, que es suficiente porque la firma es la única
-autenticación. Si querés el circuito real, hace falta una URL pública.
+Hasta aquí todo fue simulado, que es suficiente porque la firma es la única
+autenticación. Si se quiere el circuito real, hace falta una URL pública.
 
 1. Expuesto el relay: `cloudflared tunnel --url http://localhost:3000` (o `ngrok http
    3000`). Ninguna de las dos está instalada en esta máquina, así que este paso **no
-   está verificado acá**. El concepto, las opciones y los costos están en
+   está verificado aquí**. El concepto, las opciones y los costos están en
    [`docs/exposing-the-relay.md`](exposing-the-relay.md).
 2. En el repo de prueba: **Settings → Webhooks → Add webhook**.
    - Payload URL: la URL del túnel, terminada en `/`.
@@ -316,7 +316,7 @@ autenticación. Si querés el circuito real, hace falta una URL pública.
    - Secret: el mismo `GITHUB_WEBHOOK_SECRET`.
    - SSL verification: activa.
    - Eventos: *Let me select individual events* → **Pull requests** e **Issues**.
-3. Con el CLI escuchando, hacé un merge real a `main` en ese repo. En **Recent
+3. Con el CLI escuchando, hacer un merge real a `main` en ese repo. En **Recent
    Deliveries** la entrega tiene que mostrar `200`, y el CLI la imprime.
 4. **Redeliver** desde la UI de GitHub manda la misma entrega con el mismo
    `X-GitHub-Delivery`: es la prueba de idempotencia con tráfico real, y no debe
@@ -345,8 +345,8 @@ entera.
 
 - **El historial renderizado** y sus filtros en el CLI: ticket 07, cerrado, pero esta
   guía no lo recorre; se queda en la salida cruda contra el relay real.
-- **La distribución del binario**: ticket 08, cerrado; acá sólo se prueba la versión
-  inyectada, no los cuatro binarios de `cli:dist`.
+- **La distribución del binario**: ticket 08, cerrado; en esta guía solo se prueba la
+  versión inyectada, no los cuatro binarios de `cli:dist`.
 - **CI**: no hay workflow que corra las dos suites.
 - **Retención y purgado**: los eventos se guardan indefinidamente.
 - **Varios relays o alta disponibilidad**: hay un proceso y un archivo SQLite.

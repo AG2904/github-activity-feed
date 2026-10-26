@@ -3,9 +3,9 @@
 Guía para ejecutar el binario de `client/` y verificar con las manos lo que los
 tickets 01 a 05 construyeron. La suite e2e prueba lo mismo de forma automatizada,
 compilando el binario real y hablándole por HTTP con un relay falso; esto es para
-cuando querés ver el cable, probar tu propio relay o mostrarle el sistema a alguien.
+cuando se quiere ver el cable, probar el propio relay o mostrar el sistema a alguien.
 
-Si lo que querés es probar el sistema completo —relay incluido—, el recorrido está
+Si lo que se quiere es probar el sistema completo —relay incluido—, el recorrido está
 en [`docs/end-to-end-testing.md`](end-to-end-testing.md).
 
 ## Antes de empezar: tres ideas
@@ -13,13 +13,13 @@ en [`docs/end-to-end-testing.md`](end-to-end-testing.md).
 1. **stdout lleva eventos; stderr lleva todo lo demás.** La sesión entera vive en
    stderr y en texto plano: el banner `watching <url> · backfill <n>`, la línea
    `connected` de la primera conexión, los avisos de reconexión, la línea `stopped`
-   de la salida y los errores. Si mezclás los dos, no podés distinguir un evento de
-   un aviso, y `feed watch | jq` deja de funcionar.
+   de la salida y los errores. Si se mezclan los dos, no se puede distinguir un evento
+   de un aviso, y `feed watch | jq` deja de funcionar.
 2. **El CLI no decide qué es crítico.** El relay ya filtró: si un evento llegó al
    stream, es crítico. Lo que el CLI filtra es *para quién*, porque el relay hace
    broadcast y manda todo a todos (ADR-0001).
-3. **El stream es en vivo y no repite.** Si te conectás después de que el evento se
-   publicó, no lo ves. Para eso está `feed history` —hoy sólo en su forma `--json`—.
+3. **El stream es en vivo y no repite.** Si se conecta después de que el evento se
+   publicó, no aparece. Para eso está `feed history` —hoy solo en su forma `--json`—.
 
 ## Paso 0 — Compilar
 
@@ -31,8 +31,8 @@ go build -o feed ./cmd/feed
 En Windows el binario es `feed.exe` y se invoca `.\feed.exe`; los comandos de abajo
 usan `./feed` y funcionan igual en bash, zsh y PowerShell.
 
-Para que `--version` diga algo distinto de `dev`, compilá como se compila un binario
-distribuido:
+Para que `--version` diga algo distinto de `dev`, hay que compilar como se compila un
+binario distribuido:
 
 ```bash
 go build -ldflags "-X main.version=v0.1.0" -o feed ./cmd/feed
@@ -51,8 +51,8 @@ v0.1.0
 ```
 
 Sale con `0` y no escribe nada en stderr. La versión entra por `-ldflags`, que es el
-mismo mecanismo que va a usar el binario distribuido (ticket 08): si ves `dev`, el
-`-X` no llegó y estás mirando un build de desarrollo.
+mismo mecanismo que va a usar el binario distribuido (ticket 08): si aparece `dev`, el
+`-X` no llegó y se está mirando un build de desarrollo.
 
 ## Paso 2 — Uso y códigos de salida
 
@@ -69,7 +69,7 @@ Dos cosas que esta tabla enseña y conviene mirar de cerca:
 - **Una URL inusable es fatal, no reintentable.** `://bad` sale con `1` y sin una
   sola línea de `reconnecting`. Un relay apagado, en cambio, se reintenta para
   siempre: esa diferencia es deliberada. Aun así la sesión cierra con su línea de
-  cuenta —acá `stopped · no events`, porque no se mostró nada—: no hay camino de
+  cuenta —aquí `stopped · no events`, porque no se mostró nada—: no hay camino de
   salida del `watch` que se despidan en silencio.
 - **El conflicto de flags se detecta sin tocar la red.** El último caso no hace
   ningún request: es un error de uso, no del relay.
@@ -91,8 +91,8 @@ npm start
 GITHUB_WEBHOOK_SECRET=un-secreto-largo-de-prueba npm start
 ```
 
-El relay escucha en `http://localhost:3000` por defecto. Si usás otro puerto, pasalo
-también al CLI con `--relay`.
+El relay escucha en `http://localhost:3000` por defecto. Si se usa otro puerto, hay que
+pasarlo también al CLI con `--relay`.
 
 ## Paso 4 — Ver un evento en vivo
 
@@ -102,7 +102,7 @@ En una terminal:
 ./feed watch --relay http://localhost:3000 --no-color
 ```
 
-En otra, mandá el webhook de un merge a `main` (está completo, con la firma, en
+En otra, mandar el webhook de un merge a `main` (está completo, con la firma, en
 [`manual-testing.md`](manual-testing.md#paso-3--mandar-un-webhook-firmado)):
 
 ```powershell
@@ -164,7 +164,7 @@ narración es de stderr y el texto plano es una decisión, no un descuido.
 ```
 
 Cada evento sale como **una línea JSON idéntica al payload del relay**, sin
-reformatear. Para probar que no re-serializa, mandá un evento cuyo `subject` tenga un
+reformatear. Para probar que no re-serializa, mandar un evento cuyo `subject` tenga un
 `&`:
 
 ```text
@@ -175,7 +175,7 @@ reformatear. Para probar que no re-serializa, mandá un evento cuyo `subject` te
 `"branch":null`. El CLI sigue entregando los bytes tal cual, así que si la clave
 aparece reordenada o re-tipada, alguien re-serializó.
 
-El `&` tiene que seguir siendo `&`. Si ves `\u0026`, alguien pasó el payload por
+El `&` tiene que seguir siendo `&`. Si aparece `\u0026`, alguien pasó el payload por
 `encoding/json` y rompió el contrato.
 
 ## Paso 6 — Los filtros locales
@@ -185,11 +185,11 @@ sigue mandando todo.
 
 | Caso | Comando | Qué esperar |
 | --- | --- | --- |
-| actor | `./feed watch --user maria.perez` | sólo los eventos donde maria es `actor` |
-| assignee | `./feed watch --user tomas.ferreira` | sólo la asignación donde tomas es `assignee` |
+| actor | `./feed watch --user maria.perez` | solo los eventos donde maria es `actor` |
+| assignee | `./feed watch --user tomas.ferreira` | solo la asignación donde tomas es `assignee` |
 | nadie | `./feed watch --user nadie` | nada, y el stream sigue abierto |
 | mayúsculas | `./feed watch --user Maria.Perez` | **nada**: la comparación es exacta y sensible a mayúsculas |
-| repositorio | `./feed watch --repo AG2904/github-activity-feed` | sólo los eventos de ese repo |
+| repositorio | `./feed watch --repo AG2904/github-activity-feed` | solo los eventos de ese repo |
 | otro repo | `./feed watch --repo other/repo` | nada |
 | combinados | `./feed watch --user lucia.gomez --repo other/repo` | los dos filtros son un AND |
 
@@ -201,17 +201,17 @@ misma persona.
 ## Paso 7 — Lo que se descarta
 
 Un frame que no es un evento —`id:`, `event:`, `retry:`, un comentario de heartbeat,
-un JSON roto— se ignora y el CLI sigue leyendo. Contra el relay real no podés
+un JSON roto— se ignora y el CLI sigue leyendo. Contra el relay real no se puede
 provocar eso, porque el relay no manda basura: ese caso lo cubre la suite, en
 `TestWatchDiscardsFramesItCannotUseAndKeepsReading`, con un relay falso que mezcla
 frames válidos y basura y después exige que lleguen exactamente los dos válidos.
 
-Lo que sí podés ver a mano es la otra mitad de la regla: un frame basura **no corta la
-conexión**. Si el siguiente evento llega, se imprime.
+Lo que sí se puede ver a mano es la otra mitad de la regla: un frame basura **no corta
+la conexión**. Si el siguiente evento llega, se imprime.
 
 ## Paso 8 — El relay se cae y vuelve
 
-Con el `watch` corriendo, matá el relay (`Ctrl-C` en su terminal). El CLI no muere:
+Con el `watch` corriendo, matar el relay (`Ctrl-C` en su terminal). El CLI no muere:
 
 ```text
 watch: reconnecting in 1.223085495s: read tcp …: An existing connection was forcibly closed by the remote host.
@@ -221,25 +221,25 @@ watch: reconnecting in 8.827214592s: …
 ```
 
 Los delays son la escalera de backoff: un segundo, dos, cuatro, ocho…, con un jitter
-de hasta un cuarto del paso, y un techo de treinta segundos. Levantá el relay de nuevo
-y en la siguiente ventana aparece:
+de hasta un cuarto del paso, y un techo de treinta segundos. Al levantar el relay de
+nuevo, en la siguiente ventana aparece:
 
 ```text
 watch: reconnected
 ```
 
 Una reconexión **no** repite la línea `connected`: esa línea es de la primera
-conexión y sólo de esa. Lo que sí aparece son los eventos nuevos que se manden.
+conexión y solo de esa. Lo que sí aparece son los eventos nuevos que se manden.
 
-Mandá otro webhook: se imprime. Los eventos que pasaron mientras estaba desconectado
+Mandar otro webhook: se imprime. Los eventos que pasaron mientras estaba desconectado
 **no** se reproducen —el stream no guarda historia—, y el CLI tampoco manda
 `Last-Event-ID`: el contador `id:` de Nest arranca en cero en cada conexión y no es
 una posición de reanudación (ADR-0007). Los eventos perdidos se recuperan con
 `feed history`.
 
 **El reset del backoff** es el otro comportamiento: si el relay entregó al menos un
-evento válido, la escalera vuelve a un segundo. Matá el relay justo después de un
-evento y el próximo `reconnecting in` va a volver a ~1 s.
+evento válido, la escalera vuelve a un segundo. Si se mata el relay justo después de
+un evento, el próximo `reconnecting in` va a volver a ~1 s.
 
 ## Paso 9 — El silencio: no esperes cinco minutos
 
@@ -247,7 +247,7 @@ evento y el próximo `reconnecting in` va a volver a ~1 s.
 Esperar cinco minutos a mano es absurdo, así que el binario tiene una costura de
 test: `idleTimeoutSetting` se inyecta por `-ldflags` y no es una flag pública.
 
-Compilá una copia con dos segundos de timeout:
+Compilar una copia con dos segundos de timeout:
 
 ```bash
 cd client
@@ -256,7 +256,7 @@ go build -trimpath \
   -o feed-idle ./cmd/feed
 ```
 
-Levantá un relay que acepte la conexión y no escriba nada:
+Levantar un relay que acepte la conexión y no escriba nada:
 
 ```js
 // silent-relay.js — acepta /stream y nunca escribe un byte.
@@ -281,9 +281,9 @@ watch: reconnected
 
 La razón se nombra: `no bytes for 2s`. Con el binario normal diría `no bytes for
 5m0s`, y ese caso es justamente el que el heartbeat del relay evita: un evento o un
-comentario cada quince segundos reinicia el timer. Para verlo, dejá un `watch` contra
-el relay real veinte segundos sin mandar nada: no aparece ninguna línea nueva y el
-stream sigue siendo el mismo.
+comentario cada quince segundos reinicia el timer. Para verlo, hay que dejar un `watch`
+contra el relay real veinte segundos sin mandar nada: no aparece ninguna línea nueva y
+el stream sigue siendo el mismo.
 
 ## Paso 10 — El historial
 
@@ -291,7 +291,7 @@ stream sigue siendo el mismo.
 ./feed history --relay http://localhost:3000 --json > history.json
 ```
 
-El archivo es **el body de `/history`, byte por byte**. Comparalo:
+El archivo es **el body de `/history`, byte por byte**. Comparar:
 
 ```powershell
 (Invoke-WebRequest http://localhost:3000/history -UseBasicParsing).Content
@@ -302,7 +302,7 @@ El orden es `id DESC` —lo más nuevo primero— y no hay paginación.
 El CLI hace el mismo pedido y filtra localmente. Lo que conviene saber al probarlo a
 mano:
 
-- **`./feed history` sin `--json` pinta el historial**, newest first, con la misma
+- **`./feed history` sin `--json` muestra el historial**, newest first, con la misma
   tarjeta que el vivo. Sale con `0`.
 - **`--group-by-repo` agrupa** por repositorio en orden alfabético, y deja al final,
   sin encabezado, las filas sin repositorio.
@@ -318,7 +318,7 @@ NO_COLOR=1 ./feed watch --relay http://localhost:3000
 ```
 
 Los tres casos tienen que imprimir texto plano, sin un solo `\x1b`. La regla es una
-sola: hay color sólo si stdout es un terminal de verdad, no lo apagó `--no-color` y no
+sola: hay color solo si stdout es un terminal de verdad, no lo apagó `--no-color` y no
 lo apagó `NO_COLOR`. Un pipe nunca tiene color, y ése es el motivo por el que
 `feed watch | jq` es seguro.
 
@@ -344,8 +344,8 @@ Qué se puede verificar y qué no: la suite corre con stdout en un pipe, así qu
 afirmar los tonos. Sí puede afirmar la ausencia de escapes, y de dos maneras: hay casos
 que los buscan explícitamente, y los fixtures sin color comparan la salida exacta, así
 que cualquier `\x1b` filtrado los rompe. La presencia y los matices se miran a mano:
-`./feed watch --relay http://localhost:3000` y comparar contra la tabla. Hacelo en dos
-consolas, porque cada tema pinta los RGB concretos y el rol es lo único que el binario
+`./feed watch --relay http://localhost:3000` y comparar contra la tabla. Hacerlo en dos
+consolas, porque cada tema define los RGB concretos y el rol es lo único que el binario
 elige: **Windows Terminal** y un **conhost con VT** —una consola clásica con
 `ENABLE_VIRTUAL_TERMINAL_PROCESSING` habilitado—. Si en alguna de las dos un rol se
 pierde o el texto queda ilegible, el problema es la ranura, no el tema.
@@ -354,7 +354,7 @@ En Windows, además, el color exige que la consola acepte secuencias ANSI: el bi
 prende `ENABLE_VIRTUAL_TERMINAL_PROCESSING`; si la consola lo rechaza, no emite escapes
 en vez de imprimir basura.
 
-El reporte agrupado pinta el encabezado del repositorio en azul bold, porque es la única
+El reporte agrupado muestra el encabezado del repositorio en azul bold, porque es la única
 estructura que tiene el documento. No contradice el gris del repositorio en la tarjeta:
 ahí el repositorio es contexto, y en el encabezado el azul —el rol de ubicación que
 lleva la rama— es estructura, la única línea que organiza el reporte.
@@ -381,8 +381,8 @@ contexto cancelado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalEr
 | --- | --- | --- | --- |
 | 01 — arrancar y llegar al relay | banner, precedencia `--relay` > `$RELAY_URL` > default | 3, 4 | sí |
 | 01 — arrancar y llegar al relay | URL inusable es fatal | 2 | sí |
-| 02 — pintar eventos en vivo | merge y asignación como tarjetas | 4 | sí |
-| 02 — pintar eventos en vivo | sin color en un pipe | 11 | sí |
+| 02 - mostrar los eventos en vivo | merge y asignación como tarjetas | 4 | sí |
+| 02 - mostrar los eventos en vivo | sin color en un pipe | 11 | sí |
 | 03 — el contrato crudo | `--json` byte por byte, sin `\u0026` | 5 | sí |
 | 03 — el contrato crudo | basura descartada sin cortar el stream | 7 | sí |
 | 04 — la conexión se sostiene | reintento indefinido y backoff creciente | 8 | sí |
@@ -393,16 +393,16 @@ contexto cancelado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalEr
 | rama — el merge nombra su rama | la tarjeta dice `merged <rama> into main`, o vuelve a `merged into main` si es `null` | 4, 5 | sí |
 | 06 — la primera conexión no es una pantalla en blanco | — | — | **pendiente** |
 | 07 — el historial responde | — | — | **pendiente** |
-| 08 — distribuir el binario | `--version` inyectada | 1 | parcial (sólo la inyección) |
+| 08 — distribuir el binario | `--version` inyectada | 1 | parcial (solo la inyección) |
 
 ## Problemas frecuentes
 
 | Síntoma | Causa |
 | --- | --- |
-| `feed: command not found` | el binario no está en `PATH`: usá `./feed` (o `.\feed.exe`) |
-| `go run` devuelve siempre `1` | `go run` no propaga el código del binario y agrega `exit status N`; compilá y ejecutá el binario |
-| `watch` no imprime el evento que acabás de mandar | te conectaste después: el stream no repite. Mandá otro, o mirá `/history` |
-| nada llega y el relay está arriba | otro puerto: mirá el banner `watching <url>/stream` |
+| `feed: command not found` | el binario no está en `PATH`: usar `./feed` (o `.\feed.exe`) |
+| `go run` devuelve siempre `1` | `go run` no propaga el código del binario y agrega `exit status N`; compilar y ejecutar el binario |
+| `watch` no imprime el evento que se acaba de mandar | se conectó después: el stream no repite. Mandar otro, o mirar `/history` |
+| nada llega y el relay está arriba | otro puerto: mirar el banner `watching <url>/stream` |
 | stderr lleno de `At line:… CategoryInfo…` | PowerShell 5.1 decora el stderr de ejecutables nativos; el texto del CLI está ahí, con basura alrededor |
 | `401` al mandar el webhook | la firma no corresponde al body exacto, o el secreto no es el del relay |
 | el reloj dice `just now` para un evento viejo | `when` en el futuro o el evento recién guardado; el tiempo es relativo a `now` |
@@ -410,5 +410,5 @@ contexto cancelado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalEr
 ## Limpieza
 
 `Ctrl-C` cierra el watch y el relay. El historial queda en `relay.db` (o en
-`DATABASE_PATH`); para empezar de cero, borralo con el relay apagado. El binario
+`DATABASE_PATH`); para empezar de cero, borrarlo con el relay apagado. El binario
 `feed` y `feed-idle` son artefactos locales: están en `.gitignore`.

@@ -14,7 +14,7 @@ La decisión y lo que se descartó están en
 ## Camino corto
 
 ```bash
-cp .env.example .env      # y reemplazá change-me por un secret real
+cp .env.example .env      # y reemplazar `change-me` por un secreto real
 docker compose up -d --build relay
 docker compose run --rm feed watch
 ```
@@ -22,7 +22,7 @@ docker compose run --rm feed watch
 `docker compose run --rm feed history --json` hace la consulta puntual, y
 `docker compose down` apaga todo sin tocar el volumen.
 
-El relay queda publicado en `127.0.0.1:3000`, que es lo que el CLI de tu máquina
+El relay queda publicado en `127.0.0.1:3000`, que es lo que el CLI de la máquina
 espera por defecto (`http://localhost:3000`).
 
 ## Variables
@@ -53,8 +53,8 @@ docker compose cp relay:/data/relay.db ./relay-backup.db   # copia en caliente
 ## El CLI como herramienta, no como servicio
 
 `feed` está detrás del perfil `tools`, así que `docker compose up` arranca solo el
-relay. La razón es que un `watch` es un proceso en primer plano pegado a tu
-terminal: como servicio en segundo plano no tiene dónde pintar.
+relay. La razón es que un `watch` es un proceso en primer plano pegado a la
+terminal: como servicio en segundo plano no tiene dónde mostrar su salida.
 
 ```bash
 docker compose run --rm feed watch --repo owner/name
@@ -88,7 +88,7 @@ Fijadas el **26 de octubre de 2026**, contra las fuentes oficiales:
 El árbol de dependencias de producción del relay se consultó contra OSV el mismo
 día: **sin advisories** para `@nestjs/common`, `@nestjs/core`,
 `@nestjs/platform-express`, `@nestjs/typeorm`, `better-sqlite3`, `reflect-metadata`,
-`rxjs` ni `typeorm` en las versiones del lockfile. `npm audit` no se pudo usar acá
+`rxjs` ni `typeorm` en las versiones del lockfile. `npm audit` no se pudo usar aquí
 (el registry corta la conexión), y por eso la consulta fue directa a OSV.
 
 ### Cómo se actualiza
