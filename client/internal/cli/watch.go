@@ -49,10 +49,7 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintln(stderr)
 
-	out := newEmitter(stdout, *noColor, activity.Filter{User: *user, Repository: *repository})
-	// The live feed is the one place --json changes how a single event is
-	// written, so it is the one place the emitter carries that flag.
-	out.json = *jsonOut
+	out := newEmitter(stdout, *noColor, *jsonOut, activity.Filter{User: *user, Repository: *repository})
 	// The stop line is deferred, not written at each return: there is more
 	// than one way out of this function — Ctrl-C, an unusable URL, a closed
 	// stdout — and the session's account must speak on all of them.

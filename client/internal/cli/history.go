@@ -41,7 +41,7 @@ func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	out := newEmitter(stdout, *noColor, activity.Filter{User: *user, Repository: *repository})
+	out := newEmitter(stdout, *noColor, *jsonOut, activity.Filter{User: *user, Repository: *repository})
 	rows := out.shown(payloads)
 
 	// Raw output is the relay's own bytes of every event this client shows,

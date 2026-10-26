@@ -29,12 +29,16 @@ type emitter struct {
 }
 
 // newEmitter builds the output policy both commands hand their events to: the
-// same stdout, the same colour rule, the same filter, so `--no-color` and
-// `--user` cannot come to mean different things in the two of them.
-func newEmitter(stdout io.Writer, noColor bool, filter activity.Filter) *emitter {
+// same stdout, the same colour rule, the same filter, the same raw-or-card
+// choice, so `--no-color`, `--user` and `--json` cannot come to mean different
+// things in the two of them. Every decision it holds is fixed for the life of
+// the process, which is why it arrives through the constructor instead of being
+// mutated afterwards.
+func newEmitter(stdout io.Writer, noColor, jsonOut bool, filter activity.Filter) *emitter {
 	return &emitter{
 		out:     stdout,
 		palette: render.Palette{Color: colorEnabled(stdout, noColor)},
+		json:    jsonOut,
 		filter:  filter,
 	}
 }
