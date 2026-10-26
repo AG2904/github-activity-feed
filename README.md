@@ -21,7 +21,7 @@ El proyecto tiene dos mitades que hablan el mismo contrato:
 
 - **El relay** (`src/`, NestJS + SQLite) recibe los webhooks firmados de GitHub,
   decide qué eventos son críticos, los guarda y los emite en vivo por SSE.
-- **El CLI** (`client/`, Go) se conecta al relay y pinta los eventos en la terminal,
+- **El CLI** (`client/`, Go) se conecta al relay y muestra los eventos en la terminal,
   o consulta el historial almacenado.
 
 Un evento es crítico en dos casos: un pull request fusionado a `main`, y un issue
@@ -39,6 +39,9 @@ La justificación del diseño, el contrato y el estado del proyecto están en
 | Node.js | 24 (la versión que apuntan los tipos de las dependencias) | el relay |
 | Go | 1.27 (`client/go.mod` declara `go 1.27.0`) | el CLI |
 
+Ninguno de los dos es obligatorio si se usa el camino dockerizado: véase
+[Todo junto en Docker](#todo-junto-en-docker).
+
 ## Relay: arranque rápido
 
 1. Copiar la plantilla de variables de entorno y completar el secreto:
@@ -49,7 +52,7 @@ La justificación del diseño, el contrato y el estado del proyecto están en
 
    En `.env`, reemplazar `change-me` por un secreto largo. `GITHUB_WEBHOOK_SECRET` es
    obligatoria: sin ella el relay se niega a arrancar. `.env` está en `.gitignore` y
-   nunca se commitea.
+   nunca se versiona.
 
 2. Instalar las dependencias:
 
@@ -64,8 +67,9 @@ La justificación del diseño, el contrato y el estado del proyecto están en
    ```
 
    El relay carga `.env` al arrancar. Las variables exportadas en la shell tienen
-   prioridad sobre el archivo, así que podés sobrescribir cualquiera sin editarlo.
-   El proceso escucha en el puerto `3000`, o en el que indique la variable `PORT`.
+   prioridad sobre el archivo, así que cualquiera puede sobrescribirse sin editar el
+   archivo. El proceso escucha en el puerto `3000`, o en el que indique la variable
+   `PORT`.
 
 4. Confirmar que responde:
 
@@ -131,7 +135,7 @@ La justificación del diseño, el contrato y el estado del proyecto están en
      los filtros locales, el banner suma ` · user <login>` y ` · repo <owner/name>`
      (véase [`docs/cli-testing.md`](docs/cli-testing.md)).
 
-   Esa separación es deliberada: `feed watch | jq` recibe sólo eventos.
+   Esa separación es deliberada: `feed watch | jq` recibe solo eventos.
 
 4. Para ver el contrato sin formato, una línea JSON por evento, tal como lo emite el
    relay. Con el binario de npm, desde la raíz del repositorio:
@@ -151,18 +155,18 @@ La justificación del diseño, el contrato y el estado del proyecto están en
    Desde `client\` con el binario de Go, el equivalente es
    `.\feed.exe history --relay http://localhost:3000 --json`.
 
-   Contra un relay recién arrancado, la salida es `[]`. Sin `--json`, el historial se
-   pinta con las mismas tarjetas del modo en vivo.
+   Contra un relay recién iniciado, la salida es `[]`. Sin `--json`, el historial se
+   muestra con las mismas tarjetas del modo en vivo.
 
 El flujo completo —firma del webhook incluida— está en
 [`docs/end-to-end-testing.md`](docs/end-to-end-testing.md).
 
 ## Todo junto en Docker
 
-Si no querés instalar Node, Go ni SQLite, los dos procesos caben en dos imágenes:
+Para no instalar Node, Go ni SQLite, los dos procesos caben en dos imágenes:
 
 ```bash
-cp .env.example .env      # y reemplazá change-me por un secret real
+cp .env.example .env      # y reemplazar `change-me` por un secreto real
 docker compose up -d --build relay
 docker compose run --rm feed watch
 ```
@@ -187,6 +191,8 @@ Los recorridos operativos:
   desde el webhook hasta la terminal.
 - [`docs/exposing-the-relay.md`](docs/exposing-the-relay.md) — cómo exponer el relay
   con un túnel para recibir webhooks reales de GitHub, con sus límites medidos.
+- [`docs/docker.md`](docs/docker.md) — los dos procesos en contenedores, con las
+  versiones fijadas y su justificación.
 
 ## Estado de las fases
 
@@ -197,10 +203,11 @@ El plan por fases está en [`ARCHITECTURE.md` §7](ARCHITECTURE.md#7-plan-de-imp
 - **Fase 2 — el CLI:** completa. `watch` y `history`, filtros locales, renderizado en
   tarjetas y binarios estáticos para cuatro plataformas.
 - **Fase 3 — validación y demo:** en progreso. Incluye CI en GitHub Actions, la
-  publicación de binarios y una demostración con payloads reales de GitHub.
+  publicación de binarios, el camino dockerizado (ADR-0014) y una demostración con
+  payloads reales de GitHub.
 
-Fuera de alcance en esta fase: automatización de despliegue, contenedores, proxies
-inversos y TLS; empaquetado con goreleaser, instaladores o imágenes Docker; cambios al
-contrato de eventos, al filtro o al formato de cable; autenticación multiusuario,
-permisos, monitoreo, métricas y alertas. El despliegue del relay en un servidor interno
-es opcional y no bloquea el cierre de la fase.
+Fuera de alcance en esta fase: automatización de despliegue, proxies inversos y TLS;
+empaquetado con goreleaser o instaladores; publicación de las imágenes en un registry;
+cambios al contrato de eventos, al filtro o al formato de cable; autenticación
+multiusuario, permisos, monitoreo, métricas y alertas. El despliegue del relay en un
+servidor interno es opcional y no bloquea el cierre de la fase.

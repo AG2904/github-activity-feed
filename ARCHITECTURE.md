@@ -17,7 +17,11 @@ El proyecto es principalmente un **portafolio técnico** — demuestra arquitect
 ### Restricciones Técnicas Reales y Decisiones de Arquitectura
 
 - **Cero Slack / Teams como destino final:** Evaluados y descartados (§2.3). Las notificaciones llegan a la terminal, sin ruido de chat.
-- **Cero Docker:** El relay es un proceso **NestJS (TypeScript)** nativo con **SQLite** embebido — sin contenedores ni servidores de base de datos. Trivial de correr en una demo; admisible por TI si algún día se despliega en la empresa.
+- **Docker opcional, nunca obligatorio:** El relay es un proceso **NestJS
+  (TypeScript)** nativo con **SQLite** embebido: no necesita contenedores ni un
+  servidor de base de datos. El camino dockerizado existe para quien prefiera no
+  instalar el toolchain (ADR-0014), pero correr el relay a mano sigue siendo el
+  camino de la demo.
 - **Autonomía del CLI:** Desarrollado 100% en **Go** y distribuido como un **único binario estático** por plataforma (sin dependencias en la máquina del dev).
 - **Privacidad y Auditoría:** Sin payloads hacia servicios de terceros; el relay es dueño del dato: **SQLite** para persistencia y soporte del comando analítico `feed history --user`.
 - **Autenticación:** webhooks de GitHub firmados con **HMAC SHA-256** (`X-Hub-Signature-256`) y verificación en tiempo constante. El secreto vive solo en variables de entorno, nunca en código commiteado.

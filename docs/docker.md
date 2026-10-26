@@ -106,18 +106,20 @@ Al subir cualquiera, `docker compose build` reconstruye. No hay tags flotantes
 cambio de runtime silencioso, y con un `node_modules` compilado contra otro ABI el
 síntoma aparece en runtime, no en el build.
 
-## Qué no se verificó acá
+## Qué está verificado
 
-La máquina donde se escribió esto **no tiene Docker**, así que estos archivos no se
-construyeron localmente. La verificación es el job `docker` de
-[`ci.yml`](../.github/workflows/ci.yml): construye las dos imágenes en cada push y
-en cada PR, y hace un smoke test de cada una —`feed --version` y un `GET /history`
-contra el relay recién arrancado—. Si el `Dockerfile` está roto, ese job es el que
-lo dice.
+El job `docker` de [`ci.yml`](../.github/workflows/ci.yml) construye las dos imágenes
+en cada push y en cada PR, y hace un smoke test de cada una: `feed --version` y un
+`GET /history` contra el relay recién iniciado. La primera corrida pasó el **26 de
+octubre de 2026**, así que ambos targets construyen y ambos contenedores arrancan.
 
-Lo único verificado en la máquina de origen: que los tags de las imágenes existen
-en Docker Hub, que las versiones son las publicadas en los índices oficiales, el
-resultado de OSV, y que los dos YAML parsean.
+En la máquina de origen —donde no hay Docker— se verificó además que los tags de las
+imágenes existen en Docker Hub, que las versiones son las publicadas en los índices
+oficiales, el resultado de OSV y que los dos YAML parsean.
+
+Lo que **no** se probó todavía es el recorrido completo a mano: un webhook firmado
+entrando por el túnel hasta un `feed watch` corriendo en `docker compose`. Los pasos
+para hacerlo están en [`end-to-end-testing.md`](end-to-end-testing.md).
 
 ## Seguridad
 
