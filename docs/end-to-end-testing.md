@@ -12,7 +12,7 @@ probar: cada una usa un doble del otro lado del cable.
 
 ## Camino corto
 
-1. Compilá los dos lados: `npm.cmd run build` y `cd client && go build -o feed ./cmd/feed`.
+1. Compilá los dos lados: `npm run build` y `cd client && go build -o feed ./cmd/feed`.
 2. Levantá el relay con un secreto y una base limpia.
 3. En otra terminal: `./feed watch --relay http://localhost:3000 --json`.
 4. Mandá los webhooks del [paso 4](#paso-4--el-recorrido-completo).
@@ -23,7 +23,7 @@ probar: cada una usa un doble del otro lado del cable.
 
 | Pieza | Verificado en esta máquina |
 | --- | --- |
-| Node + npm | v26.8.2 / npm 12.2.0 (usá `npm.cmd` en PowerShell) |
+| Node + npm | v26.8.2 / npm 12.2.0 |
 | Go | 1.27.1 (`go.mod` pide 1.27.0) |
 | Relay | build limpio, 54 tests e2e en ~14 s |
 | CLI | build limpio, `go test ./...` en ~2 min |
@@ -42,7 +42,7 @@ Tres ideas que ordenan todo lo que sigue:
 ## Paso 1 — Compilar los dos lados
 
 ```powershell
-npm.cmd run build
+npm run build
 ```
 
 ```bash
@@ -59,7 +59,7 @@ borrarlos, no rodearlos.
 $env:GITHUB_WEBHOOK_SECRET = "un-secreto-largo-de-prueba"
 $env:DATABASE_PATH = "./sistema.db"
 Remove-Item ./sistema.db -ErrorAction SilentlyContinue
-npm.cmd start
+npm start
 ```
 
 ```bash
@@ -284,7 +284,7 @@ Dejá el `watch` conectado veinte o treinta segundos sin mandar webhooks.
 ## Paso 11 — Las dos suites
 
 ```powershell
-npm.cmd test
+npm test
 ```
 
 ```bash

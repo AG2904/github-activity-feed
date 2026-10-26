@@ -8,7 +8,7 @@ con un repositorio real; el recorrido de punta a punta está en
 
 ## Camino corto
 
-1. Levantá el relay como siempre (`GITHUB_WEBHOOK_SECRET` + `npm.cmd start`).
+1. Levantá el relay como siempre (`GITHUB_WEBHOOK_SECRET` + `npm start`).
 2. En otra terminal: `cloudflared tunnel --url http://localhost:3000`. No hace falta
    cuenta ni permisos de administrador: se baja el `.exe` del release oficial y se
    ejecuta.

@@ -84,7 +84,7 @@ Los pasos 4 a 11 necesitan un relay vivo. El recorrido completo está en
 
 ```powershell
 $env:GITHUB_WEBHOOK_SECRET = "un-secreto-largo-de-prueba"
-npm.cmd start
+npm start
 ```
 
 ```bash

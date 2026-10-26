@@ -25,9 +25,6 @@ La justificación del diseño, el contrato y el estado del proyecto están en
 | Node.js | 24 (la versión que apuntan los tipos de las dependencias) | el relay |
 | Go | 1.27 (`client/go.mod` declara `go 1.27.0`) | el CLI |
 
-En PowerShell, `npm` puede estar bloqueado por la política de ejecución: los comandos
-de esta guía usan `npm.cmd`, que funciona sin cambiar esa política.
-
 ## Relay: arranque rápido
 
 1. Copiar la plantilla de variables de entorno y completar el secreto:
@@ -43,13 +40,13 @@ de esta guía usan `npm.cmd`, que funciona sin cambiar esa política.
 2. Instalar las dependencias:
 
    ```powershell
-   npm.cmd ci
+   npm ci
    ```
 
 3. Arrancar el relay:
 
    ```powershell
-   npm.cmd start -- --env-file .env
+   npm start -- --env-file .env
    ```
 
    El relay lee variables de entorno, no el archivo `.env`. `--env-file` es una opción
@@ -79,7 +76,7 @@ de esta guía usan `npm.cmd`, que funciona sin cambiar esa política.
    `client/dist/`:
 
    ```powershell
-   npm.cmd run cli:build
+   npm run cli:build
    ```
 
    La salida nombra el archivo producido, por ejemplo
