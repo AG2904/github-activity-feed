@@ -51,11 +51,26 @@ jobs:
           FEED_VERSION: ${{ github.ref_name }}
         run: npm run cli:dist
 
+      - name: Checksum the binaries
+        # `sha256sum` writes "<hash>  <name>" from the directory it runs in, which
+        # is the format `sha256sum -c` reads back. The names are the ones the
+        # build script just produced, so the list cannot drift from the assets:
+        # a download that cannot be checked is a download you have to trust a
+        # web page for.
+        working-directory: client/dist
+        run: |
+          sha256sum \
+            feed-windows-amd64.exe \
+            feed-linux-amd64 \
+            feed-darwin-amd64 \
+            feed-darwin-arm64 > SHA256SUMS
+          cat SHA256SUMS
+
       - name: Publish the Release
         # The tag name is untrusted input: it travels through the environment,
         # never interpolated into the shell. The Release is created as a draft
-        # with the four assets attached and only then published, so a failed
-        # upload cannot leave a published, partial Release.
+        # with the assets attached and only then published, so a failed upload
+        # cannot leave a published, partial Release.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REF_NAME: ${{ github.ref_name }}
@@ -65,8 +80,9 @@ jobs:
             client/dist/feed-linux-amd64 \
             client/dist/feed-darwin-amd64 \
             client/dist/feed-darwin-arm64 \
+            client/dist/SHA256SUMS \
             --title "$REF_NAME" \
-            --notes "Binaries for $REF_NAME. Built by the release workflow, with the tag as the reported version." \
+            --notes "Binaries for $REF_NAME. Built by the release workflow, with the tag as the reported version. Verify the download with \`sha256sum -c SHA256SUMS\` on Linux or \`shasum -a 256 -c SHA256SUMS\` on macOS." \
             --verify-tag \
             --draft
           gh release edit "$REF_NAME" --draft=false
