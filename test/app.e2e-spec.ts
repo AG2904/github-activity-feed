@@ -1119,3 +1119,72 @@ describe('Relay HTTP seam', () => {
     });
   });
 });
+
+/**
+ * What a `docker stop` does, at the seam this suite can observe.
+ *
+ * Docker sends SIGTERM and waits; the relay answers by closing its server. A
+ * client holding the stream open never finishes that connection on its own, so
+ * `close()` has one way to hang forever: waiting for a stream nobody will end.
+ * Without completing the broadcast, the container is killed ten seconds later
+ * and the client sees a severed socket instead of an ended stream.
+ */
+describe('the relay closes with a stream open', () => {
+  it('ends the stream and returns from close instead of waiting for it', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'relay-shutdown-'));
+    const previousDatabase = process.env.DATABASE_PATH;
+    const previousSecret = process.env.GITHUB_WEBHOOK_SECRET;
+
+    process.env.GITHUB_WEBHOOK_SECRET = SECRET;
+    process.env.DATABASE_PATH = join(dir, 'relay.db');
+    process.env.STREAM_HEARTBEAT_MS = '100';
+
+    const client = new AbortController();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const shutdownApp = moduleRef.createNestApplication<NestExpressApplication>(INGRESS_OPTIONS);
+    configureIngress(shutdownApp);
+    await shutdownApp.init();
+    await shutdownApp.listen(0, '127.0.0.1');
+
+    try {
+      const response = await fetch(new URL('/stream', await shutdownApp.getUrl()), {
+        signal: client.signal,
+      });
+      expect(response.headers.get('content-type')).toContain('text/event-stream');
+
+      // The connection is established and held: headers arrived, no body event
+      // yet. This is the state a `docker stop` lands in.
+      const closed = await Promise.race([
+        shutdownApp.close().then(() => 'closed' as const),
+        new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 3_000)),
+      ]);
+      expect(closed).toBe('closed');
+
+      // And the connection is over. The stream completes first, so a client that
+      // is reading sees its stream end; the adapter destroys whatever socket is
+      // left, so a client that is not reading gets a closed connection instead.
+      // Both are "over", and both are better than a socket that outlives the
+      // process: the guarantee under test is that close() returns.
+      const reader = response.body!.getReader();
+      let streamOver = false;
+      try {
+        let done = false;
+        while (!done) {
+          done = (await reader.read()).done;
+        }
+        streamOver = true;
+      } catch {
+        streamOver = true;
+      }
+      expect(streamOver).toBe(true);
+    } finally {
+      // Aborting first keeps the cleanup from inheriting the hang this test is
+      // about: closing the client is what lets a server waiting on it return.
+      client.abort();
+      await shutdownApp.close();
+      process.env.DATABASE_PATH = previousDatabase;
+      process.env.GITHUB_WEBHOOK_SECRET = previousSecret;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

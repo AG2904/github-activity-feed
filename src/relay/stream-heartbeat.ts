@@ -1,4 +1,4 @@
-import { map, merge, of, switchMap, timer } from 'rxjs';
+import { ignoreElements, map, merge, of, switchMap, takeUntil, timer } from 'rxjs';
 import type { MessageEvent } from '@nestjs/common';
 import type { Observable } from 'rxjs';
 
@@ -41,10 +41,18 @@ export function heartbeatMs(): number {
  * writes a heartbeat and a stream gone quiet writes one per interval. The
  * `of(null)` starts the first timer, because a client connecting to a relay with
  * nothing to say has no event to restart it.
+ *
+ * It ends when the activity stream ends. `switchMap` alone would outlive its
+ * source — the timer it switches to never completes — and a heartbeat that
+ * outlives the broadcast is a connection the relay can never close, which is
+ * exactly the shutdown path this guards.
  */
 export function heartbeats<T>(activity: Observable<T>): Observable<MessageEvent> {
   return merge(of(null), activity).pipe(
     switchMap(() => timer(heartbeatMs(), heartbeatMs())),
+    // `ignoreElements` completes with the stream without emitting, so an event
+    // cancels nothing: only the end of the broadcast ends the heartbeats.
+    takeUntil(activity.pipe(ignoreElements())),
     map(() => ({ comment: HEARTBEAT_COMMENT })),
   );
 }

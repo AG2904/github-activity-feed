@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { OnModuleDestroy } from '@nestjs/common';
 import { Observable, Subject } from 'rxjs';
 import type { ActivityEvent } from './domain/activity-event.js';
 
@@ -12,7 +13,7 @@ import type { ActivityEvent } from './domain/activity-event.js';
  * past, and this is only what is happening now.
  */
 @Injectable()
-export class ActivityStream {
+export class ActivityStream implements OnModuleDestroy {
   private readonly events = new Subject<ActivityEvent>();
 
   /**
@@ -27,5 +28,17 @@ export class ActivityStream {
   /** The channel as a client sees it: read-only, one subscription per connection. */
   receive(): Observable<ActivityEvent> {
     return this.events.asObservable();
+  }
+
+  /**
+   * Closing the broadcast is what lets the process stop.
+   *
+   * An SSE client never ends its own connection, so closing the HTTP server
+   * would wait for a request that has no end. Completing the Subject ends every
+   * open stream first, and a `docker stop` becomes a clean shutdown instead of a
+   * ten-second wait followed by SIGKILL.
+   */
+  onModuleDestroy(): void {
+    this.events.complete();
   }
 }

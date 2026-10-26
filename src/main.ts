@@ -8,6 +8,11 @@ async function bootstrap() {
   loadEnvFile();
   const app = await NestFactory.create<NestExpressApplication>(AppModule, INGRESS_OPTIONS);
   configureIngress(app);
+  // SIGTERM is how a container asks the process to stop. Without this, Node's
+  // default handler ends the process where it stands: open streams are severed
+  // and the database is never closed. With it, `docker stop` runs the shutdown
+  // path the e2e suite exercises.
+  app.enableShutdownHooks();
   await app.listen(process.env.PORT ?? 3000);
 }
 await bootstrap();
