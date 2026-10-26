@@ -58,10 +58,10 @@ slots, not new ones.
 - 2026-10-23: Done. La paleta `soft reason` está en `cli-output-06`, con el registro
   de evidencia en
   [`docs/tickets/cli-output/06-the-palette-settles.md`](../../../docs/tickets/cli-output/06-the-palette-settles.md).
-  Cliente en verde (`go test -count=1 ./...`, 45.8 s) y relay sin tocar. La revisión
-  de dos ejes encontró prosa que no coincidía con los slots —el comentario de roles,
-  `amber` contra `yellow`, las menciones de "la única nota cálida" y la frase del
-  ticket 05 que ubicaba la rama "en el rol de lugar del repositorio"—; todo corregido
-  en `6f0290e`. El tono real queda para el paso manual: Windows Terminal y conhost
-  con VT. La rama del prototipo se conserva como registro (`prototype/palette-options`,
-  `ea100ee`).
+  Cliente en verde (`go test -count=1 ./...`, 45.8 s) y el relay sin cambios. La
+  revisión de dos ejes encontró prosa que no coincidía con los slots —el comentario de
+  roles, `amber` contra `yellow`, las menciones de "la única nota cálida" y la frase
+  del ticket 05 que ubicaba la rama "en el rol de lugar del repositorio"—; todo
+  corregido en `6f0290e`. El tono real queda para el paso manual: Windows Terminal y
+  conhost con VT. La rama del prototipo se conserva como registro
+  (`prototype/palette-options`, `ea100ee`).

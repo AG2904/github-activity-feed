@@ -21,4 +21,4 @@
 
   **Conflicto antes de la red.** `--json` + `--group-by-repo` sale con 2 y un mensaje en stderr sin llegar a pedir `/history`. `--group-by-repo` existe desde este ticket porque el criterio lo exige, pero todavía no agrupa: eso es el ticket 07.
 
-  **Revisión.** Se extrajo `emit` para que el loop de `watch` no mezcle transporte, parseo y dos políticas de salida (el próximo ticket lo vuelve a tocar), se protegió el cuerpo de `/history` del fake relay con el mutex del harness, y el caso JSON ahora descarta también frames `id:`-only, comentario, `event:`-only, `retry:` y JSON truncado, no sólo un cuerpo que no es JSON.
+  **Revisión.** Se extrajo `emit` para que el loop de `watch` no mezcle transporte, parseo y dos políticas de salida (el próximo ticket lo vuelve a tocar), se protegió el cuerpo de `/history` del fake relay con el mutex del harness, y el caso JSON ahora descarta también frames `id:`-only, comentario, `event:`-only, `retry:` y JSON truncado, no solo un cuerpo que no es JSON.

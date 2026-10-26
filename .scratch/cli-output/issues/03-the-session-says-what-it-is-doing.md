@@ -50,9 +50,9 @@ line of account. Three lines, all on stderr, all plain text.
   [`docs/tickets/cli-output/03-the-session-says-what-it-is-doing.md`](../../../docs/tickets/cli-output/03-the-session-says-what-it-is-doing.md).
   Cliente en verde (`go test -count=1 ./...`, 47.3 s) y relay 55/55. Dos cosas que
   aportó la revisión de dos ejes: el gating de la línea `connected` estaba sobre
-  intentos fallidos y no sobre la primera conexión *aceptada* —un relay que arranca
-  caído nunca recibía la línea afirmativa—, y la prueba de la cuenta de salida sólo
+  intentos fallidos y no sobre la primera conexión *aceptada* —un relay que se inicia
+  caído nunca recibía la línea afirmativa—, y la prueba de la cuenta de salida solo
   corría en Windows; ahora `endSession` tiene rama por plataforma (pipe roto en
   Windows, `os.Interrupt` en Unix). La rama no-Windows queda **sin ejecutar en esta
-  máquina** (no hay WSL): falta un `go test ./...` en Unix. El ejemplo del banner en
-  el spec se corrigió para coincidir con su prosa y con este ticket.
+  máquina** (no hay WSL): queda pendiente un `go test ./...` en Unix. El ejemplo del
+  banner en el spec se corrigió para coincidir con su prosa y con este ticket.

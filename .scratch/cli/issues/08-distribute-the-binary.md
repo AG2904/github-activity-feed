@@ -21,7 +21,7 @@
 
   **La versión dice de dónde vino el binario.** Sale del `package.json` más `git describe --always --dirty`, inyectada por `-ldflags` con el mismo mecanismo que la suite usa para la suya (`TestVersionIsInjectedAtBuildTime`). Con el árbol sucio aparece `-dirty`; sin git el build igual sale, con la versión del paquete.
 
-  **La verificación es archivo por archivo.** `go version -m` sobre los cuatro confirma `-trimpath=true`, `CGO_ENABLED=0` y el `GOOS`/`GOARCH` de cada uno; los cuatro llevan la estampa de la versión adentro; y el de windows se ejecutó y la imprimió. El único binario que no se puede correr acá es el de linux y los de macOS, y por eso la evidencia de esos tres es el contenido del archivo y no una ejecución.
+  **La verificación es archivo por archivo.** `go version -m` sobre los cuatro confirma `-trimpath=true`, `CGO_ENABLED=0` y el `GOOS`/`GOARCH` de cada uno; los cuatro llevan la estampa de la versión adentro; y el de windows se ejecutó y la imprimió. El único binario que no se puede correr aquí es el de linux y los de macOS, y por eso la evidencia de esos tres es el contenido del archivo y no una ejecución.
 
   **Este ticket no sumó casos a la suite, y está dicho por qué.** Su comportamiento no está del lado del límite del proceso —la seam acordada—, y la parte que sí (la inyección de la versión) ya estaba pinneada. Queda para la Fase 3 lo que falta de verdad: CI, publicación de los binarios y el README, que sigue sin existir.
 

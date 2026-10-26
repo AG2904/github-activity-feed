@@ -17,7 +17,7 @@ and where the runbooks are. Spanish, like the rest of the repository's documenta
 - [x] A quick start builds and runs the CLI: `npm run cli:build` (or `go build` in
       `client/`), `./feed watch --relay <url>`, and what to expect on stdout and
       stderr.
-- [x] The contract is linked, not duplicated: `ARCHITECTURE.md` Â§6 and the runbooks in
+- [x] The contract is linked, not duplicated: `ARCHITECTURE.md` §6 and the runbooks in
       `docs/` (`cli-testing.md`, `end-to-end-testing.md`, `exposing-the-relay.md`).
 - [x] The phase status is honest: Fases 1 and 2 complete, Fase 3 in progress, and
       what is out of scope.
@@ -27,16 +27,16 @@ and where the runbooks are. Spanish, like the rest of the repository's documenta
 ## Comments
 
 - 2026-10-23: `package.json` points its `homepage` at `README.md` and the file never
-  existed; `ARCHITECTURE.md` Â§9 records it as pending. This ticket closes that and
-  nothing else â€” no badges, no marketing.
+  existed; `ARCHITECTURE.md` §9 records it as pending. This ticket closes that and
+  nothing else — no badges, no marketing.
 - 2026-10-23: The README is Spanish because every other document in the repository is
   (the architecture, the runbooks, the ticket records); code and code comments stay
   English.
-- 2026-10-23: Done. El README estÃ¡ en `validation`, con el registro de evidencia en
+- 2026-10-23: Done. El README está en `validation`, con el registro de evidencia en
   [`docs/tickets/validation/02-the-readme.md`](../../../docs/tickets/validation/02-the-readme.md).
-  Se verificÃ³ siguiÃ©ndolo al pie de la letra: relay con `--env-file`, los dos caminos
-  de build y ejecuciÃ³n, el banner con `/stream`, y `/history` â†’ `[]`. Dos diferencias
-  con el texto del ticket, documentadas en el propio README: `npm start` a secas no
-  lee `.env` (el relay lee variables de entorno, no el archivo), y en Windows
-  `go build -o feed` produce un archivo sin extensiÃ³n que no se ejecuta; el README
+  Se verificó siguiéndolo al pie de la letra: relay con `--env-file`, los dos caminos
+  de build y ejecución, el banner con `/stream`, y `/history` → `[]`. Dos diferencias
+  con el texto del ticket, documentadas en el propio README: `npm start` por sí solo
+  no lee `.env` (el relay lee variables de entorno, no el archivo), y en Windows
+  `go build -o feed` produce un archivo sin extensión que no se ejecuta; el README
   usa `--env-file .env` y `-o feed.exe`.

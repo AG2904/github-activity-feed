@@ -43,6 +43,6 @@ human relative time and the blank line between events.
 - 2026-10-21: Done. La tarjeta, las etiquetas, `yesterday` y la separación están en
   `main`, con el registro de evidencia en
   [`docs/tickets/cli-output/01-the-feed-reads-as-a-card.md`](../../../docs/tickets/cli-output/01-the-feed-reads-as-a-card.md).
-  La suite del cliente quedó en verde (`go test ./...`, 38.2 s) y el relay en 55/55. El
-  ticket 02 toma desde acá: este cambio no trae la paleta por rol, sólo el peso del
-  título y su hyperlink.
+  La suite del cliente pasó a verde (`go test ./...`, 38.2 s) y el relay en 55/55. El
+  ticket 02 continúa desde ese punto: este cambio no trae la paleta por rol, solo el
+  peso del título y su hyperlink.
