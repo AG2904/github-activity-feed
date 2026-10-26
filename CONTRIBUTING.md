@@ -32,8 +32,8 @@ Ninguna rama se propone para integrar con una suite en rojo. Los dos conjuntos
 son independientes y se corren por separado:
 
 ```powershell
-npm.cmd run build; npm.cmd run lint; npm.cmd test   # relay
-npm.cmd run cli:lint; npm.cmd run cli:test          # CLI
+npm run build; npm run lint; npm test   # relay
+npm run cli:lint; npm run cli:test          # CLI
 ```
 
 Los comandos de arranque y de uso están en el [README](README.md); el recorrido
