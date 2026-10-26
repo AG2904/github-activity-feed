@@ -31,7 +31,7 @@ registro.
 
 ### client/internal/cli/stored.go (nuevo)
 
-- **`storedEvent`** (los bytes del relay + el evento parseado) se movió acá desde
+- **`storedEvent`** (los bytes del relay + el evento parseado) se movió aquí desde
   `backfill.go`: ahora dos comandos leen las mismas filas.
 - **`storedRows`** decodifica el cuerpo como `[]json.RawMessage`; **`storedHistory`**
   es `fetch` + `storedRows`, y lo usan el backfill y el reporte por igual.
@@ -41,12 +41,12 @@ registro.
 
 ### client/internal/cli/backfill.go
 
-- Se queda sólo con `backfill`: pide el historial, se queda con las primeras
+- Se queda solo con `backfill`: pide el historial, se queda con las primeras
   `limit` filas (las más nuevas) y las imprime al revés.
 
 ### client/internal/cli/cli.go
 
-- `history` y el comando homónimo salieron de acá: `cli.go` queda como dispatch,
+- `history` y el comando homónimo salieron de aquí: `cli.go` queda como dispatch,
   configuración del relay y el plumbing compartido (`endpoint`, `fetch`,
   `colorEnabled`, `newFlagSet`, `parseFlags`, `relayFallback`).
 
@@ -168,7 +168,7 @@ La suite del cliente tiene 46 casos, todos por el límite del proceso.
 - **`--json` filtra.** Es la corrección de la revisión de dos ejes, y la que más
   importaba: `history --json --user me` descargaba el historial de todos porque el
   `io.Copy` del cuerpo pasaba antes de cualquier filtro. En el stream, el ticket 05
-  ya había fijado que el filtro corre antes del payload crudo; acá se hace lo
+  ya había fijado que el filtro corre antes del payload crudo; aquí se hace lo
   mismo. El contrato de "bytes del relay" se mantiene evento por evento —orden de
   claves, `null`, milisegundos, ampersand— y el array es el sobre que agrega la
   CLI. Sin filtro, ese sobre coincide con el cuerpo que el relay sirvió, que es lo
@@ -183,8 +183,8 @@ La suite del cliente tiene 46 casos, todos por el límite del proceso.
   forma del reporte y hacen legible un bloque que, si no, es un muro de dos líneas.
   Pinneados por bytes en los tests.
 - **`--no-color` en `history`.** El ticket no lo pide, pero el spec dice que el
-  color se desactiva con `--no-color` o `NO_COLOR`; el reporte ahora pinta, así
-  que el flag tenía que existir también acá (y `NO_COLOR` ya funcionaba solo).
+  color se desactiva con `--no-color` o `NO_COLOR`; el reporte ahora usa color, así
+  que el flag tenía que existir también aquí (y `NO_COLOR` ya funcionaba solo).
 - **El agrupado vive en `render/grouped.go`.** Agrupar es darle forma a la
   presentación, igual que las dos líneas, y no toca flags; el CLI le entrega una
   lista finita y ya. Es también la razón por la que el agrupado no existe en el

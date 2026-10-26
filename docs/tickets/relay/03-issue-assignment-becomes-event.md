@@ -22,7 +22,7 @@ un evento se muda al dominio. Las decisiones quedaron asentadas en el spec
 - **`ActivityEventType`**: unión de literales (`pr.merged` | `issue.assigned`), no
   un `enum` de TypeScript — el enum emite código en runtime y obliga a importarlo
   en cada sitio.
-- **`IsoInstant`**: tipo nominal que sólo produce `isoInstant(...)`, normalizando
+- **`IsoInstant`**: tipo nominal que solo produce `isoInstant(...)`, normalizando
   a UTC con `toISOString()`. `when` deja de ser un `string` suelto: cualquiera
   pasaba el typecheck antes.
 - **`assignee`** pasa de `string` a `string | null`. La cadena vacía afirmaba "hay
@@ -87,7 +87,7 @@ oxlint          → 0 warnings, 0 errors
 - ✅ AC3: El evento almacenado nombra al actor (quien asignó) y al assignee (quien
   recibió), que en los fixtures son personas distintas.
 - ✅ AC4: La asignación se detecta desde el conjunto de assignees que el payload
-  reporta, nunca desde la acción sola: `opened` cuenta sólo si el issue ya viene
+  reporta, nunca desde la acción sola: `opened` cuenta solo si el issue ya viene
   asignado, y una acción que toca un issue ya asignado no cuenta.
 
 ## Decisiones y desvíos
@@ -113,7 +113,7 @@ oxlint          → 0 warnings, 0 errors
   spec pide para lo malformado. Es la misma clase de defecto que el ticket 02
   había encontrado y corregido a medias; se cerró el resto y se agregó el caso
   que lo prueba.
-- **Dos casos de fixture del ticket 04 se adelantaron acá** (issue sin label
+- **Dos casos de fixture del ticket 04 se adelantaron en este ticket** (issue sin label
   crítica, payload malformado), porque son el mismo predicado que este ticket
   introduce. El ticket 04 conserva el barrido negativo completo.
 
@@ -123,5 +123,5 @@ oxlint          → 0 warnings, 0 errors
   asignación. Este ticket lo aceptaba cuando el issue llegaba ya asignado, pero
   GitHub manda `assigned` y `opened` como dos deliveries del mismo hecho, y el
   relay lo guardaba dos veces. La creación sigue almacenándose, por su delivery
-  `assigned`. El resto de los criterios de acá siguen vigentes; ver
+  `assigned`. El resto de los criterios de este ticket siguen vigentes; ver
   `docs/tickets/relay/10-an-assignment-at-creation-counts-once.md`.

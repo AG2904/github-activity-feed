@@ -13,7 +13,7 @@ Ahora `opened` no es un trigger: la creación se captura por su delivery
 
 ### src/relay/github/issue-assignment.ts
 
-- **`isCriticalAssignment`** acepta sólo `action === 'assigned'`. `opened` deja de
+- **`isCriticalAssignment`** acepta solo `action === 'assigned'`. `opened` deja de
   calificar aunque el issue llegue con assignee.
 - **`toAssignmentEvent`** deja de leer `created_at`: todo evento que pasa el
   filtro es un `assigned`, y su `when` es `updated_at`.

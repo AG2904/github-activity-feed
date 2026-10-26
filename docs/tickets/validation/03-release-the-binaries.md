@@ -32,7 +32,7 @@ borraron el Release y el tag de prueba.
 
 - `FEED_VERSION` con `trim()`: si trae un valor, gana y se usa tal cual; si no, se
   conserva el camino anterior (`package.json` + `git describe`). Un override vacío o
-  sólo espacios no puede ganarle a la versión del paquete.
+  solo espacios no puede ganarle a la versión del paquete.
 
 ## Comportamiento resultante
 

@@ -6,7 +6,7 @@ La enmienda del 2026-10-22 del spec movió las etiquetas de la línea de context
 frente de la línea del título: el *por qué* llega antes que el *qué*. La segunda
 línea de la tarjeta pasó de `Título` a `[bug] Título` —un espacio después del
 corchete de cierre, en el orden que manda el evento— y la línea de contexto quedó
-sólo con `repository · tiempo`. El cambio se implementó con TDD sobre el seam de
+solo con `repository · tiempo`. El cambio se implementó con TDD sobre el seam de
 proceso (fixtures de stdout exacto primero) y la revisión de dos ejes agregó el pin
 que faltaba para una tarjeta merged con etiquetas.
 
@@ -15,7 +15,7 @@ que faltaba para una tarjeta merged con etiquetas.
 ### `client/internal/render/render.go`
 
 - `title()` ahora prefija las etiquetas: con `len(event.Labels) > 0` arma
-  `[bug, feedback]` pintado en rojo bold (`p.paint(red, …)`) más un espacio, y lo
+  `[bug, feedback]` mostrado en rojo bold (`p.paint(red, …)`) más un espacio, y lo
   antepone al título. Con color, el título sigue siendo bold y el hyperlink OSC 8
   —dos segmentos con un reset entre los dos, la pareja que resiste conhost—.
   Sin color, la línea arranca en `labels + event.Subject`.
@@ -23,7 +23,7 @@ que faltaba para una tarjeta merged con etiquetas.
   sin renglón extra.
 - `context()` perdió el segmento de etiquetas: queda `repository · tiempo`,
   unido por el `·` gris, con cada segmento omitido si el evento no lo lleva
-  (fila legacy con `repository: null` ⇒ sólo el tiempo). La capacidad del builder
+  (fila legacy con `repository: null` ⇒ solo el tiempo). La capacidad del builder
   bajó de 3 a 2.
 - Las tarjetas agrupadas pasan por el mismo `card()`: misma forma, sin el
   repositorio. `--json` no toca el renderer — byte-idéntico.
@@ -80,7 +80,7 @@ npm.cmd test              55/55 en 14.79s
 ```
 
 (`-count=1` importa: el paquete de e2e compila el binario en `TestMain`, y sin
-`-count=1` un cambio sólo en `internal/` devuelve resultados cacheados.)
+`-count=1` un cambio solo en `internal/` devuelve resultados cacheados.)
 
 TDD en orden: los fixtures se movieron primero y cuatro casos fallaron en rojo
 contra el binario viejo antes de tocar `render.go`. La revisión de dos ejes sobre
@@ -111,10 +111,10 @@ manual está en `docs/cli-testing.md`.
   sin espacio inicial, sin línea en blanco extra (caso propio
   `TestWatchStartsLineTwoAtTheTitleWhenTheEventHasNoLabels`).
 - ✅ AC3: la línea de contexto perdió las etiquetas y conserva `repository ·
-  tiempo`, omitiendo cada segmento ausente; legacy `repository: null` ⇒ sólo el
+  tiempo`, omitiendo cada segmento ausente; legacy `repository: null` ⇒ solo el
   tiempo.
 - ✅ AC4: con color, las etiquetas quedan rojo bold, el título sigue bold y es el
-  hyperlink OSC 8, y la línea cruda de la URL aparece sólo sin hyperlinks.
+  hyperlink OSC 8, y la línea cruda de la URL aparece solo sin hyperlinks.
 - ✅ AC5: las tarjetas del reporte agrupado llevan la misma forma —`[labels]
   título` sin repositorio—.
 - ✅ AC6: los fixtures sin color se movieron con la forma y nada más cambió;

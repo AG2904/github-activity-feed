@@ -21,7 +21,7 @@ filtro matchea los dos.
 - **`list(user?)`**: con filtro, `where: [{ actor: user }, { assignee: user }]` — el
   array es el `OR` de TypeORM, y el `order: { id: 'DESC' }` sigue en el mismo `find`,
   así que filtrar no cambia el orden en que se sirve el historial.
-- **La regla de "filtro ausente o vacío" vive acá**, en un solo lugar: es el servicio
+- **La regla de "filtro ausente o vacío" vive aquí**, en un solo lugar: es el servicio
   el que decide que no hay usuario por el cual acotar. El controlador no normaliza
   nada.
 - El JSDoc cita la story 15, para que el `OR` no parezca una generosidad sin motivo.
@@ -38,7 +38,7 @@ filtro matchea los dos.
   con nombre sobre él. Esto **revierte** una decisión registrada en el ticket 05, que
   había dejado dos formas parecidas separadas por "ganancia marginal"; con la tercera
   variante, la regla de tres que el ticket 06 ya había aplicado en los tests de
-  streaming pasa a aplicar acá. La reversión queda registrada, no silenciosa.
+  streaming pasa a aplicar aquí. La reversión queda registrada, no silenciosa.
 - **`openStream` y `streamConnections` subieron a nivel de módulo**, porque los
   bloques 06 y 07 los necesitan igual, y se cierran en el `afterAll` de afuera.
 - **`withUrl` pasó a llamarse `eventsAtUrl`**: el nombre viejo decía "URL" y la
@@ -47,7 +47,7 @@ filtro matchea los dos.
 
 ## Comportamiento resultante
 
-- `GET /history?user=maria.perez` devuelve sólo los eventos en los que
+- `GET /history?user=maria.perez` devuelve solo los eventos en los que
   `maria.perez` es el actor.
 - `GET /history?user=tomas.ferreira` devuelve la asignación aunque él no la haya
   hecho: es el assignee, o sea la persona de la que el evento trata.
@@ -81,7 +81,7 @@ Un commit en `main`: `feat: filter the audit history by the user involved
 
 - ✅ AC1: El endpoint de historial acepta un filtro por usuario (`?user=`).
 - ✅ AC2: Con eventos de dos actores distintos almacenados, filtrar por uno devuelve
-  sólo los de ese. Y son dos actores de verdad: `maria.perez` mergea, `lucia.gomez`
+  solo los de ese. Y son dos actores de verdad: `maria.perez` mergea, `lucia.gomez`
   asigna.
 - ✅ AC3: La respuesta filtrada usa el mismo shape que la sin filtrar y que el
   stream. Probado por igualdad profunda en las dos direcciones y para los dos tipos
@@ -100,7 +100,7 @@ Un commit en `main`: `feat: filter the audit history by the user involved
   case-insensitive, así que `?user=Maria.Perez` sobre un evento de `maria.perez`
   devuelve `[]` — indistinguible de "ese usuario no tiene eventos", que es justo el
   modo de falla silencioso que este repo viene cazando. Ninguna línea del spec exige
-  ni prohíbe el match case-insensitive (`Normalization` sólo dice que se usan los
+  ni prohíbe el match case-insensitive (`Normalization` solo dice que se usan los
   usernames), así que es una decisión de producto abierta: **queda sin fijar por
   test**, para no congelar una conducta que el dueño todavía no eligió. Si se quiere
   case-insensitive, es un cambio chico en la query y el test correspondiente.

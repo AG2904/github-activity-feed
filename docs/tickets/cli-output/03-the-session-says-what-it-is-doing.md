@@ -119,12 +119,12 @@ npm.cmd test              55/55 en 14.79s
 ```
 
 (`-count=1` importa: el paquete de e2e compila el binario en `TestMain`, y sin
-`-count=1` un cambio sólo en `internal/` devuelve resultados cacheados.)
+`-count=1` un cambio solo en `internal/` devuelve resultados cacheados.)
 
 TDD en orden: cada caso fue rojo primero contra el binario anterior. La revisión
 de dos ejes sobre la rama de integración aportó el bug del gating de `connected`
 (corregido, rojo primero), el pin de "lo que el filtro descartó no cuenta"
-(agregado), la cuenta de salida en ambas plataformas (la prueba de conteos sólo
+(agregado), la cuenta de salida en ambas plataformas (la prueba de conteos solo
 corría en Windows) y los refactors de standards citados arriba.
 
 **No verificado**: (1) la rama no-Windows de `endSession` —`os.Interrupt`— está

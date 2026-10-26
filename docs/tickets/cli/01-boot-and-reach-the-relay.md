@@ -4,7 +4,7 @@
 
 El walking skeleton de la Fase 2. `client/` pasa a ser un módulo Go con un
 binario `feed` que resuelve dónde está el relay, conoce su propia versión y
-despacha sus dos subcomandos, `watch` y `history`. Ninguno de los dos pinta nada
+despacha sus dos subcomandos, `watch` y `history`. Ninguno de los dos muestra nada
 todavía: el parser SSE y el renderer llegan con el ticket 02, y la forma del
 historial con el ticket 07. Lo que este ticket entrega, además del binario, es
 el harness de tests sobre el que se apoyan todos los tickets siguientes.
@@ -17,7 +17,7 @@ Un commit en `main`: `0d09d6b feat: boot the feed binary and reach the relay (ti
 
 - Módulo `github.com/AG2904/github-activity-feed/client` (ADR-0009), anidado
   dentro del monorepo.
-- Sin directiva `require`: el cliente se apoya sólo en la biblioteca estándar
+- Sin directiva `require`: el cliente se apoya solo en la biblioteca estándar
   (ADR-0008). Tampoco hay `go.sum`, porque no hay dependencias que fijar.
 
 ### client/cmd/feed/main.go
@@ -118,7 +118,7 @@ feed            -> ayuda en stderr (exit 2)
 - **`watch` sale con `1` si el relay no responde.** Es provisional: el ticket 04
   lo reemplaza por el reintento indefinido. Se prefirió no adelantar la política
   de reconexión en el skeleton.
-- **Ambos subcomandos descartan la respuesta.** El ticket 01 sólo prueba la seam
+- **Ambos subcomandos descartan la respuesta.** El ticket 01 solo prueba la seam
   de configuración y de red; renderizar sin el parser del ticket 02 o sin la
   forma del ticket 07 habría adelantado decisiones ajenas.
 - **El default se verifica leyendo el banner, no ocupando el puerto 3000.** Así

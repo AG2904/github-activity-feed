@@ -24,7 +24,7 @@ veces al stream aunque la respuesta HTTP no distinga los dos casos.
   emitir ni completar el canal.
 - **No guarda historia.** Un evento almacenado mientras no había nadie conectado no
   se reproduce cuando alguien se conecta después: el historial de auditoría es lo
-  que reconstruye el pasado, y esto es sólo lo que está pasando.
+  que reconstruye el pasado, y esto es solo lo que está pasando.
 
 ### src/relay/stream.controller.ts (nuevo)
 
@@ -40,12 +40,12 @@ veces al stream aunque la respuesta HTTP no distinga los dos casos.
 
 - **`store()` responde `boolean`** (si la fila se escribió). El ticket 05 lo dejaba
   devolviendo vacío a propósito, porque no había consumidor; el consumidor llegó
-  acá. El comentario del método dice ahora para qué sirve esa respuesta.
+  con este ticket. El comentario del método dice ahora para qué sirve esa respuesta.
 
 ### src/relay/webhook.controller.ts
 
 - Orquesta el caso de uso completo: verifica la firma, parsea, filtra, guarda y
-  —sólo si se guardó— entrega al stream comentando por qué.
+  —solo si se guardó— entrega al stream comentando por qué.
 
 ### src/relay/relay.module.ts
 

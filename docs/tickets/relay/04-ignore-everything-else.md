@@ -4,7 +4,7 @@
 
 El barrido negativo del filtro: todo webhook que no sea un merge a `main` o una
 asignación con label `bug`/`feedback` se acusa con éxito y se descarta, sin tocar
-el historial. Es la mitad donde un filtro se rompe en silencio — nada falla, sólo
+el historial. Es la mitad donde un filtro se rompe en silencio — nada falla, solo
 entra basura — así que se prueba como un set: cada fixture verifica el historial
 completo contra su estado previo, y un caso final postea el set entero y confirma
 que no entró ninguna fila y que ninguna se reemplazó.
@@ -129,8 +129,8 @@ quedó apuntando al mismo commit.
 
 ## Decisiones y desvíos
 
-- **El body ilegible se cerró acá, no se documentó como desviación.** La decisión
-  fue de Andrés (2026-10-16). El contrato elegido: un `2xx` sólo con firma
+- **El body ilegible se cerró en este ticket, no se documentó como desviación.**
+  La decisión fue de Andrés (2026-10-16). El contrato elegido: un `2xx` solo con firma
   verificada, y un body firmado que no se puede leer se acusa y se descarta. La
   alternativa era dejarlo en `400` y registrar la brecha; se descartó porque el
   registro del ticket 02 ya afirmaba "JSON malformado se ignora" — o sea que la
@@ -155,7 +155,7 @@ quedó apuntando al mismo commit.
   en `closed` y el relay hacía lo correcto con un fixture que probaba lo contrario
   de lo que decía. Lo destapó la aserción sobre las filas, no la del status.
 - **`ARCHITECTURE.md` (entonces `gitlab_feed_architecture.md`): §5 en el pase de docs, §7 y §9 en uno posterior.**
-  El plan de fases daba la idempotencia como "tickets 04–05" (es sólo el 05) y no
+  El plan de fases daba la idempotencia como "tickets 04–05" (es solo el 05) y no
   marcaba cerrado el ticket 03, así que se sincronizó en un commit aparte
   (`docs: sync the phase plan with what has landed`) en vez de mezclar la evidencia
   del ticket con la planificación del repo.

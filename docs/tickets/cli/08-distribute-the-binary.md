@@ -51,10 +51,10 @@ binarios de prueba desde cero.
   evento real llegar con el `watch` abierto, el backfill de la primera conexión, los
   filtros, los casos de tubería (`| tee`, `--json | jq`) y la consulta retrospectiva
   con `--group-by-repo`.
-- **Paso 7, la tabla**: qué probás / cómo / qué esperar, con el ticket de cada
+- **Paso 7, la tabla**: qué se prueba / cómo / qué esperar, con el ticket de cada
   comportamiento, igual que la tabla del relay. Los números de la suite (46 casos de
   la CLI, 54 del relay) y la forma de la estampa de versión son los de estas
-  corridas; el `<commit>` es el del árbol desde el que construiste, así que cambia
+  corridas; el `<commit>` es el del árbol desde el que se construyó, así que cambia
   con cada build y por eso va como plantilla y no como un hash literal.
 - La introducción aclara que el documento tiene dos mitades: el relay primero, el
   binario después.
@@ -125,7 +125,7 @@ Test Files  1 passed (1)
 Tests       54 passed (54)
 ```
 
-`gofmt -l .` sigue limpio (se verificó a mano; el AC sólo nombra `go vet` para
+`gofmt -l .` sigue limpio (se verificó a mano; el AC solo nombra `go vet` para
 `cli:lint`, así que no se cableó).
 
 ## Acceptance Criteria
@@ -157,7 +157,7 @@ Tests       54 passed (54)
 - **Los binarios viven en `client/dist/`**, que ya estaba ignorado por la regla
   `dist/` del `.gitignore` (la que usa el build de Nest). No hizo falta tocarlo, y
   nada construido se commitea.
-- **`cli:lint` es `go vet`, y sólo eso.** El AC lo nombra así; `gofmt -l` se sigue
+- **`cli:lint` es `go vet`, y solo eso.** El AC lo nombra así; `gofmt -l` se sigue
   verificando a mano y aparece en los registros de cada ticket. Si algún día molesta,
   el lugar es el script de npm, no el build.
 - **Este ticket no sumó casos a la suite.** No es una omisión: su comportamiento no
@@ -192,7 +192,7 @@ Dos ejes, y esta vez encontraron sobre todo documentación que mentía.
    los tickets 08 y 09 del relay.
 4. **El árbol citaba mal los ADR.** Le colgaba ADR-0008 a `cmd/feed/main.go` por la
    inyección de versión y el Ctrl-C, que ADR-0008 no dice; y ADR-0009 a
-   `internal/cli/`, cuando ADR-0009 es sólo el módulo anidado. Ahora 0009 está en
+   `internal/cli/`, cuando ADR-0009 es solo el módulo anidado. Ahora 0009 está en
    `client/` y 0008 en `internal/cli/`, que es donde el ticket 02 dice que va.
 5. **`feed --user` no es un comando** en tres lugares del documento; es
    `feed history --user`, como dice el glosario.

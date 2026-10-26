@@ -114,7 +114,7 @@ Un evento guardado con la columna llega al cable así:
 
 Un evento guardado **antes** de que la columna existiera llega con
 `"repository": null`, y eso es deliberado: recuperarlo del `url` es exactamente la
-derivación que este ticket vino a sacar, y sólo funcionaría para URLs de la forma que
+derivación que este ticket vino a sacar, y solo funcionaría para URLs de la forma que
 este relay produce.
 
 El filtro por repositorio es una igualdad exacta sobre `owner/name`. Combinado con el
@@ -196,7 +196,7 @@ habían hecho mergear ahí dos veces—. El filtro estaba bien; la expectativa e
   `null` era rellenar las filas viejas derivando el repositorio de su `url` al
   arrancar. Se descartó porque la derivación **no es total** —una `url` que no tenga la
   forma que este relay produce no da nada—, así que el campo tendría que ser nullable
-  igual, y el backfill sólo agregaría maquinaria sin quitar el caso nulo.
+  igual, y el backfill solo agregaría maquinaria sin quitar el caso nulo.
 - **Desvío: limpié la deuda de URLs de los fixtures.** AC5 obliga a que los fixtures
   sean coherentes, y un fixture cuyo `url` dice `Gitlab-notifier` y cuyo `repository`
   dice `github-activity-feed` sería internamente incoherente —un payload real tiene la

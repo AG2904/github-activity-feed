@@ -2,7 +2,7 @@
 
 ## Resumen
 
-La tarjeta de un merge deja de decir sólo dónde terminó el trabajo y dice de dónde
+La tarjeta de un merge deja de decir solo dónde terminó el trabajo y dice de dónde
 vino: `maria.perez merged fix/memory-leak into main`. El relay lee
 `pull_request.head.ref` —un dato que ya llegaba en el webhook y se descartaba— y
 `ActivityEvent` gana `branch` como noveno campo **nullable**, con las mismas
@@ -38,8 +38,8 @@ cliente sigue entregando el payload verbatim.
   sin rama, `assignee` en todo `pr.merged`).
 - `internal/render/render.go`: `headline()` arma `actor merged <branch> into main`
   cuando la rama existe y conserva `merged into main` cuando es `null` o vacía. La
-  rama se pinta con `p.paint(blue, …)` —rol de lugar, el mismo del repositorio—, y
-  la tarjeta agrupada pasa por el mismo `card()` (sólo se le quita el repositorio).
+  rama se muestra con `p.paint(blue, …)` —rol de lugar, el mismo del repositorio—, y
+  la tarjeta agrupada pasa por el mismo `card()` (solo se le quita el repositorio).
 - `test/e2e_test.go`: `mergedFrame` y los fixtures JSON con `branch`;
   `TestWatchPaintsAMergedPullRequest` pinea la frase con rama y
   `TestWatchRendersAMergeWithoutABranch` el fallback; grouped y backfill siguen
@@ -50,7 +50,7 @@ cliente sigue entregando el payload verbatim.
 - `docs/adr/0013-branch-as-a-field-of-the-event.md`: nuevo ADR que decide el
   noveno campo, sus opciones descartadas y sus consecuencias (legacy null,
   fallback, `--json`). ADR-0005 y ADR-0010 llevan el bloque "Amended by
-  ADR-0013" —sólo cambia el conteo de campos, el resto de cada decisión sigue
+  ADR-0013" —solo cambia el conteo de campos, el resto de cada decisión sigue
   en pie— y ADR-0013 apunta de vuelta.
 - `.scratch/cli-output/spec.md`: retira la nota "The event carries no branch",
   suma la fila azul de la rama a la tabla de la paleta, enmienda la cláusula de
@@ -131,7 +131,7 @@ paso manual queda en `docs/cli-testing.md`.
   `actor merged <branch> into main` cuando existe y `actor merged into main`
   cuando es null, sin segmento vacío ni `into main` duplicado.
 - ✅ AC4: la misma tarjeta aparece en vivo, backfill, `history` y el reporte
-  agrupado (que sigue omitiendo sólo el repositorio).
+  agrupado (que sigue omitiendo solo el repositorio).
 - ✅ AC5: `--json` lleva `branch` y `null` para legacy; el contrato y los
   fixtures se movieron juntos; el CLI sigue entregando los bytes verbatim y los
   demás campos conservan nombre, orden y valor.

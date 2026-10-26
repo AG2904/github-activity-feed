@@ -19,7 +19,7 @@ commit de este registro.
 ### client/internal/cli/backfill.go (nuevo)
 
 - **`backfill(ctx, url, out, limit)`** pide el historial, elige las filas más
-  recientes que este cliente muestra, las invierte y las pinta. `limit <= 0` no
+  recientes que este cliente muestra, las invierte y las muestra. `limit <= 0` no
   pide nada al relay. Devuelve si **leyó** un historial: un relay que no contesta
   deja la terminal como está y la conexión siguiente vuelve a preguntar, así que
   una CLI arrancada antes que su relay igual llena la terminal. Un historial que
@@ -67,7 +67,7 @@ commit de este registro.
 - `historyOf(payloads...)` arma el cuerpo de `/history` con los mismos payloads
   que un test mandaría por el stream: una sola fuente de bytes para los dos
   caminos (historia 18).
-- El harness registra la **request completa** (no sólo el path) y puede hacer que
+- El harness registra la **request completa** (no solo el path) y puede hacer que
   `/history` conteste 500 y después recuperarse. Lo primero es lo que permite
   constatar que la CLI sigue pidiendo un historial sin filtrar; lo segundo, que un
   relay que contesta mal no sea fatal y que el backfill se reintente.
@@ -87,7 +87,7 @@ $ feed watch --user maria.perez --backfill 2 --no-color
 AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/pull/42
 [issue.assigned] lucia.gomez Ship the onboarding checklist
 AG2904/github-activity-feed · maria.perez · 2h ago · https://github.com/AG2904/github-activity-feed/issues/7
-# a partir de acá el stream: cada evento nuevo aparece debajo
+# a partir de aquí el stream: cada evento nuevo aparece debajo
 
 $ feed watch --backfill 0
 # nada hasta que llegue un evento vivo
@@ -155,7 +155,7 @@ La suite del cliente tiene 36 casos, todos por el límite del proceso.
   es lo que recupera lo que se perdió. Con este orden la CLI nunca reimprime, y el
   hueco que deja (dos requests al relay, la primera vez) es de la misma clase que
   ya acepta en cada reconexión. La revisión lo marcó como defecto y se corrigió.
-- **Reintento de una lectura rechazada.** `filled` sólo se pone en verdadero
+- **Reintento de una lectura rechazada.** `filled` solo se pone en verdadero
   cuando un relay contesta con un historial. Un relay que estaba reiniciando
   cuando el desarrollador arrancó la CLI no le deja la terminal vacía para
   siempre: cuando vuelve, la conexión que lo alcanza llena la terminal. La
@@ -194,7 +194,7 @@ Dos rondas de revisión de dos ejes, y lo que cambió cada una.
 
 **Ronda 1 (sobre `c5daf20`).** *Spec*: el default de 10 no lo pinneaba ningún test
 —lo cierra uno con doce eventos guardados— y el harness no podía ver si la CLI
-angostaba la request del relay, porque registraba sólo el path (ahora registra la
+angostaba la request del relay, porque registraba solo el path (ahora registra la
 request completa y un caso exige un `/history` sin query). *Standards*: extraer el
 request compartido (`fetch`) y renombrar la fila a `storedEvent`.
 

@@ -1,4 +1,4 @@
-# Ticket 02 - Los eventos en vivo se pintan en la terminal
+# Ticket 02 - Los eventos en vivo se muestran en la terminal
 
 ## Resumen
 
@@ -17,7 +17,7 @@ ejes.
 
 ### client/internal/sse/sse.go (nuevo)
 
-- Parser SSE sobre `bufio`, sin dependencias (ADR-0007). `Next()` devuelve sólo
+- Parser SSE sobre `bufio`, sin dependencias (ADR-0007). `Next()` devuelve solo
   el payload de `data:`, uniendo data multilínea con `\n`.
 - Se ignoran `id:`, `event:`, `retry:`, los frames de comentario (incluido el
   heartbeat del relay) y cualquier campo desconocido. Un frame sin `data` se
@@ -48,9 +48,9 @@ ejes.
 ### client/internal/cli/cli.go
 
 - `watch` acepta `--relay` y `--no-color`, imprime el banner en stderr, abre
-  `GET /stream` y pinta cada payload parseable en stdout.
+  `GET /stream` y muestra cada payload parseable en stdout.
 - `colorEnabled` es la única regla de escapes: `--no-color`, luego `NO_COLOR`,
-  y sólo si stdout es una terminal. Un pipe nunca ve un escape.
+  y solo si stdout es una terminal. Un pipe nunca ve un escape.
 - `terminal_windows.go` usa `GetConsoleMode` y habilita
   `ENABLE_VIRTUAL_TERMINAL_PROCESSING` mediante `SetConsoleMode` (cargado con
   `NewLazyDLL`, porque `syscall` no lo expone y ADR-0008 prohíbe dependencias).
@@ -120,13 +120,13 @@ y se inspeccionaron los bytes, que muestran `\x1b[33m[issue.assigned]\x1b[0m`,
 
 ## Acceptance Criteria
 
-- ✅ AC1: `feed watch` mantiene abierta una conexión a `GET /stream` y pinta un evento cuando el relay escribe uno.
+- ✅ AC1: `feed watch` mantiene abierta una conexión a `GET /stream` y muestra un evento cuando el relay escribe uno.
 - ✅ AC2: Cada evento son dos líneas: badge, assignee cuando existe y subject; luego repositorio, actor y tiempo relativo.
 - ✅ AC3: En `issue.assigned` el assignee va en bold inmediatamente después del badge; en `pr.merged`, donde es `null`, el slot desaparece sin dejar hueco.
 - ✅ AC4: El subject lleva un hyperlink OSC 8 al `url` del evento.
-- ✅ AC5: Los escapes se usan sólo cuando stdout es una terminal. Con pipe, `NO_COLOR` o `--no-color` no hay escapes y el `url` crudo aparece en la segunda línea.
-- ✅ AC6: Se ignoran `id:`, `event:`, `retry:` y los frames de comentario; sólo los payloads de `data:` se convierten en eventos.
-- ✅ AC7: Un frame que no parsea - JSON truncado, cuerpo que no es JSON, frame sólo con `id:` - se descarta sin terminar el proceso.
+- ✅ AC5: Los escapes se usan solo cuando stdout es una terminal. Con pipe, `NO_COLOR` o `--no-color` no hay escapes y el `url` crudo aparece en la segunda línea.
+- ✅ AC6: Se ignoran `id:`, `event:`, `retry:` y los frames de comentario; solo los payloads de `data:` se convierten en eventos.
+- ✅ AC7: Un frame que no parsea - JSON truncado, cuerpo que no es JSON, frame solo con `id:` - se descarta sin terminar el proceso.
 
 ## Decisiones y límites conocidos
 
@@ -137,7 +137,7 @@ y se inspeccionaron los bytes, que muestran `\x1b[33m[issue.assigned]\x1b[0m`,
 - **Windows:** se habilita el procesamiento de terminal virtual antes de emitir
   escapes. Si el modo no se puede habilitar, `isTerminal` devuelve `false` y la
   salida va sin color antes que imprimir secuencias literales.
-- **El assignee se pinta sin `@`.** El ticket pide el assignee en bold, no una
+- **El assignee se muestra sin `@`.** El ticket pide el assignee en bold, no una
   decoración del login.
 - **`repository: null` omite el segmento.** El spec pide no inventar un nombre
   para una fila anterior a la columna (ADR-0010).

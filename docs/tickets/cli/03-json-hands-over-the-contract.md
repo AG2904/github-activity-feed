@@ -113,7 +113,7 @@ La suite del cliente tiene 13 casos, todos por el límite del proceso.
 - **`history --json` no agrega newline.** El cuerpo se copia tal cual; si el
   relay no termina en salto de línea, la salida tampoco.
 - **`--group-by-repo` todavía no agrupa.** Su comportamiento llega con el ticket
-  07; este ticket sólo define el conflicto con `--json`.
+  07; este ticket solo define el conflicto con `--json`.
 - **El color sigue sin test automatizado en terminal.** En este modo es
   estructuralmente imposible que aparezca un escape, porque el renderer no se
   invoca.

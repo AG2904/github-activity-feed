@@ -6,7 +6,7 @@ La CLI puede quedarse corriendo en una terminal durante días. `feed watch`
 reabre la conexión cuando el relay la corta, cuando deja de escribir, o cuando
 el relay ni siquiera está arriba al arrancar; espera con backoff exponencial y
 jitter, resetea el backoff cuando llega un evento, y sale limpio con Ctrl-C.
-stdout sigue llevando sólo eventos; stderr lleva el banner, un aviso por intento
+stdout sigue llevando solo eventos; stderr lleva el banner, un aviso por intento
 de reconexión y el aviso de recuperación.
 
 Dos commits en `main`: `68e10f9 feat: keep the feed alive through drops and
@@ -29,7 +29,7 @@ fatal (ticket 04)`, el segundo con las correcciones de la revisión de dos ejes.
   jitter de hasta un cuarto del escalón y se recorta al techo de 30s; un evento
   válido llama a `reset()` antes de calcular la espera siguiente. El ticket 05
   extendió ese reset a un evento que el filtro descarta: llegó, aunque no se
-  pinte.
+  muestre.
 - **`idleReader`.** Resetea un `time.Timer` en cada `Read` que devuelve bytes,
   no en cada evento. A los cinco minutos sin bytes cierra el cuerpo, la lectura
   se desbloquea y el loop reconecta con el motivo `no bytes for 5m0s`. Los
@@ -122,7 +122,7 @@ La suite del cliente tiene 19 casos, todos por el límite del proceso.
 - ✅ AC1: Una conexión caída se reabre sin intervención, con backoff exponencial de un segundo a un techo de treinta, con jitter.
 - ✅ AC2: El backoff se resetea apenas llega un evento.
 - ✅ AC3: Un stream que pasa más de cinco minutos en silencio se considera muerto y se reabre.
-- ✅ AC4: Cada intento de reconexión escribe exactamente una línea en stderr; stdout lleva sólo eventos.
+- ✅ AC4: Cada intento de reconexión escribe exactamente una línea en stderr; stdout lleva solo eventos.
 - ✅ AC5: Un relay inalcanzable al arrancar se reintenta indefinidamente, no es fatal.
 - ✅ AC6: Una reconexión no reproduce nada: ningún evento ya impreso se imprime de nuevo.
 - ✅ AC7: Ctrl-C sale con 0 después de hacer flush, sin stack trace.
@@ -131,7 +131,7 @@ La suite del cliente tiene 19 casos, todos por el límite del proceso.
 
 - **Un aviso de recuperación además del de intento.** El ticket pide una línea
   por intento; la historia 9 pide saber cuándo la conexión volvió. Son líneas
-  distintas y sólo la de intento cuenta para el criterio.
+  distintas y solo la de intento cuenta para el criterio.
 - **El backoff arranca en un segundo, no en medio.** El jitter suma hasta un
   cuarto del escalón en lugar de restar; el primer reintento espera 1–1.25s. En
   el techo, el clamp deja la espera en 30s exactos.

@@ -71,14 +71,14 @@ watching http://localhost:3000/stream · backfill 10 · user maria.perez · repo
   libre.
 - Enlaces y anclas: `ARCHITECTURE.md` §6 y §7 resuelven con el slug real; los cuatro
   runbooks y `.env.example` existen.
-- Español neutro: barrido de voseo (`tenés, querés, podés, hacé, usá, copiá, …`) sin
-  coincidencias; las construcciones son impersonales o con infinitivo.
+- Español neutro: barrido de voseo sobre las formas de segunda persona (`-és`, `-á`,
+  `-í`) sin coincidencias; las construcciones son impersonales o con infinitivo.
 - Revisión de dos ejes: se corrigieron el orden de los bloques del CLI (ya no se
   invoca `.\feed.exe` fuera de `client\`), el banner (faltaba `/stream`), la
   consistencia `npm`/`npm.cmd` y el estado de `ARCHITECTURE.md`.
 
 **No verificado**: el camino con `$PORT` distinto de 3000 (el puerto estaba libre y no
-se ejercitó), el render de un evento con webhook firmado real (sólo se observaron
+se ejercitó), el render de un evento con webhook firmado real (solo se observaron
 banner y `connected`), y las rutas de build/ejecución que no son Windows — están
 documentadas en los runbooks, fuera del alcance de este ticket.
 

@@ -3,7 +3,7 @@
 ## Resumen
 
 La tarjeta del ticket 01 estrena paleta: el color codifica roles —personas, estado,
-lugar y motivo— y no decora. Se aplicó con códigos de 16 colores, sólo en terminal, y
+lugar y motivo— y no decora. Se aplicó con códigos de 16 colores, solo en terminal, y
 sin que el significado dependa del color. La verificación es de bytes, porque el seam
 del proceso no puede observar un TTY; el paso manual quedó escrito en el runbook.
 
@@ -16,10 +16,10 @@ del proceso no puede observar un TTY; el paso manual quedó escrito en el runboo
   contexto.
 - `paint()` es la única puerta de los segmentos planos: con `Color` apagado devuelve el
   texto sin un byte de escape, así que un pipe no puede recibir color por accidente.
-- `headline()` pinta actor, verbo, conector y destino; `context()` pinta repositorio,
-  etiquetas, separadores y tiempo. El separador se pinta entero —`" · "`— para que el
-  gris no quede sólo en el glifo.
-- Un tipo de evento desconocido se pinta en gris, no en ámbar: no tiene rol propio y la
+- `headline()` colorea actor, verbo, conector y destino; `context()` colorea repositorio,
+  etiquetas, separadores y tiempo. El separador se colorea entero —`" · "`— para que el
+  gris no quede solo en el glifo.
+- Un tipo de evento desconocido va en gris, no en ámbar: no tiene rol propio y la
   regla del spec es que herede contexto hasta que se le asigne uno.
 - El gris es *bright black* (`90`), no *faint* (`2`), porque conhost con VT ignora
   *faint* y el contexto perdería su de-énfasis justo en la consola que la paleta toma
@@ -91,5 +91,5 @@ está escrito en `docs/cli-testing.md`.
   imprime con color.
 - ✅ AC4: ningún escape cuando stdout no es terminal, con `--no-color` o con `NO_COLOR`;
   los fixtures sin color siguen pasando sin cambios.
-- ✅ AC5: sólo códigos SGR de 16 colores; sin 256, emoji, box drawing ni reverse video.
+- ✅ AC5: solo códigos SGR de 16 colores; sin 256, emoji, box drawing ni reverse video.
 - ✅ AC6: `docs/cli-testing.md` documenta la verificación manual y el límite de la suite.

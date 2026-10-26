@@ -21,14 +21,14 @@ descartable con el gate de formato fallando.
 - **Job `client`**: `working-directory: client`, `actions/setup-go` con
   `go-version-file: client/go.mod`, build, `go vet`, un gate de `gofmt -l .` que falla
   si imprime algo, y `go test -count=1 ./...`.
-- El cache de Go es explícito y cachea **sólo** `~/.cache/go-build`: el módulo no
+- El cache de Go es explícito y cachea **solo** `~/.cache/go-build`: el módulo no
   tiene dependencias externas, así que `~/go/pkg/mod` siempre está vacío. La revisión
   sacó ese path y el `restore-keys`, que no aportaba a una clave derivada de un único
   archivo constante.
 - Comentarios en el archivo explican las dos decisiones que se leen como raras: por
   qué no se usa el cache nativo de setup-go (no hay `go.sum` que resolver) y por qué
   `-count=1` (la suite compila el binario en `TestMain`; sin él, Go devuelve
-  resultados cacheados cuando sólo cambió `internal/`).
+  resultados cacheados cuando solo cambió `internal/`).
 
 ## Comportamiento resultante
 

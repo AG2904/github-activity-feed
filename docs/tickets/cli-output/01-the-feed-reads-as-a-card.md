@@ -14,7 +14,7 @@ primero y la paleta por rol diferida al ticket 02, que está bloqueado por éste
 
 - La tarjeta se arma en `card()`: `headline()` (actor + verbo + destino), `title()`
   (título, negrita y OSC 8 cuando hay color) y `context()` (repositorio · etiquetas ·
-  tiempo). La URL pasa a ser una cuarta línea **sólo** cuando no hay hyperlink.
+  tiempo). La URL pasa a ser una cuarta línea **solo** cuando no hay hyperlink.
 - `headline()` traduce el tipo a vocabulario humano —`merged` / `assigned`— y deriva el
   destino del tipo, porque el evento no lleva rama. Un tipo desconocido cae a su valor
   crudo, sin destino, en vez de imprimir una línea vacía.
@@ -98,7 +98,7 @@ Revisión de dos ejes sobre el diff sin commitear, contra `019f76a`:
   excepción documentada.
 
 **No verificado**: el camino con `Color = true`. La suite corre con stdout en un pipe,
-así que sólo puede afirmar la ausencia de escapes; el hyperlink y la negrita del título
+así que solo puede afirmar la ausencia de escapes; el hyperlink y la negrita del título
 se verifican a mano cuando se implemente el ticket 02.
 
 ## Acceptance Criteria

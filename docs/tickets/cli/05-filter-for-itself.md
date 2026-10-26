@@ -4,7 +4,7 @@
 
 Cada desarrollador puede quedarse con sus propios eventos. `feed watch --user
 <login>` deja pasar los eventos donde ese login es el actor **o** el assignee;
-`--repo <owner/name>` deja pasar sólo los de ese repositorio, leído del campo
+`--repo <owner/name>` deja pasar solo los de ese repositorio, leído del campo
 `repository` del evento. Los dos flags se combinan con AND. El relay sigue
 mandando todo: el filtro es local, y un evento descartado no produce ninguna
 salida, tampoco en `--json`.
@@ -47,7 +47,7 @@ con las correcciones de la revisión de dos ejes.
   concentran la forma renderizada que varios tests esperaban repetida.
 - Casos nuevos: filtro por actor, por assignee, por repositorio (incluyendo un
   evento con `repository: null`), conjunción de los dos, case sensitivity, y
-  `--json --user` escribiendo sólo el payload que matchea.
+  `--json --user` escribiendo solo el payload que matchea.
 - El request del CLI sigue siendo `GET /stream` sin query: los casos mandan
   eventos que no matchean por el mismo stream y verifican que no aparezcan.
 
@@ -94,7 +94,7 @@ La suite del cliente tiene 25 casos, todos por el límite del proceso.
 ## Acceptance Criteria
 
 - ✅ AC1: `--user <login>` deja pasar un evento donde el usuario es el actor, uno donde es el assignee, y descarta el resto.
-- ✅ AC2: `--repo <owner/name>` deja pasar sólo los eventos cuyo repositorio coincide, y descarta el resto.
+- ✅ AC2: `--repo <owner/name>` deja pasar solo los eventos cuyo repositorio coincide, y descarta el resto.
 - ✅ AC3: El repositorio sale del campo `repository` del evento (ADR-0010); no hay derivación desde el `url`.
 - ✅ AC4: `--user` y `--repo` se combinan como conjunción.
 - ✅ AC5: El filtrado es local: la CLI sigue recibiendo todo lo que el relay emite, y un evento filtrado no produce ninguna salida.
@@ -107,9 +107,9 @@ La suite del cliente tiene 25 casos, todos por el límite del proceso.
   pase inadvertido. La regla está duplicada en TypeScript y Go; compartirla
   requeriría algo que ninguno de los dos contextos tiene hoy.
 - **Un evento filtrado resetea el backoff.** El criterio del ticket 04 dice que
-  el reset ocurre cuando llega un evento; el filtro decide qué se pinta, no qué
+  el reset ocurre cuando llega un evento; el filtro decide qué se muestra, no qué
   llegó. Se actualizó el registro del ticket 04 para reflejarlo.
-- **El filtro se aplica sólo a `watch`.** `history --user`/`--repo` son del
+- **El filtro se aplica solo a `watch`.** `history --user`/`--repo` son del
   ticket 07, aunque reutilizarán `activity.Filter`. *(Pagado en el ticket 07:
   `history` filtra con el mismo `activity.Filter` y la misma regla de aceptación
   que el stream, incluido `--json`.)*

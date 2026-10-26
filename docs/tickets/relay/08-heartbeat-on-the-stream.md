@@ -75,11 +75,11 @@ Sobre una conexión ociosa, el relay escribe:
 
 y nada más: sin `data:`, sin `event:`, sin `id:` y sin `retry:`. El `id:` no
 aparece porque el escritor de SSE de Nest saltea el contador cuando el mensaje es
-sólo un comentario (`isCommentOnly`), lo que importa: un `id:` en el frame haría
+solo un comentario (`isCommentOnly`), lo que importa: un `id:` en el frame haría
 que un cliente genérico lo leyera como `Last-Event-ID` y ofreciera reanudar desde
 ahí.
 
-Un cliente que sólo mira frames con `data:` no ve nada distinto de antes. Ese es
+Un cliente que solo mira frames con `data:` no ve nada distinto de antes. Ese es
 el punto: la liveness y el stream de eventos comparten la conexión sin que ninguno
 de los dos sepa del otro.
 
@@ -111,7 +111,7 @@ saltea el comentario sin romperse, igual que un cliente.
 
 - ✅ **AC1: el stream escribe un heartbeat a intervalo fijo cuando no se mandó
   ningún evento en ese intervalo.** El `switchMap` sobre el `timer` reinicia el
-  temporizador en cada evento, así que el heartbeat sólo aparece en la ociosidad.
+  temporizador en cada evento, así que el heartbeat solo aparece en la ociosidad.
   Cubierto por el caso nuevo, que afirma **dos** frames consecutivos: un heartbeat
   único pasaría un test de un solo frame y no probaría el intervalo.
 - ✅ **AC2: el heartbeat no llega a un cliente como ActivityEvent.** Viaja como
@@ -181,7 +181,7 @@ saltea el comentario sin romperse, igual que un cliente.
   fluyen eventos exige una ventana temporal, y un test así es una fábrica de
   flakiness: si el entorno se demora, el caso falla por razones que no son del
   código. Lo que sí está afirmado es la periodicidad (dos frames seguidos), que es
-  la parte que un test puede sostener. La decisión se registra acá en lugar de
+  la parte que un test puede sostener. La decisión se registra aquí en lugar de
   quedar implícita.
 - **El registro del ticket 06 no se reescribió**, aunque afirme que no hay
   heartbeat. Es evidencia de lo que ese ticket construyó y decidió, y era cierto

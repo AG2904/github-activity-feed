@@ -2,7 +2,7 @@
 
 ## Resumen
 
-La paleta deja de gritar. Los seis roles se pintan en peso regular (el viejo usaba
+La paleta deja de gritar. Los seis roles se muestran en peso regular (el viejo usaba
 `1;3x` en cuatro de ellos, que la mayoría de terminales renderiza como *bright*), el
 repositorio baja a gris de contexto, la rama conserva el azul de ubicación, el motivo
 pasa de rojo bold a magenta y el título sigue siendo el único bold de la tarjeta.
@@ -18,18 +18,18 @@ byte-idéntica.
 - Constantes por rol en peso regular: `cyan` (`36`), `green` (`32`), `yellow`
   (`33`), `blue` (`34`), `magenta` (`35`), `grey` (`90`), más `bold` (`1`) y
   `reset`. No queda ningún `1;3x`: el bold se reserva para el título.
-- El repositorio se pinta `grey`; la rama conserva `blue`; las etiquetas pasan de
+- El repositorio se muestra en `grey`; la rama conserva `blue`; las etiquetas pasan de
   `red` bold a `magenta`; el conector y el tiempo siguen en gris.
 - `paint()` sigue siendo la única puerta de los segmentos planos; el título arma su
   propio `bold` + OSC 8, como antes.
-- La revisión corrigió el comentario de roles (decía que sólo el título llevaba bold
+- La revisión corrigió el comentario de roles (decía que solo el título llevaba bold
   —el encabezado agrupado también—, llamaba "el lugar" al repositorio y afirmaba que
   magenta era la única nota cálida con amarillo en la paleta) y renombró `amber` a
   `yellow`, porque SGR `33` es amarillo y así lo nombran el spec y los docs.
 
 ### `client/internal/render/grouped.go`
 
-- Sólo el comentario: el encabezado agrupado sigue en bold + azul porque es la única
+- Solo el comentario: el encabezado agrupado sigue en bold + azul porque es la única
   estructura del documento, y el azul se explica como el rol de ubicación que la rama
   lleva en el feed. El código no cambió.
 
@@ -45,7 +45,7 @@ byte-idéntica.
   cantidad de tonos.
 - `docs/cli-testing.md`: tabla de roles y paso manual actualizados; la verificación de
   tono queda escrita para **Windows Terminal** y un **conhost con VT**, porque el tema
-  pinta el RGB y el binario sólo elige el rol. La nota del reporte agrupado aclara que
+  aplica el RGB y el binario solo elige el rol. La nota del reporte agrupado aclara que
   el gris del repositorio en la tarjeta y el azul bold del encabezado no se
   contradicen: uno es contexto, el otro es la estructura del documento.
 - `docs/cli-flow.md`: el párrafo de la paleta describe el mapeo nuevo.
@@ -79,7 +79,7 @@ go test -count=1 ./...    ok  github.com/AG2904/github-activity-feed/client/test
 ```
 
 La implementación corrió en 44.8 s y los fixes en 41.9 s; el gate final, tras el merge
-de fixes, en 45.8 s. El relay no se tocó (el cambio es sólo del cliente) y el diff de
+de fixes, en 45.8 s. El relay no se tocó (el cambio es solo del cliente) y el diff de
 la integración no incluye `src/` ni `client/internal/activity`.
 
 Revisión de dos ejes sobre la paleta: tabla del spec y código coinciden slot por slot,
@@ -90,7 +90,7 @@ del encabezado agrupado, la nota de supersesión en el spec, la justificación d
 `cli-flow`, más el propio ticket). Todo corregido en `6f0290e`.
 
 **No verificado**: la inspección visual de los tonos en una terminal real. La suite
-sólo puede afirmar la ausencia de escapes; el paso manual —Windows Terminal y conhost
+solo puede afirmar la ausencia de escapes; el paso manual —Windows Terminal y conhost
 con VT— quedó escrito en `docs/cli-testing.md` y lo corre una persona.
 
 ## Acceptance Criteria
@@ -99,7 +99,7 @@ con VT— quedó escrito en `docs/cli-testing.md` y lo corre una persona.
   assignee `36`, `merged` y `main` `32`, `assigned` `33`, rama `34`, repositorio y
   `·`/tiempo `90`, etiquetas `35`, título `1` + OSC 8—, con el comentario fechado que
   nombra el prototipo y explica el retiro de la tabla vieja.
-- ✅ AC2: `render.go` pinta los slots nuevos y nombra los constantes honestamente; no
+- ✅ AC2: `render.go` muestra los slots nuevos y nombra los constantes honestamente; no
   queda ningún `1;3x` y `paint()` sigue siendo la única puerta.
 - ✅ AC3: con color apagado la salida es byte-idéntica: los fixtures pineados pasan
   sin tocarse.
