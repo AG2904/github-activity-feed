@@ -20,7 +20,8 @@
     "cli:build": "cd client && node tools/build.mjs",
     "cli:dist": "cd client && node tools/build.mjs --dist",
     "cli:test": "cd client && go test -count=1 ./...",
-    "cli:lint": "cd client && go vet ./..."
+    "cli:lint": "cd client && go vet ./...",
+    "check:docs": "node tools/check-encoding.mjs"
   },
   "repository": {
     "type": "git",
