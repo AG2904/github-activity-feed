@@ -254,27 +254,32 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 
 ## 5. Mapa de archivos
 
-| Archivo | Responsabilidad | Quién lo llama |
+| Archivo | Rol | Lo llama |
 | --- | --- | --- |
-| `client/cmd/feed/main.go` | proceso: señales, `cli.Run`, código de salida | la shell |
-| `client/internal/cli/cli.go` | `Run`, despacho, `--version`, `colorEnabled` | `main.go` |
-| `client/internal/cli/watch.go` | `watch`, `stream`: el flujo de la conexión en vivo | `cli.Run` |
-| `client/internal/cli/history.go` | `history`: una request, filtro local y las tres salidas | `cli.Run` |
-| `client/internal/cli/emitter.go` | `emitter`: la política de salida (`accept`, `shown`, `paint`, `summarize`, `group`) | `watch`, `history`, `backfill` |
-| `client/internal/cli/retry.go` | `backoff` y `fatalError`: cuánto esperar y qué no se reintenta | `watch` |
-| `client/internal/cli/idle.go` | `idleReader` e `idleTimeout`: la conexión muda se da por muerta | `stream` |
-| `client/internal/cli/backfill.go` | `backfill`: la primera conexión llena la pantalla | `watch` |
-| `client/internal/cli/stored.go` | `storedHistory`, `storedRows`: el historial como filas crudas | `history`, `backfill` |
-| `client/internal/cli/terminal_windows.go` | `isTerminal` + VT en Windows | `colorEnabled` |
-| `client/internal/cli/terminal_other.go` | `isTerminal` en el resto | `colorEnabled` |
-| `client/internal/sse/sse.go` | `Reader.Next()`: frames SSE a payloads | `watch.go` |
-| `client/internal/activity/activity.go` | `Event`, `Parse()`, `Filter.Match()` | `watch.go`, `history.go` |
-| `client/internal/render/render.go` | `Palette.Event()`: la tarjeta de un evento | `watch.go`, `history.go` |
-| `client/internal/render/grouped.go` | `Palette.Grouped()`: el reporte por repositorio | `history.go` |
+| `client/cmd/feed/main.go` | el borde del proceso: señales y código de salida | la shell |
+| `client/internal/cli/cli.go` | el despacho, los códigos de salida y la regla de color | el proceso |
+| `client/internal/cli/watch.go` | la conexión en vivo: abrir, leer, pintar, reconectar | el despacho |
+| `client/internal/cli/history.go` | la consulta puntual: una request y sus tres salidas | el despacho |
+| `client/internal/cli/emitter.go` | la política de salida: qué se muestra y cómo se escribe | los dos comandos y el backfill |
+| `client/internal/cli/retry.go` | la política de reconexión: cuánto esperar, qué no se reintenta | la conexión en vivo |
+| `client/internal/cli/idle.go` | la guarda de silencio: la conexión muda se da por muerta | la conexión en vivo |
+| `client/internal/cli/backfill.go` | la primera conexión llena la pantalla | la conexión en vivo |
+| `client/internal/cli/stored.go` | el historial como filas crudas | los dos caminos de lectura |
+| `client/internal/cli/terminal_windows.go` | la terminal en Windows: es consola, y aprende escapes | la regla de color |
+| `client/internal/cli/terminal_other.go` | la terminal en el resto | la regla de color |
+| `client/internal/sse/sse.go` | frames SSE a payloads | la conexión en vivo |
+| `client/internal/activity/activity.go` | el contrato: el evento y su filtro | los dos comandos |
+| `client/internal/render/render.go` | la tarjeta de un evento | los dos comandos |
+| `client/internal/render/grouped.go` | el reporte por repositorio | el historial |
 | `client/test/main_test.go` | compila los dos binarios con `-ldflags` | `go test` |
-| `client/test/harness_test.go` | `fakeRelay`: `httptest` con `/stream` y `/history` | toda la suite |
+| `client/test/harness_test.go` | el relay falso de la suite | toda la suite |
 | `client/test/e2e_test.go` | los casos, siempre a través del binario | `go test` |
-| `client/tools/build.mjs` | `cli:build` y `cli:dist`: los cuatro binarios con versión | `npm run` |
+| `client/tools/build.mjs` | los cuatro binarios con versión | `npm run` |
+
+La tabla dice **qué es** cada archivo, no qué funciones tiene. Los nombres viven
+en el código, que es la única fuente que no se puede desincronizar; esto es el
+mapa para saber dónde mirar sin abrir cinco archivos. Si un archivo cambia de rol,
+cambia la fila; si solo cambia un nombre adentro, la tabla no se toca.
 
 ## 6. Los invariantes que no se ven en el código
 
