@@ -1,10 +1,12 @@
 # GitHub Activity Feed
 
-[![CI](https://github.com/AG2904/github-activity-feed/actions/workflows/ci.yml/badge.svg)](https://github.com/AG2904/github-activity-feed/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/AG2904/github-activity-feed)](https://github.com/AG2904/github-activity-feed/releases)
-[![Go](https://img.shields.io/github/go-mod/go-version/AG2904/github-activity-feed/client)](client/go.mod)
+[![Go](https://img.shields.io/badge/go-1.27-00ADD8?logo=go&logoColor=white)](client/go.mod)
 [![Node](https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white)](package.json)
-[![License](https://img.shields.io/github/license/AG2904/github-activity-feed)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+<!-- Los badges de CI y de release vuelven cuando el repositorio sea público:
+     shields y el endpoint de Actions no resuelven contra un repo privado, así
+     que hoy mostrarían "repo not found" a cualquiera que abra el README. -->
 
 ![El CLI en acción: feed history --group-by-repo devuelve el historial agrupado y feed watch imprime una asignación apenas llega](docs/demo/demo.gif)
 
