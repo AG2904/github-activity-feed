@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CLI en Go: arquitectura actual (Fase 2 cerrada)",
+    "locale": "es",
+    "output": ".archify/architecture-cli-20261026-184344/cli.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AG2904/github-activity-feed.git",
+      "provider": "github",
+      "revision": "aed90439587e64de646d7aa91b43e0fd2489bf33"
+    }
+  },
+  "components": [
+    {
+      "id": "dev",
+      "type": "external",
+      "label": "Desarrollador",
+      "sublabel": "terminal del dev",
+      "pos": [40, 40],
+      "size": [170, 60],
+      "sources": [{ "path": "docs/cli-flow.md", "line": 26, "end_line": 27 }]
+    },
+    {
+      "id": "feed",
+      "type": "backend",
+      "label": "proceso feed",
+      "sublabel": "cmd/feed/main.go · señales",
+      "tag": "Ctrl-C = salida 0",
+      "pos": [40, 160],
+      "size": [210, 64],
+      "sources": [{ "path": "client/cmd/feed/main.go", "line": 21, "end_line": 33 }]
+    },
+    {
+      "id": "dispatch",
+      "type": "backend",
+      "label": "cli.Run",
+      "sublabel": "subcomando + flags",
+      "tag": "uso inválido = 2",
+      "pos": [40, 290],
+      "size": [210, 64],
+      "sources": [
+        { "path": "client/internal/cli/cli.go", "line": 21, "end_line": 57 },
+        { "path": "client/internal/cli/cli.go", "line": 87, "end_line": 103 }
+      ]
+    },
+    {
+      "id": "watch",
+      "type": "backend",
+      "label": "watch",
+      "sublabel": "conexión sostenida",
+      "tag": "idle 5 min · backoff 1 → 30 s",
+      "pos": [40, 420],
+      "size": [210, 70],
+      "sources": [
+        { "path": "client/internal/cli/watch.go", "line": 25, "end_line": 130 },
+        { "path": "client/internal/cli/watch.go", "line": 132, "end_line": 167 }
+      ]
+    },
+    {
+      "id": "sse",
+      "type": "backend",
+      "label": "sse.Reader",
+      "sublabel": "frames a payloads",
+      "tag": "sólo data: · ignora id/event",
+      "pos": [40, 560],
+      "size": [210, 70],
+      "sources": [{ "path": "client/internal/sse/sse.go", "line": 30, "end_line": 66 }]
+    },
+    {
+      "id": "activity",
+      "type": "backend",
+      "label": "activity",
+      "sublabel": "Event · Parse · Filter.Match",
+      "tag": "9 campos · filtro local",
+      "pos": [40, 700],
+      "size": [210, 70],
+      "sources": [
+        { "path": "client/internal/activity/activity.go", "line": 31, "end_line": 41 },
+        { "path": "client/internal/activity/activity.go", "line": 55, "end_line": 67 },
+        { "path": "client/internal/activity/activity.go", "line": 72, "end_line": 100 }
+      ]
+    },
+    {
+      "id": "emitter",
+      "type": "backend",
+      "label": "emitter",
+      "sublabel": "qué se muestra y cómo",
+      "tag": "accept · paint · group · summarize",
+      "pos": [40, 840],
+      "size": [210, 70],
+      "sources": [
+        { "path": "client/internal/cli/emitter.go", "line": 17, "end_line": 29 },
+        { "path": "client/internal/cli/emitter.go", "line": 51, "end_line": 57 },
+        { "path": "client/internal/cli/emitter.go", "line": 79, "end_line": 104 }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "backend",
+      "label": "render",
+      "sublabel": "tarjeta · reporte agrupado",
+      "tag": "dos líneas · ANSI/OSC 8",
+      "pos": [40, 980],
+      "size": [210, 70],
+      "sources": [
+        { "path": "client/internal/render/render.go", "line": 51, "end_line": 81 },
+        { "path": "client/internal/render/grouped.go", "line": 26, "end_line": 45 }
+      ]
+    },
+    {
+      "id": "stdout",
+      "type": "external",
+      "label": "stdout",
+      "sublabel": "eventos y nada más",
+      "tag": "ANSI sólo si es consola",
+      "pos": [40, 1120],
+      "size": [200, 56],
+      "sources": [{ "path": "client/internal/cli/emitter.go", "line": 79, "end_line": 104 }]
+    },
+    {
+      "id": "history",
+      "type": "backend",
+      "label": "feed history",
+      "sublabel": "una request, tres salidas",
+      "tag": "--json · --group-by-repo",
+      "pos": [340, 290],
+      "size": [210, 70],
+      "sources": [{ "path": "client/internal/cli/history.go", "line": 17, "end_line": 93 }]
+    },
+    {
+      "id": "stored",
+      "type": "backend",
+      "label": "stored rows",
+      "sublabel": "storedHistory · storedRows",
+      "tag": "bytes crudos del relay",
+      "pos": [660, 290],
+      "size": [190, 70],
+      "sources": [{ "path": "client/internal/cli/stored.go", "line": 22, "end_line": 42 }]
+    },
+    {
+      "id": "relay",
+      "type": "external",
+      "label": "relay",
+      "sublabel": "GET /stream · GET /history",
+      "tag": "broadcast: manda todo",
+      "pos": [660, 440],
+      "size": [200, 64],
+      "sources": [
+        { "path": "src/relay/stream.controller.ts", "line": 30, "end_line": 38 },
+        { "path": "src/relay/history.controller.ts", "line": 17, "end_line": 23 }
+      ]
+    },
+    {
+      "id": "backfill",
+      "type": "backend",
+      "label": "backfill",
+      "sublabel": "la primera pantalla",
+      "tag": "hasta --backfill n · oldest first",
+      "pos": [340, 560],
+      "size": [210, 70],
+      "sources": [{ "path": "client/internal/cli/backfill.go", "line": 18, "end_line": 44 }]
+    }
+  ],
+  "connections": [
+    { "id": "dev-runs-feed", "from": "dev", "to": "feed", "label": "feed watch", "variant": "emphasis" },
+    { "id": "main-calls-run", "from": "feed", "to": "dispatch", "label": "cli.Run(os.Args[1:])", "variant": "emphasis" },
+    { "id": "dispatch-watch", "from": "dispatch", "to": "watch", "label": "watch()" },
+    { "id": "dispatch-history", "from": "dispatch", "to": "history", "label": "history()" },
+    { "id": "watch-backfill", "from": "watch", "to": "backfill", "label": "primera conexión", "fromSide": "right", "toSide": "left" },
+    { "id": "history-reads", "from": "history", "to": "stored", "label": "storedHistory()", "fromSide": "right", "toSide": "left" },
+    { "id": "backfill-reads", "from": "backfill", "to": "stored", "label": "storedHistory()", "fromSide": "right", "toSide": "left" },
+    { "id": "stored-requests", "from": "stored", "to": "relay", "label": "GET /history", "fromSide": "bottom", "toSide": "top" },
+    { "id": "relay-stream", "from": "relay", "to": "watch", "label": "SSE · data:", "variant": "emphasis", "fromSide": "left", "toSide": "right" },
+    { "id": "watch-reads", "from": "watch", "to": "sse", "label": "Reader.Next()" },
+    { "id": "sse-payload", "from": "sse", "to": "activity", "label": "payload (data:)", "variant": "emphasis" },
+    { "id": "activity-emits", "from": "activity", "to": "emitter", "label": "accept()", "variant": "emphasis" },
+    { "id": "emitter-renders", "from": "emitter", "to": "render", "label": "paint / group" },
+    { "id": "render-writes", "from": "render", "to": "stdout", "label": "tarjeta / reporte", "variant": "emphasis" },
+    { "id": "history-shows", "from": "history", "to": "emitter", "label": "shown()", "fromSide": "left", "toSide": "top" },
+    { "id": "backfill-paints", "from": "backfill", "to": "emitter", "label": "paint()", "fromSide": "left", "toSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "Contrato de proceso",
+      "items": [
+        "stdout lleva eventos y nada más; banner, avisos y errores van a stderr",
+        "El interior nunca toca os.Args ni os.Exit: cli.Run recibe args y writers y devuelve el código",
+        "Salidas: 0 éxito o Ctrl-C, 1 error de runtime, 2 error de uso"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "La conexión la sostiene el cliente",
+      "items": [
+        "El parser SSE es propio (ADR-0007): sólo data:, multilínea unida con salto de línea",
+        "El id: de Nest se ignora: arranca en 0 y no es una posición de reanudación",
+        "El heartbeat del relay es un comentario SSE; idle.go da la conexión muda por muerta a los 5 min",
+        "retry.go: backoff 1 → 30 s con jitter, reset cuando llegó un evento válido"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Dos caminos, una sola política",
+      "items": [
+        "emitter.go concentra accept, paint, group y el resumen de la sesión: watch, history y backfill no pueden divergir",
+        "El filtro local es actor o assignee, la misma regla que /history?user= (ADR-0001)",
+        "--json escribe los bytes del relay; re-serializar cambiaría claves, nulls y milisegundos",
+        "El evento tiene 9 campos: branch es nullable y se agregó en ADR-0013"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Distribución",
+      "items": [
+        "CI y release viven en .github/workflows; los binarios salen con npm run cli:dist",
+        "Dockerfile y docker-compose.yml corren las dos mitades; compose publica el relay en 127.0.0.1 (ADR-0014)",
+        "El CLI es estático y sin dependencias (ADR-0008); el módulo Go está anidado en client/ (ADR-0009)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "CLI en Go: cada archivo y la llamada que lo cruza",
+    "locale": "es",
+    "output": ".archify/architecture-file-calls-cli-20261026-185500/file-calls.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/AG2904/github-activity-feed.git",
+      "provider": "github",
+      "revision": "aed90439587e64de646d7aa91b43e0fd2489bf33"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [40, 40],
+    "cols": 3,
+    "gapX": 150,
+    "gapY": 95,
+    "cellW": 230,
+    "cellH": 106
+  },
+  "components": [
+    {
+      "id": "main",
+      "type": "external",
+      "label": "cmd/feed/main.go",
+      "sublabel": "señales · os.Exit",
+      "tag": "el borde del proceso",
+      "row": 0,
+      "col": 0,
+      "sources": [{ "path": "client/cmd/feed/main.go", "line": 21, "end_line": 33 }]
+    },
+    {
+      "id": "cli",
+      "type": "backend",
+      "label": "cli.go",
+      "sublabel": "Run · flags · fetch",
+      "tag": "despacho y códigos",
+      "row": 1,
+      "col": 0,
+      "sources": [{ "path": "client/internal/cli/cli.go", "line": 21, "end_line": 57 }]
+    },
+    {
+      "id": "watch",
+      "type": "backend",
+      "label": "watch.go",
+      "sublabel": "watch · stream",
+      "tag": "el loop de la conexión",
+      "row": 2,
+      "col": 0,
+      "sources": [{ "path": "client/internal/cli/watch.go", "line": 25, "end_line": 130 }]
+    },
+    {
+      "id": "history",
+      "type": "backend",
+      "label": "history.go",
+      "sublabel": "history · writeArray",
+      "tag": "una request, tres salidas",
+      "row": 2,
+      "col": 1,
+      "sources": [{ "path": "client/internal/cli/history.go", "line": 17, "end_line": 93 }]
+    },
+    {
+      "id": "backfill",
+      "type": "backend",
+      "label": "backfill.go",
+      "sublabel": "backfill",
+      "tag": "la primera pantalla",
+      "row": 3,
+      "col": 0,
+      "sources": [{ "path": "client/internal/cli/backfill.go", "line": 18, "end_line": 44 }]
+    },
+    {
+      "id": "sse",
+      "type": "backend",
+      "label": "sse.go",
+      "sublabel": "NewReader · Next",
+      "tag": "sólo data:",
+      "row": 3,
+      "col": 1,
+      "sources": [{ "path": "client/internal/sse/sse.go", "line": 30, "end_line": 66 }]
+    },
+    {
+      "id": "stored",
+      "type": "backend",
+      "label": "stored.go",
+      "sublabel": "storedHistory · storedRows",
+      "tag": "bytes crudos",
+      "row": 3,
+      "col": 2,
+      "sources": [{ "path": "client/internal/cli/stored.go", "line": 22, "end_line": 42 }]
+    },
+    {
+      "id": "idle",
+      "type": "backend",
+      "label": "idle.go",
+      "sublabel": "newIdleReader · Read",
+      "tag": "silencio = muerte",
+      "row": 4,
+      "col": 0,
+      "sources": [{ "path": "client/internal/cli/idle.go", "line": 35, "end_line": 68 }]
+    },
+    {
+      "id": "retry",
+      "type": "backend",
+      "label": "retry.go",
+      "sublabel": "backoff · fatalError",
+      "tag": "1 → 30 s con jitter",
+      "row": 4,
+      "col": 1,
+      "sources": [{ "path": "client/internal/cli/retry.go", "line": 19, "end_line": 40 }]
+    },
+    {
+      "id": "terminal",
+      "type": "backend",
+      "label": "terminal_*.go",
+      "sublabel": "isTerminal por build tags",
+      "tag": "VT en Windows",
+      "row": 4,
+      "col": 2,
+      "sources": [
+        { "path": "client/internal/cli/terminal_windows.go", "line": 21, "end_line": 25 },
+        { "path": "client/internal/cli/terminal_other.go", "line": 9, "end_line": 11 }
+      ]
+    },
+    {
+      "id": "emitter",
+      "type": "backend",
+      "label": "emitter.go",
+      "sublabel": "accept · shown · paint · group",
+      "tag": "la política de salida",
+      "row": 5,
+      "col": 1,
+      "sources": [{ "path": "client/internal/cli/emitter.go", "line": 17, "end_line": 29 }]
+    },
+    {
+      "id": "activity",
+      "type": "backend",
+      "label": "activity.go",
+      "sublabel": "Event · Parse · Match",
+      "tag": "9 campos",
+      "row": 6,
+      "col": 0,
+      "sources": [{ "path": "client/internal/activity/activity.go", "line": 31, "end_line": 41 }]
+    },
+    {
+      "id": "render",
+      "type": "backend",
+      "label": "render.go",
+      "sublabel": "Palette.Event",
+      "tag": "la tarjeta",
+      "row": 6,
+      "col": 1,
+      "sources": [{ "path": "client/internal/render/render.go", "line": 51, "end_line": 81 }]
+    },
+    {
+      "id": "grouped",
+      "type": "backend",
+      "label": "grouped.go",
+      "sublabel": "Palette.Grouped",
+      "tag": "el reporte por repo",
+      "row": 6,
+      "col": 2,
+      "sources": [{ "path": "client/internal/render/grouped.go", "line": 26, "end_line": 45 }]
+    }
+  ],
+  "connections": [
+    { "id": "main-cli", "from": "main", "to": "cli", "label": "cli.Run", "variant": "emphasis" },
+    { "id": "cli-watch", "from": "cli", "to": "watch", "label": "watch()" },
+    { "id": "cli-history", "from": "cli", "to": "history", "label": "history()" },
+    { "id": "cli-terminal", "from": "cli", "to": "terminal", "label": "isTerminal()" },
+    { "id": "watch-backfill", "from": "watch", "to": "backfill", "label": "backfill()" },
+    { "id": "watch-sse", "from": "watch", "to": "sse", "label": "NewReader · Next", "variant": "emphasis" },
+    { "id": "watch-emitter", "from": "watch", "to": "emitter", "label": "accept · paint" },
+    { "id": "watch-idle", "from": "watch", "to": "idle", "label": "newIdleReader" },
+    { "id": "watch-retry", "from": "watch", "to": "retry", "label": "delay · resolved" },
+    { "id": "backfill-stored", "from": "backfill", "to": "stored", "label": "storedHistory()" },
+    { "id": "backfill-emitter", "from": "backfill", "to": "emitter", "label": "shown · paint" },
+    { "id": "history-stored", "from": "history", "to": "stored", "label": "storedHistory()" },
+    { "id": "history-emitter", "from": "history", "to": "emitter", "label": "shown · group" },
+    { "id": "stored-cli", "from": "stored", "to": "cli", "label": "fetch · endpoint" },
+    { "id": "emitter-activity", "from": "emitter", "to": "activity", "label": "Parse · Match", "variant": "emphasis" },
+    { "id": "emitter-render", "from": "emitter", "to": "render", "label": "Palette.Event", "variant": "emphasis" },
+    { "id": "emitter-grouped", "from": "emitter", "to": "grouped", "label": "Palette.Grouped" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Dos caminos de lectura",
+      "items": [
+        "watch abre /stream y reconecta; history hace una sola request y termina",
+        "Los dos pasan por stored para el historial y por emitter para decidir qué se escribe",
+        "El backfill corre antes de la primera conexión y usa las mismas piezas"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Un solo emitter",
+      "items": [
+        "accept define qué es válido y qué se muestra: el vivo y el reporte no pueden discrepar",
+        "paint escribe la tarjeta; group delega en render.Palette.Grouped",
+        "El resumen de la sesión (total, merged, assigned) se cuenta en el mismo lugar"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Mecanismos de la conexión",
+      "items": [
+        "idle.go envuelve el body y da la conexión muda por muerta a los 5 minutos",
+        "retry.go separa el error fatal del reintentable y calcula el backoff",
+        "terminal_*.go resuelve isTerminal con build tags: consola real o nada de ANSI"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Sin dependencias",
+      "items": [
+        "go.mod no tiene un solo require: sólo la biblioteca estándar (ADR-0008)",
+        "El módulo vive en client/: los comandos de Go corren desde ahí (ADR-0009)",
+        "El binario se construye con CGO_ENABLED=0 y la versión entra por -ldflags"
+      ]
+    }
+  ]
+}

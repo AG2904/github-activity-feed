@@ -10,9 +10,9 @@ El relay está del otro lado del cable y tiene su propio mapa:
 
 Si se prefiere ver antes de leer, hay tres diagramas versionados:
 
-- `.archify/architecture-cli-20261019-141819/cli.html` — los roles del CLI y cómo se
+- `.archify/architecture-cli-20261026-184344/cli.html` — los roles del CLI y cómo se
   conectan con el relay.
-- `.archify/architecture-file-calls-cli-20261019-141819/file-calls.html` — cada
+- `.archify/architecture-file-calls-cli-20261026-185500/file-calls.html` — cada
   archivo de `client/` como nodo y cada flecha con el nombre de la llamada que la
   cruza.
 - `.archify/sequence-cli-relay-20261025-122635/cli-relay.html` — la secuencia de

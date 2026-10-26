@@ -100,6 +100,7 @@ Ambos eventos **se pueden expresar** en Actions (`pull_request: types: [closed]`
 github-activity-feed/
 ├── src/                       # Relay (NestJS + SQLite)
 │   ├── app.module.ts          # wiring + fail-fast del secreto de entorno
+│   ├── env.ts                 # lectura y validación del entorno
 │   ├── main.ts
 │   └── relay/                 # seam HTTP única
 │       ├── domain/                 # modelo de dominio: sin TypeORM, sin HTTP, sin payloads
@@ -117,8 +118,13 @@ github-activity-feed/
 │       ├── webhook.controller.ts   # POST / — validación HMAC (ADR-0002)
 │       ├── history.controller.ts   # GET /history — historial de auditoría
 │       ├── stream.controller.ts    # GET /stream — canal SSE en vivo (ADR-0001)
+│       ├── stream-heartbeat.ts     # comentario SSE cada 15 s: liveness para los proxies
 │       └── relay.module.ts
 ├── test/                      # e2e sobre la seam HTTP (vitest + supertest)
+├── .github/workflows/         # CI y release de los binarios
+├── Dockerfile                 # dos targets: relay y CLI (ADR-0014)
+├── docker-compose.yml         # las dos mitades; el relay publicado en 127.0.0.1
+├── tools/check-encoding.mjs   # guarda de encoding que corre en CI
 ├── docs/
 │   ├── adr/                   # registro de decisiones (ADR)
 │   ├── agents/                # convenciones del tracker de issues
@@ -126,18 +132,23 @@ github-activity-feed/
 │   ├── manual-testing.md      # cómo probar el relay y la CLI a mano, paso a paso
 │   ├── relay-flow.md          # el flujo del relay, archivo por archivo
 │   ├── cli-flow.md            # el flujo de la CLI, archivo por archivo
+│   ├── docker.md              # las dos mitades en contenedores, sin toolchain local
+│   ├── demo/                  # el demo grabado y los payloads que usa
 │   ├── tickets/relay/         # registros de evidencia por ticket completado
-│   └── tickets/cli/           # lo mismo para la CLI
+│   ├── tickets/cli/           # lo mismo para la CLI
+│   └── tickets/cli-output/    # y para la salida del cliente
 ├── .archify/                  # diagramas versionados (el HTML y su candidato)
 ├── .scratch/relay/            # spec + tickets
 ├── .scratch/cli/              # spec + tickets del cliente
+├── .scratch/cli-output/       # spec + tickets de la presentación
+├── .scratch/validation/       # spec + tickets de la entrega (CI, release, demo)
 ├── GLOSSARY.md                # lenguaje de dominio compartido
 └── client/                    # CLI en Go — Fase 2 completa, módulo anidado (ADR-0009)
     ├── cmd/feed/main.go       # el binario: arranca el proceso y traduce Ctrl-C
     ├── internal/activity/     # el shape normalizado y el filtro por Involvement
     ├── internal/sse/          # el parser SSE a mano (ADR-0007)
     ├── internal/render/       # las dos líneas del feed y el reporte agrupado
-    ├── internal/cli/          # dispatch, política de salida, watch y history (ADR-0008)
+    ├── internal/cli/          # dispatch, watch/history, emitter, idle y retry (ADR-0008)
     ├── tools/build.mjs        # binarios estáticos y versión (`npm run cli:*`)
     ├── test/                  # e2e sobre el límite del proceso
     └── go.mod
