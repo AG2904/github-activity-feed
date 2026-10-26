@@ -8,6 +8,9 @@ Para qué sirve: probar el sistema sin instalar Node, Go ni SQLite, y tener el r
 corriendo siempre con el historial sobre un volumen en vez de un `relay.db` en el
 directorio de trabajo.
 
+La decisión y lo que se descartó están en
+[ADR-0014](adr/0014-containers-as-the-distribution-path.md).
+
 ## Camino corto
 
 ```bash
