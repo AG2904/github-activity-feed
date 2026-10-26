@@ -35,7 +35,7 @@ jobs:
       - name: Set up Go 1.27
         # The build script shells out to `go build`; the version comes from the
         # module, exactly as CI does it.
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: client/go.mod
           cache: false
