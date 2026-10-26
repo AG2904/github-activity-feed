@@ -1,0 +1,43 @@
+# Version updates for the things this repository pins on purpose.
+#
+# The base images in Dockerfile are exact patches (ADR-0014), which is what
+# makes a rebuild reproducible -- and what makes them go stale silently. This
+# file is the automation that ADR promised was missing.
+#
+# The Go client declares no dependencies, so there is nothing for a Go
+# ecosystem entry to update: its only supply chain is the toolchain image.
+version: 2
+
+updates:
+  # package.json + package-lock.json: the relay's runtime and dev tooling.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the whole NestJS family: they are released together and a
+      # split set is a build that cannot be merged one piece at a time.
+      nestjs:
+        patterns:
+          - '@nestjs/*'
+      # Testing tooling moves often and never ships to production.
+      test-tooling:
+        patterns:
+          - vitest
+          - '@vitest/*'
+          - vite
+          - supertest
+          - '@types/supertest'
+
+  # The pinned ARGs in Dockerfile: node, golang and alpine.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  # The actions used by ci.yml and release.yml.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
