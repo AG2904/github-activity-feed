@@ -67,8 +67,9 @@ GITHUB_WEBHOOK_SECRET=un-secreto-largo-de-prueba DATABASE_PATH=./sistema.db npm 
 ```
 
 `GITHUB_WEBHOOK_SECRET` es obligatoria: sin ella el relay se niega a arrancar.
-`DATABASE_PATH` es opcional y por defecto es `relay.db`. El proyecto **no tiene
-`dotenv`**: `npm start` no lee `.env` aunque exista.
+`DATABASE_PATH` es opcional y por defecto es `relay.db`. El relay carga `.env` al
+arrancar con el loader nativo de Node, pero las variables exportadas en la shell
+ganan: por eso las de arriba se aplican aunque exista un `.env`.
 
 Confirmá que está arriba antes de seguir:
 

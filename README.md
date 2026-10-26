@@ -46,13 +46,12 @@ La justificación del diseño, el contrato y el estado del proyecto están en
 3. Arrancar el relay:
 
    ```powershell
-   npm start -- --env-file .env
+   npm start
    ```
 
-   El relay lee variables de entorno, no el archivo `.env`. `--env-file` es una opción
-   del CLI de Nest que carga el archivo antes de arrancar; sin ella habría que exportar
-   el secreto en la shell. El proceso escucha en el puerto `3000`, o en el que indique
-   la variable `PORT`.
+   El relay carga `.env` al arrancar. Las variables exportadas en la shell tienen
+   prioridad sobre el archivo, así que podés sobrescribir cualquiera sin editarlo.
+   El proceso escucha en el puerto `3000`, o en el que indique la variable `PORT`.
 
 4. Confirmar que responde:
 

@@ -44,10 +44,9 @@ GITHUB_WEBHOOK_SECRET=un-secreto-largo-de-prueba npm start
 El secreto es tuyo: cualquier texto largo sirve, siempre que sea el mismo que uses
 para firmar. No se commitea.
 
-**Aviso sobre `.env`:** el proyecto no tiene `dotenv`, así que `npm start` **no lee**
-`.env` aunque `.env.example` diga lo contrario. O pasás las variables por la shell
-(lo de arriba), o usás `npm start -- --env-file .env`, que sí lo carga porque el flag
-es del CLI de Nest.
+**Aviso sobre `.env`:** el relay carga `.env` al arrancar con el loader nativo de
+Node (no hay `dotenv`). Las variables exportadas en la shell tienen prioridad sobre
+el archivo, así que las dos formas de arriba también sirven para sobrescribirlo.
 
 **Si `npm start` falla con `'npx' is not recognized`:** en el directorio raíz hay
 shims locales (`.cmd`, ignorados por git) que tapan a los binarios reales. Se
