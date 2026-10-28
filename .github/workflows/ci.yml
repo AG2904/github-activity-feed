@@ -20,7 +20,7 @@ jobs:
   # other check here — "sólo" stored as "sÃ³lo" still looks like text, and a grep
   # for the word misses it. Four such files were committed before this existed.
   docs:
-    name: Docs (encoding)
+    name: Docs (encoding, diagrams)
     runs-on: ubuntu-latest
     steps:
       - name: Check out
@@ -33,6 +33,12 @@ jobs:
 
       - name: Check markdown encoding
         run: node tools/check-encoding.mjs
+
+      - name: Check one run per diagram
+        # Archify writes a timestamped directory per run, so a regenerated
+        # diagram leaves its predecessor in the tree — and, once committed, in
+        # the remote, where nobody looks at it again.
+        run: node tools/prune-diagrams.mjs --check
 
   # Relay and client are independent on purpose: they share the event contract
   # and nothing else, so a red relay suite must not hide a red client suite.

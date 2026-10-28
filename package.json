@@ -21,7 +21,8 @@
     "cli:dist": "cd client && node tools/build.mjs --dist",
     "cli:test": "cd client && go test -count=1 ./...",
     "cli:lint": "cd client && go vet ./...",
-    "check:docs": "node tools/check-encoding.mjs"
+    "check:docs": "node tools/check-encoding.mjs",
+    "diagrams:prune": "node tools/prune-diagrams.mjs"
   },
   "repository": {
     "type": "git",

@@ -25,9 +25,11 @@ one read. For a structural question read `ARCHITECTURE.md`, then
 
 `.archify/` holds one directory per diagram, five in total, and the flow docs
 link to them. A regeneration writes a new timestamped directory instead of
-replacing the old one: after regenerating, delete the previous run's directory
-and update the link in `docs/cli-flow.md` or `docs/relay-flow.md`. A receipt-only
-directory left behind is the same mess one run later.
+replacing the old one: run `npm run diagrams:prune` after regenerating, then
+update the link in `docs/cli-flow.md` or `docs/relay-flow.md`. The command
+stages the deletion, so commit and push it — a copy left behind lives in the
+remote where nobody looks. The `docs` CI job fails if a superseded run is
+committed.
 
 ## Agent skills
 
