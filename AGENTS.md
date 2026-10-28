@@ -21,6 +21,14 @@ one read. For a structural question read `ARCHITECTURE.md`, then
 `docs/relay-flow.md` or `docs/cli-flow.md` — those are the maps, kept current.
 `codegraph init` stays off here.
 
+### Diagrams
+
+`.archify/` holds one directory per diagram, five in total, and the flow docs
+link to them. A regeneration writes a new timestamped directory instead of
+replacing the old one: after regenerating, delete the previous run's directory
+and update the link in `docs/cli-flow.md` or `docs/relay-flow.md`. A receipt-only
+directory left behind is the same mess one run later.
+
 ## Agent skills
 
 ### Issue tracker
