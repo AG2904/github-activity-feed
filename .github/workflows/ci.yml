@@ -115,11 +115,28 @@ jobs:
             exit 1
           fi
 
+      - name: Lint (golangci-lint)
+        # Uber's minimum set — errcheck, goimports, revive, govet, staticcheck —
+        # configured in client/.golangci.yml. The golangci-lint release is pinned
+        # to a minor version and the action resolves its latest patch; the
+        # documented exclusions (best-effort stderr narration, best-effort Close)
+        # live in that config file, not here.
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13
+          # `uses:` steps do not read the job's working-directory default, so
+          # the nested module path (ADR-0009) is repeated explicitly.
+          working-directory: client
+
       - name: Test (end-to-end)
         # -count=1 is load-bearing: the e2e package builds the binary in
         # TestMain, so without it Go can return a cached pass when only
         # internal/ changed.
-        run: go test -count=1 ./...
+        # -race instruments this test process only: the CLI binaries the
+        # harness builds are separate processes and stay outside the race
+        # detector. It lives here and not in `npm run cli:test` so the local
+        # loop keeps its speed.
+        run: go test -count=1 -race ./...
 
   # Dockerfile is not exercised by the two suites above: a broken relay stage
   # and a broken feed stage fail in different places, and a broken Dockerfile

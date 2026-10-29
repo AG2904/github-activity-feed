@@ -1,0 +1,81 @@
+# Static analysis for the client/ Go module (nested module, ADR-0009: run
+# golangci-lint from client/, never from the repo root). Dev tooling only:
+# nothing here is linked into the built binary and none of it adds a require
+# to client/go.mod (ADR-0008).
+#
+# The linter set is Uber's recommended minimum
+# (https://github.com/uber-go/guide/blob/master/style.md#linting):
+# errcheck, goimports, revive, govet, staticcheck. In the v2 configuration
+# format goimports is a formatter, not a linter, hence its own section below.
+# CI pins golangci-lint v2.13 — the version this file is written against —
+# and the same version can be run locally via `npm run cli:lint:static`.
+
+version: "2"
+
+linters:
+  # Exactly the five-linter minimum and nothing more: start from none, then
+  # enable the set, so a golangci-lint upgrade cannot silently add linters.
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - revive
+    - staticcheck
+
+  settings:
+    errcheck:
+      # strings.Builder.Write and WriteString report (int, error) but their
+      # contract is "the error is always nil" — they cannot fail. Checking the
+      # discarded results in the card assembly (internal/render/render.go) and
+      # in the test read-loop (test/harness_test.go readUntil) would be pure
+      # noise, so the two methods are excluded at the function level.
+      exclude-functions:
+        - "(*strings.Builder).Write"
+        - "(*strings.Builder).WriteString"
+
+  exclusions:
+    # The comments preset drops only comment-SHAPE complaints (revive's
+    # exported/package-comments formatting and staticcheck ST1000/ST1020-22).
+    # Every substantive rule of the enabled linters keeps running.
+    presets:
+      - comments
+
+    rules:
+      # The watch session narrates itself on stderr: the banner block, the
+      # backfill-error line, the connect and reconnect notices, the fatal
+      # line and the backoff countdown — all deliberate fmt.Fprintf/Fprintln
+      # in watch() whose returned error is dropped, with the same best-effort
+      # contract in history.go, emitter.go's stop summary and cli.go's usage
+      # output. Ignoring the write error is the point: narration must never
+      # change the exit code or mask the real failure, and a silent terminal
+      # has to read as "nothing happened", not as "it hung" (the doc comment
+      # on watch() in internal/cli/watch.go). The rule keys on the message
+      # text, not on line numbers, so refactors cannot silently widen it.
+      # The path regex tolerates both separators so the rule also holds on a
+      # local Windows run.
+      - linters:
+          - errcheck
+        path: 'internal[/\\]cli[/\\]'
+        text: 'fmt\.Fprint'
+
+      # The test fakes hold the same contract: the httptest relays and
+      # TestMain's build-failure paths narrate best-effort, and a teardown
+      # os.RemoveAll must not fail a test that already decided its verdict.
+      - linters:
+          - errcheck
+        path: 'test[/\\]'
+        text: '(fmt\.Fprint|os\.RemoveAll)'
+
+      # Closing a resource that was already used successfully is best-effort
+      # everywhere: HTTP bodies after a completed read (watch.go, stored.go,
+      # cli.go) and pipes/listeners in test teardown. A failing Close must
+      # not mask the real outcome or turn a successful read into a failure.
+      - linters:
+          - errcheck
+        text: '\.Close\(\)'
+
+formatters:
+  enable:
+    # goimports is a superset of gofmt: same formatting, plus import
+    # grouping and pruning. The plain gofmt gate stays as its own CI step.
+    - goimports
