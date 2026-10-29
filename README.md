@@ -158,6 +158,29 @@ Ninguno de los dos es obligatorio si se usa el camino dockerizado: véase
    Contra un relay recién iniciado, la salida es `[]`. Sin `--json`, el historial se
    muestra con las mismas tarjetas del modo en vivo.
 
+### Instalarlo como comando
+
+Los pasos de arriba invocan el binario por su ruta, porque recién compilado todavía
+no es un comando. Para tener `feed` a secas, como en la grabación del principio:
+
+```powershell
+npm.cmd run cli:install
+```
+
+Compila el binario del host y lo copia a `~/bin/feed.exe` (o `~/bin/feed` en
+Linux y macOS). El script no agrega nada al `PATH`, no pide permisos y no
+sobrescribe un `feed` que no haya compilado él mismo: si encuentra otro archivo con
+ese nombre, se niega y pide `--force`. Y si ese archivo es un enlace —duro o
+simbólico— se niega siempre, incluso con `--force`: reemplaza archivos, nunca escribe
+a través de un enlace hacia otro lado. Desinstalarlo es borrar ese archivo.
+
+Con `~/bin` en el `PATH`, el resto de esta guía funciona igual reemplazando la ruta
+por `feed`:
+
+```powershell
+feed watch --relay http://localhost:3000
+```
+
 El flujo completo —firma del webhook incluida— está en
 [`docs/end-to-end-testing.md`](docs/end-to-end-testing.md).
 

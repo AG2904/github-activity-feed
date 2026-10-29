@@ -18,6 +18,7 @@
     "start:prod": "node dist/main",
     "test": "vitest run --config ./vitest.config.e2e.ts",
     "cli:build": "cd client && node tools/build.mjs",
+    "cli:install": "cd client && node tools/install.mjs",
     "cli:dist": "cd client && node tools/build.mjs --dist",
     "cli:test": "cd client && go test -count=1 ./...",
     "cli:lint": "cd client && go vet ./...",
