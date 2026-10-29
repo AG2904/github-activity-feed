@@ -17,8 +17,7 @@ import (
 func history(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("history", stderr, "usage: feed history [--relay <url>] [--user <login>] [--repo <owner/name>] [--no-color] [--json | --group-by-repo]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
-	user := fs.String("user", "", "only events where this login is the actor or the assignee")
-	repository := fs.String("repo", "", "only events in this owner/name repository")
+	user, repository := addFilters(fs)
 	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
 	jsonOut := fs.Bool("json", false, "write each stored event's bytes verbatim")
 	groupByRepo := fs.Bool("group-by-repo", false, "group the history by repository")

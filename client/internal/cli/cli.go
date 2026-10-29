@@ -100,6 +100,16 @@ func parseFlags(fs *flag.FlagSet, args []string) (code int, ok bool) {
 	return 0, true
 }
 
+// addFilters registers the two filters watch and history share — same names,
+// same defaults, same help text — because the commands must answer the same
+// question about the same person (docs/cli-flow.md:145-147), and one
+// definition cannot silently drift from the other.
+func addFilters(fs *flag.FlagSet) (user, repository *string) {
+	user = fs.String("user", "", "only events where this login is the actor or the assignee")
+	repository = fs.String("repo", "", "only events in this owner/name repository")
+	return user, repository
+}
+
 // colorEnabled is the single rule for escapes: never by --no-color or
 // NO_COLOR, and only when stdout is a terminal. A pipe gets plain text, which
 // is what makes `feed watch | tee` and `feed watch | jq` safe.
@@ -145,6 +155,14 @@ func printable(s string) string {
 	return b.String()
 }
 
+// refused is the one refusal both read paths share: same rule, same wording,
+// one copy of the message the security suite pins, so fetch and stream cannot
+// drift apart. The status arrives as the relay wrote it; printable keeps the
+// bytes a terminal would act on out of stderr.
+func refused(url, status string) error {
+	return fmt.Errorf("%s answered %s", url, printable(status))
+}
+
 // fetch opens one read request against the relay and refuses anything that is
 // not a 200, so the two read paths agree about what a relay that answered badly
 // looks like. The caller owns the body.
@@ -159,7 +177,7 @@ func fetch(ctx context.Context, url string) (*http.Response, error) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("%s answered %s", url, printable(resp.Status))
+		return nil, refused(url, resp.Status)
 	}
 	return resp, nil
 }
