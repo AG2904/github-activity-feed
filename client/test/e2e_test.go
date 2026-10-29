@@ -644,7 +644,7 @@ func TestReconnectBackoffGrowsAndResetsAfterAnEvent(t *testing.T) {
 	feed.waitStderr(t, "watch: reconnected")
 
 	relay.dropStream(t)
-	delays := feed.waitReconnects(t, 2)
+	feed.waitReconnects(t, 2)
 	relay.waitConnected(t)
 
 	// The event is what resets the backoff; the drop comes after the event.
@@ -652,7 +652,7 @@ func TestReconnectBackoffGrowsAndResetsAfterAnEvent(t *testing.T) {
 	feed.waitStdout(t, "Fix memory leak in parser component")
 
 	relay.dropStream(t)
-	delays = feed.waitReconnects(t, 3)
+	delays := feed.waitReconnects(t, 3)
 	relay.waitConnected(t)
 
 	if delays[0] < time.Second || delays[0] >= 1500*time.Millisecond {

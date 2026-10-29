@@ -22,6 +22,7 @@
     "cli:dist": "cd client && node tools/build.mjs --dist",
     "cli:test": "cd client && go test -count=1 ./...",
     "cli:lint": "cd client && go vet ./...",
+    "cli:lint:static": "cd client && golangci-lint run",
     "check:docs": "node tools/check-encoding.mjs",
     "diagrams:prune": "node tools/prune-diagrams.mjs"
   },

@@ -22,9 +22,10 @@ func (e *fatalError) Error() string { return e.err.Error() }
 func (e *fatalError) Unwrap() error { return e.err }
 
 // backoff grows exponentially from one second to a thirty-second ceiling. Each
-// delay is jittered upward by up to a quarter of the step, so a relay restart
-// does not gather every client in the same instant. The ceiling applies to the
-// step; a reset returns to the one-second base.
+// delay is jittered — upward by up to a quarter of the step below the ceiling,
+// and within the quarter below the ceiling itself at the ceiling — so a relay
+// restart does not gather every client in the same instant. The ceiling
+// applies to the step; a reset returns to the one-second base.
 type backoff struct {
 	step time.Duration
 }
@@ -39,9 +40,22 @@ func (b *backoff) delay() time.Duration {
 		step = minBackoff
 	}
 
-	delay := step + time.Duration(rand.Int64N(int64(step/4)))
-	if delay > maxBackoff {
-		delay = maxBackoff
+	if step > maxBackoff {
+		step = maxBackoff
+	}
+
+	// Cap first, then jitter. Below the ceiling the delay is the step plus up
+	// to a quarter of it; at the ceiling there is no headroom for an upward
+	// draw, so the delay comes from the quarter below the cap —
+	// [3/4·maxBackoff, maxBackoff) — instead of clipping to the
+	// deterministic maximum, which is exactly where reconnect lockstep
+	// matters most.
+	var delay time.Duration
+	if step >= maxBackoff {
+		quarter := maxBackoff / 4
+		delay = maxBackoff - quarter + time.Duration(rand.Int64N(int64(quarter)))
+	} else {
+		delay = step + time.Duration(rand.Int64N(int64(step/4)))
 	}
 
 	if next := step * 2; next < maxBackoff {

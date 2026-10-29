@@ -25,8 +25,7 @@ import (
 func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
-	user := fs.String("user", "", "only events where this login is the actor or the assignee")
-	repository := fs.String("repo", "", "only events in this owner/name repository")
+	user, repository := addFilters(fs)
 	backfillFlag := fs.Int("backfill", 10, "how many stored events the first connection prints (0 disables)")
 	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
 	jsonOut := fs.Bool("json", false, "write each event's payload verbatim")
@@ -141,7 +140,7 @@ func stream(ctx context.Context, target string, out *emitter, connected func()) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("%s answered %s", target, printable(resp.Status))
+		return false, refused(target, resp.Status)
 	}
 	if connected != nil {
 		connected()

@@ -335,9 +335,15 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 - **El relay** — tiene su propio mapa en [`docs/relay-flow.md`](relay-flow.md).
 - **Los tickets del CLI**: 06 (la primera conexión no es una pantalla en blanco),
   07 (el historial renderizado y sus filtros) y 08 (distribuir el binario) están
-  cerrados, y este mapa describe el resultado. Lo que sigue abierto es CI.
-- **CI y release**: no hay workflow que compile el cliente ni publique artefactos;
-  los binarios salen de `npm run cli:dist`, a mano.
+  cerrados, y este mapa describe el resultado. Lo que sigue abierto es publicar
+  artefactos.
+- **CI y release**: el workflow de CI compila el cliente y lo chequea en cuatro
+  capas —gofmt, `go vet`, golangci-lint (errcheck, goimports, revive, govet y
+  staticcheck; la config y sus exclusiones documentadas viven en
+  `client/.golangci.yml`) y la suite con `-race`. Los chequeos estáticos también
+  corren en local: `npm run cli:lint` para `go vet` y `npm run cli:lint:static`
+  para golangci-lint, con la misma versión que fija CI (v2.13). Publicar binarios
+  sigue siendo manual, con `npm run cli:dist`.
 - **El detalle de los colores**: la paleta por rol vive en `render.go` —cian para las
   personas, verde para la integración, amarillo para la asignación, azul para la rama
   —la ubicación que importa—, magenta para las etiquetas —la razón, cálida sin la
@@ -380,7 +386,10 @@ GOOS=windows GOARCH=amd64 go build -o feed.exe ./cmd/feed
 El relay tiene que estar arriba; los pasos para levantarlo y alimentarlo con un
 webhook firmado están en [`docs/manual-testing.md`](manual-testing.md). En Windows el
 binario es `feed.exe`, y `go test ./...` compila los dos binarios de prueba y tarda
-alrededor de dos minutos.
+alrededor de dos minutos. `npm run cli:test` corre la suite local sin `-race`, para
+que el loop sea rápido; en CI la misma suite corre con `-race`, que instrumenta el
+proceso de test —los binarios hijos que arma el harness son procesos aparte y
+quedan fuera del detector de carreras—.
 
 El recorrido a mano, caso por caso y con la salida esperada de cada uno, está en
 [`docs/cli-testing.md`](cli-testing.md); el del sistema completo —relay y CLI
