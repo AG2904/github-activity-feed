@@ -70,9 +70,12 @@ linters:
       # everywhere: HTTP bodies after a completed read (watch.go, stored.go,
       # cli.go) and pipes/listeners in test teardown. A failing Close must
       # not mask the real outcome or turn a successful read into a failure.
+      # errcheck reports the call WITHOUT its argument list — "Error return
+      # value of `resp.Body.Close` is not checked" — so the rule keys on that
+      # message shape, not on the source spelling Close().
       - linters:
           - errcheck
-        text: '\.Close\(\)'
+        text: '\.Close` is not checked'
 
 formatters:
   enable:
