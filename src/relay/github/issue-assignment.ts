@@ -31,7 +31,7 @@ function reportedAssignees(issue: Record<string, unknown>): string[] {
  * available, and this is the closest honest reading of "the assignee set
  * changed".
  *
- * Filter and normalization are one pass (ADR-0014), which also means the
+ * Filter and normalization are one pass (ADR-0015), which also means the
  * reported assignees are read once: the same walk decides whether there is
  * somebody to tell and who it is.
  */

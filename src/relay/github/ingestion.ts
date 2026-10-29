@@ -2,7 +2,7 @@ import type { ActivityEvent } from '../domain/activity-event.js';
 
 /**
  * What the GitHub adapter made of one delivered payload: the event, or the
- * reason there is none (ADR-0014).
+ * reason there is none (ADR-0015).
  *
  * The two ways of producing nothing are named apart on purpose. `not-critical`
  * is a decision — the filter read the payload and passed on it, which is the

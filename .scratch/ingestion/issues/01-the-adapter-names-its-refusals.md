@@ -13,17 +13,23 @@ ADR-0002, which acknowledges and discards rather than rejects).
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-human
+**Status:** done
 
 - [x] A new ADR in the project's register records the decision, in the house form,
-      numbered next in sequence.
+
+  numbered next in sequence.
 - [x] It defines both refusal reasons, and says which one is normal and which one is
-      a defect.
+
+  a defect.
 - [x] It states the composition rule: `malformed` is terminal, so one payload never
-      yields two readings.
+
+  yields two readings.
 - [x] It records the rejected alternatives and why each was rejected.
 - [x] It cross-references the ADRs it touches (signature-then-parse, acknowledge-and-
-      discard, the event shape) and contradicts none of them.
+
+  discard, the event shape) and contradicts none of them.
 - [x] It states what the decision does **not** change: the `200` on every
-      authenticated delivery, the stored rows, the served history.
+
+  authenticated delivery, the stored rows, the served history.
 - [x] No source code changes in this ticket.
+

@@ -49,7 +49,7 @@ Paso por paso:
    `unparseable` y la entrega se acusa con `200` y se descarta sin llegar al adaptador.
 3. **`src/relay/github/to-activity-event.ts`** es la única entrada al adaptador:
    `ingest()` pregunta por el merge y, si el payload no era crítico, por la
-   asignación. Responde un `Ingestion` (ADR-0014): el evento, o un rechazo con su
+   asignación. Responde un `Ingestion` (ADR-0015): el evento, o un rechazo con su
    motivo — `not-critical` para el payload que el filtro descartó, `malformed` para
    el crítico que no se pudo normalizar. Un `malformed` es terminal: ese payload no
    se relee como asignación. Desde afuera los dos motivos son indistinguibles a

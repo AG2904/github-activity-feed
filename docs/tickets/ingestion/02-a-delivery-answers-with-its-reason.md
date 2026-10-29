@@ -58,7 +58,7 @@ interfaz de sobre solo describiría campos que ningún lector verificó.
 `ARCHITECTURE.md`: el árbol de `src/relay/github/`. `GLOSSARY.md`: dos entradas,
 **Ingestion** y **Refusal**.
 
-### `docs/adr/0014-the-adapter-names-its-refusals.md`
+### `docs/adr/0015-the-adapter-names-its-refusals.md`
 
 El registro de la decisión (ticket 01), y el lugar donde quedan escritas las
 alternativas rechazadas.

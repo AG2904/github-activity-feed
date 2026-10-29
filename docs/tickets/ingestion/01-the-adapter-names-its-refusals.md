@@ -9,7 +9,7 @@ este ticket.
 
 ## Cambios Realizados
 
-### `docs/adr/0014-the-adapter-names-its-refusals.md`
+### `docs/adr/0015-the-adapter-names-its-refusals.md`
 
 Documento nuevo. Registra el problema en dos partes: `undefined` borraba la diferencia
 entre "no crítico" (el filtro haciendo su trabajo) y "malformado" (el adaptador y
@@ -50,7 +50,7 @@ es como este repositorio trata sus ADR.
 ## Acceptance Criteria
 
 - ✅ AC1: un ADR nuevo registra la decisión, en la forma de la casa, numerado a
-  continuación (0014).
+  continuación (0015).
 - ✅ AC2: define los dos motivos y dice cuál es normal y cuál es defecto.
 - ✅ AC3: fija la regla de composición —`malformed` es terminal, un payload no produce
   dos lecturas.

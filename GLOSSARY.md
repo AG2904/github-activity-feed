@@ -43,7 +43,7 @@ _Note_: GitHub reports it as the `assigned` action in both cases. The `opened` d
 _Avoid_: allocation, ownership
 
 **Ingestion**:
-What the relay's GitHub adapter decided about one delivered payload: the ActivityEvent it carries, or the reason there is none. It answers "what did this delivery produce?", and it is internal — the wire acknowledges the same success code either way (ADR-0014).
+What the relay's GitHub adapter decided about one delivered payload: the ActivityEvent it carries, or the reason there is none. It answers "what did this delivery produce?", and it is internal — the wire acknowledges the same success code either way (ADR-0015).
 _Note_: the two reasons are `not-critical`, the filter passing on a payload, and `malformed`, a payload that was critical but could not be normalized. A `malformed` answer is terminal: one payload never yields two readings.
 _Avoid_: parse result, outcome, response
 

@@ -36,7 +36,7 @@ function signatureMatches(
  * The request body, and the two ways it can fail to be one. A missing body and a
  * body that is not JSON used to answer the same `undefined`, which made a sender
  * that broke its serialization indistinguishable from a delivery carrying nothing
- * worth reporting (ADR-0014).
+ * worth reporting (ADR-0015).
  */
 type Body = { kind: 'parsed'; payload: unknown } | { kind: 'unparseable' };
 
@@ -66,7 +66,7 @@ export class WebhookController {
    * Verifies the signature over the raw bytes, and parses only after that. A
    * malformed, non-critical, or unrecognized payload is acknowledged and
    * discarded — never rejected, and never stored (ADR-0002, ticket 04). The
-   * adapter names why it produced nothing (ADR-0014); nothing here consumes that
+   * adapter names why it produced nothing (ADR-0015); nothing here consumes that
    * reason yet, and the answer to the sender is the same in every case.
    */
   @Post()

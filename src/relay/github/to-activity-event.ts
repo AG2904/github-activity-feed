@@ -5,7 +5,7 @@ import { mergeToMain } from './merge-to-main.js';
 /**
  * The single entry point into the GitHub adapter: turns any webhook payload into
  * the project's one decision about it — an event, or the reason there is none
- * (ADR-0014).
+ * (ADR-0015).
  *
  * This is the only module that knows GitHub's payload shapes, so the domain and
  * the HTTP seam stay ignorant of `pull_request`, `issues` and their fields.

@@ -13,7 +13,7 @@ import { asRecord, labelNames, loginOf, repositoryName } from './payload.js';
  *
  * One pass, because the filter and the normalization read the same payload. They
  * used to be two functions joined by a type predicate that proved three fields and
- * promised eight, so the mapper re-read every field it touched (ADR-0014). Now the
+ * promised eight, so the mapper re-read every field it touched (ADR-0015). Now the
  * question and the answer are the same walk, and an answer is either the event or
  * a refusal that says which of the two ways it found nothing.
  */
