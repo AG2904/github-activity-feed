@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 const defaultRelay = "http://localhost:3000"
@@ -117,6 +118,33 @@ func endpoint(relay, path string) string {
 	return relay + path
 }
 
+// relayClient reads only from the origin the operator configured. The target
+// of a redirect hop is chosen by whoever answered the request, not by the
+// operator, so a 3xx is a relay that answered badly: it surfaces through the
+// status check below rather than being followed.
+var relayClient = &http.Client{
+	CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
+
+// printable renders wire-derived text without the bytes a terminal would act
+// on. The status line is authored by whoever answered the request, and stderr
+// is documented as plain text, so the message keeps its shape — which status
+// was refused — while the bytes that would address the terminal are spelled
+// out instead.
+func printable(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r < 0x20 || r == 0x7f || (r >= 0x80 && r <= 0x9f) {
+			fmt.Fprintf(&b, "\\x%02x", r)
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
 // fetch opens one read request against the relay and refuses anything that is
 // not a 200, so the two read paths agree about what a relay that answered badly
 // looks like. The caller owns the body.
@@ -125,13 +153,13 @@ func fetch(ctx context.Context, url string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := relayClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("%s answered %s", url, resp.Status)
+		return nil, fmt.Errorf("%s answered %s", url, printable(resp.Status))
 	}
 	return resp, nil
 }

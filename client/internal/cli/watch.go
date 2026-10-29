@@ -134,14 +134,14 @@ func stream(ctx context.Context, target string, out *emitter, connected func()) 
 	if err != nil {
 		return false, &fatalError{err}
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := relayClient.Do(req)
 	if err != nil {
 		return false, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("%s answered %s", target, resp.Status)
+		return false, fmt.Errorf("%s answered %s", target, printable(resp.Status))
 	}
 	if connected != nil {
 		connected()

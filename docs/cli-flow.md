@@ -274,6 +274,7 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 | `client/test/main_test.go` | compila los dos binarios con `-ldflags` | `go test` |
 | `client/test/harness_test.go` | el relay falso de la suite | toda la suite |
 | `client/test/e2e_test.go` | los casos, siempre a través del binario | `go test` |
+| `client/test/security_test.go` | los contratos de borde: bytes de control, redirects y status | `go test` |
 | `client/tools/build.mjs` | los cuatro binarios con versión | `npm run` |
 
 La tabla dice **qué es** cada archivo, no qué funciones tiene. Los nombres viven
@@ -302,6 +303,18 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
 - **El color es del terminal, no del programa.** `--no-color`, `NO_COLOR`, o stdout
   que no es un `*os.File` o no es una consola: cualquiera de las tres apaga los
   escapes. Un pipe recibe texto plano.
+- **El texto del relay llega a la terminal sin bytes de control.** Los campos de un
+  evento vienen del relay tal como lo guardó, y un terminal ejecuta los C0, DEL y C1
+  que la paleta jamás escribiría. `clean` los descarta —y convierte un salto de línea
+  o un tab en un espacio, porque también partirían la tarjeta— antes de componer la
+  tarjeta, el encabezado agrupado y la línea de URL, así la única fuente de escapes
+  sigue siendo la paleta con color o sin él. `--json` es la excepción deliberada:
+  escribe el payload tal como llegó.
+- **Tampoco el texto ajeno llega crudo por un error.** El `status` de una respuesta
+  no es texto propio: `printable` lo vacía de bytes de control antes de que el error
+  se imprima en stderr, que es texto plano. Y un redirect no se sigue: `relayClient`
+  devuelve el 3xx como una respuesta que salió mal, porque el destino lo eligió quien
+  contestó, no quien configuró `--relay`.
 - **Un frame que no es un evento no es una falla.** Se descarta en silencio. Un error
   de escritura en stdout sí es fatal: no tiene sentido seguir leyendo para nadie.
 - **El filtro local no inventa reglas.** Es actor-o-assignee, igual que el historial.
