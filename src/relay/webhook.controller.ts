@@ -4,7 +4,7 @@ import type { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { ActivityEventsService } from './activity-events.service.js';
 import { ActivityStream } from './activity-stream.js';
-import { toActivityEvent } from './github/to-activity-event.js';
+import { ingest } from './github/to-activity-event.js';
 
 const SIGNATURE_HEADER = 'x-hub-signature-256';
 const SIGNATURE_PREFIX = 'sha256=';
@@ -32,15 +32,22 @@ function signatureMatches(
   return timingSafeEqual(Buffer.from(provided, 'utf8'), Buffer.from(expected, 'utf8'));
 }
 
-/** Parses the raw body; malformed JSON yields undefined (ignored, not an error). */
-function parseBody(rawBody: Buffer | undefined): unknown {
+/**
+ * The request body, and the two ways it can fail to be one. A missing body and a
+ * body that is not JSON used to answer the same `undefined`, which made a sender
+ * that broke its serialization indistinguishable from a delivery carrying nothing
+ * worth reporting (ADR-0014).
+ */
+type Body = { kind: 'parsed'; payload: unknown } | { kind: 'unparseable' };
+
+function parseBody(rawBody: Buffer | undefined): Body {
   if (!rawBody) {
-    return undefined;
+    return { kind: 'unparseable' };
   }
   try {
-    return JSON.parse(rawBody.toString('utf8'));
+    return { kind: 'parsed', payload: JSON.parse(rawBody.toString('utf8')) };
   } catch {
-    return undefined;
+    return { kind: 'unparseable' };
   }
 }
 
@@ -58,7 +65,9 @@ export class WebhookController {
   /**
    * Verifies the signature over the raw bytes, and parses only after that. A
    * malformed, non-critical, or unrecognized payload is acknowledged and
-   * discarded — never rejected, and never stored (ADR-0002, ticket 04).
+   * discarded — never rejected, and never stored (ADR-0002, ticket 04). The
+   * adapter names why it produced nothing (ADR-0014); nothing here consumes that
+   * reason yet, and the answer to the sender is the same in every case.
    */
   @Post()
   @HttpCode(200)
@@ -70,15 +79,18 @@ export class WebhookController {
     if (!signatureMatches(req.rawBody, signature, this.secret)) {
       throw new UnauthorizedException('invalid or missing X-Hub-Signature-256');
     }
-    const payload = parseBody(req.rawBody);
-    const event = toActivityEvent(payload);
-    if (event) {
+    const body = parseBody(req.rawBody);
+    if (body.kind === 'unparseable') {
+      return { received: true };
+    }
+    const ingestion = ingest(body.payload);
+    if (ingestion.kind === 'event') {
       // A missing header and an empty one both mean the delivery arrived untagged.
-      const stored = await this.events.store(event, deliveryId || null);
+      const stored = await this.events.store(ingestion.event, deliveryId || null);
       if (stored) {
         // A redelivery was announced when it first arrived, so it must not reach
         // the stream a second time.
-        this.stream.deliver(event);
+        this.stream.deliver(ingestion.event);
       }
     }
     return { received: true };

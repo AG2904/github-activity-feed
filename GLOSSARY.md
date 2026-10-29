@@ -42,6 +42,15 @@ An issue gaining an assignee, whether at creation or later. It is the trigger fo
 _Note_: GitHub reports it as the `assigned` action in both cases. The `opened` delivery that accompanies a creation arriving already assigned reports the same happening, not a second one (ADR-0012).
 _Avoid_: allocation, ownership
 
+**Ingestion**:
+What the relay's GitHub adapter decided about one delivered payload: the ActivityEvent it carries, or the reason there is none. It answers "what did this delivery produce?", and it is internal — the wire acknowledges the same success code either way (ADR-0014).
+_Note_: the two reasons are `not-critical`, the filter passing on a payload, and `malformed`, a payload that was critical but could not be normalized. A `malformed` answer is terminal: one payload never yields two readings.
+_Avoid_: parse result, outcome, response
+
+**Refusal**:
+An ingestion that produced no event, carrying its reason. Distinct from a duplicate: a refusal never reached storage, and nothing about it was written.
+_Avoid_: rejection, error, discard
+
 **Repository**:
 The GitHub project an ActivityEvent happened in; the unit the CLI groups and filters by.
 _Avoid_: project, codebase, origin

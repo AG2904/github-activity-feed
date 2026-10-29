@@ -1,69 +1,67 @@
-import { isoInstant, type ActivityEvent } from '../domain/activity-event.js';
+import { isoInstant } from '../domain/activity-event.js';
 import { isMainBranch } from '../domain/critical.js';
-import { asRecord, labelNames, loginOf, repositoryName, type GitHubDelivery } from './payload.js';
-
-interface GitHubPullRequest {
-  title: string;
-  merged: boolean;
-  merged_at: string | null;
-  html_url: string;
-  base: { ref: string };
-  head: { ref: string };
-  labels: Array<{ name: string }>;
-}
-
-export interface PullRequestPayload extends GitHubDelivery {
-  pull_request: GitHubPullRequest;
-}
+import type { Ingestion } from './ingestion.js';
+import { asRecord, labelNames, loginOf, repositoryName } from './payload.js';
 
 /**
- * A critical event exactly when GitHub reports the pull request closed,
- * merged, with base branch `main`. Detection keys on the reported merge state
- * only — never on intermediate payload details.
+ * The merge that landed on main, or why nothing will be stored.
+ *
+ * Detection keys on the reported merge state only — never on intermediate
+ * payload details: GitHub reports `closed` together with `merged: true` for a
+ * merged pull request, and the filter reads that pair rather than inferring a
+ * merge from anything else in the payload.
+ *
+ * One pass, because the filter and the normalization read the same payload. They
+ * used to be two functions joined by a type predicate that proved three fields and
+ * promised eight, so the mapper re-read every field it touched (ADR-0014). Now the
+ * question and the answer are the same walk, and an answer is either the event or
+ * a refusal that says which of the two ways it found nothing.
  */
-export function isMergeToMain(payload: unknown): payload is PullRequestPayload {
-  const webhook = asRecord(payload);
-  const pullRequest = asRecord(webhook?.pull_request);
-  const base = asRecord(pullRequest?.base);
-  return (
-    webhook?.action === 'closed' && pullRequest?.merged === true && isMainBranch(base?.ref)
-  );
-}
+export function mergeToMain(payload: unknown): Ingestion {
+  const delivery = asRecord(payload);
+  if (delivery?.action !== 'closed') {
+    return { kind: 'ignored', reason: 'not-critical' };
+  }
+  const pullRequest = asRecord(delivery.pull_request);
+  if (pullRequest?.merged !== true) {
+    return { kind: 'ignored', reason: 'not-critical' };
+  }
+  if (!isMainBranch(asRecord(pullRequest.base)?.ref)) {
+    return { kind: 'ignored', reason: 'not-critical' };
+  }
 
-/**
- * Maps GitHub's payload to the ActivityEvent shape, flattening labels to
- * strings. Returns undefined when the payload passes the filter but cannot be
- * normalized — per the spec such events are ignored without error rather than
- * failing the request, so every field read here is guarded.
- */
-export function toMergeToMainEvent(payload: PullRequestPayload): ActivityEvent | undefined {
-  const pullRequest = asRecord(payload?.pull_request);
-  const actor = loginOf(payload?.sender);
-  const when = isoInstant(pullRequest?.merged_at);
-  const subject = pullRequest?.title;
-  const url = pullRequest?.html_url;
-  // The source branch is supplementary: a payload without a usable head ref
-  // still normalizes, it simply has no branch to name (ADR-0013).
-  const headRef = asRecord(pullRequest?.head)?.ref;
-  const branch = typeof headRef === 'string' && headRef !== '' ? headRef : null;
+  // Past the filter, so a missing field is a disagreement about the shape rather
+  // than a payload the relay meant to skip: it is refused as malformed, not as
+  // not-critical.
+  const actor = loginOf(delivery.sender);
+  const when = isoInstant(pullRequest.merged_at);
+  const subject = pullRequest.title;
+  const url = pullRequest.html_url;
   if (
     !actor ||
     !when ||
     typeof subject !== 'string' ||
     typeof url !== 'string' ||
-    !Array.isArray(pullRequest?.labels)
+    !Array.isArray(pullRequest.labels)
   ) {
-    return undefined;
+    return { kind: 'ignored', reason: 'malformed' };
   }
+
+  // The source branch is supplementary: a payload without a usable head ref still
+  // normalizes, it simply has no branch to name (ADR-0013).
+  const headRef = asRecord(pullRequest.head)?.ref;
   return {
-    type: 'pr.merged',
-    repository: repositoryName(payload?.repository),
-    branch,
-    actor,
-    subject,
-    assignee: null,
-    labels: labelNames(pullRequest.labels),
-    url,
-    when,
+    kind: 'event',
+    event: {
+      type: 'pr.merged',
+      repository: repositoryName(delivery.repository),
+      branch: typeof headRef === 'string' && headRef !== '' ? headRef : null,
+      actor,
+      subject,
+      assignee: null,
+      labels: labelNames(pullRequest.labels),
+      url,
+      when,
+    },
   };
 }

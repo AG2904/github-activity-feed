@@ -25,6 +25,7 @@ GitHub ──POST / ──▶ webhook.controller.accept()
                         ▼
                    github/to-activity-event.ts ──▶ merge-to-main | issue-assignment
                         │                              │
+                        │                              ├──▶ github/ingestion.ts
                         │                              └──▶ github/payload.ts
                         │                                   domain/critical.ts
                         ▼
@@ -44,15 +45,21 @@ Paso por paso:
    divergir.
 2. **`src/relay/webhook.controller.ts`** verifica `X-Hub-Signature-256` —HMAC-SHA256
    de esos bytes, comparado en tiempo constante— y **después** parsea. Firma
-   inválida: `401`. Cuerpo ilegible: `undefined`, que se acusa y se descarta.
+   inválida: `401`. Cuerpo ilegible: no es JSON, así que el parseo lo nombra
+   `unparseable` y la entrega se acusa con `200` y se descarta sin llegar al adaptador.
 3. **`src/relay/github/to-activity-event.ts`** es la única entrada al adaptador:
-   prueba `isMergeToMain()` y luego `isCriticalAssignment()`, y devuelve
-   `undefined` en los dos casos en que no hay evento —payload no crítico, o crítico
-   que no se puede normalizar—. Desde afuera son indistinguibles a propósito: los
-   dos se acusan con `200` y ninguno se guarda.
-4. **`merge-to-main.ts` / `issue-assignment.ts`** aplican el filtro y normalizan. Aquí
-   es donde se leen `base.ref`, `issue.assignees` y las etiquetas, y donde el
-   repositorio sale de `repository.full_name` (nunca del `url`).
+   `ingest()` pregunta por el merge y, si el payload no era crítico, por la
+   asignación. Responde un `Ingestion` (ADR-0014): el evento, o un rechazo con su
+   motivo — `not-critical` para el payload que el filtro descartó, `malformed` para
+   el crítico que no se pudo normalizar. Un `malformed` es terminal: ese payload no
+   se relee como asignación. Desde afuera los dos motivos son indistinguibles a
+   propósito (los dos se acusan con `200` y ninguno se guarda); adentro son la única
+   forma de saber qué pasó.
+4. **`merge-to-main.ts` / `issue-assignment.ts`** aplican el filtro y normalizan en
+   **una sola pasada**: leen `base.ref`, `issue.assignees` y las etiquetas una vez y
+   responden el `Ingestion` directamente. Ya no hay predicado de tipo que prometa
+   campos que no verificó, así que nada se valida dos veces. El repositorio sale de
+   `repository.full_name` (nunca del `url`).
 5. **`github/payload.ts`** y **`domain/`** son las hojas compartidas: lectura
    defensiva de GitHub, y las reglas de qué hace crítico a un evento. Ninguna conoce
    a un controlador.
@@ -209,10 +216,11 @@ Estos archivos no aparecen en el grafo de llamadas porque no llaman a nadie: **d
 | `src/relay/webhook.controller.ts` | `POST /`: firma, parseo, store, deliver | GitHub |
 | `src/relay/history.controller.ts` | `GET /history`: `?user=`, `?repository=` | clientes |
 | `src/relay/stream.controller.ts` | `GET /stream`: compone eventos + heartbeat | clientes |
-| `src/relay/github/to-activity-event.ts` | única entrada al adaptador | `webhook.controller` |
-| `src/relay/github/merge-to-main.ts` | filtro + normalización de `pr.merged` | `to-activity-event` |
-| `src/relay/github/issue-assignment.ts` | filtro + normalización de `issue.assigned` | `to-activity-event` |
-| `src/relay/github/payload.ts` | lectura defensiva de payloads + `GitHubDelivery` | los dos normalizadores |
+| `src/relay/github/to-activity-event.ts` | `ingest()`: única entrada al adaptador | `webhook.controller` |
+| `src/relay/github/ingestion.ts` | `Ingestion` y los motivos del rechazo | los dos normalizadores, el controlador |
+| `src/relay/github/merge-to-main.ts` | filtro + normalización de `pr.merged`, en una pasada | `to-activity-event` |
+| `src/relay/github/issue-assignment.ts` | filtro + normalización de `issue.assigned`, en una pasada | `to-activity-event` |
+| `src/relay/github/payload.ts` | lectura defensiva de payloads | los dos normalizadores |
 | `src/relay/domain/activity-event.ts` | el contrato de 9 campos + `isoInstant()` | adaptador, servicio, controladores |
 | `src/relay/domain/critical.ts` | qué hace crítico a un evento | los dos normalizadores |
 | `src/relay/activity-events.service.ts` | `store()`, `list()`, `HistoryFilter`, `fromStoredRow()` | los dos controladores de lectura y el de ingreso |

@@ -1,15 +1,7 @@
-import { isoInstant, type ActivityEvent } from '../domain/activity-event.js';
+import { isoInstant } from '../domain/activity-event.js';
 import { carriesCriticalLabel } from '../domain/critical.js';
-import { asRecord, labelNames, loginOf, repositoryName, type GitHubDelivery } from './payload.js';
-
-interface GitHubUser {
-  login: string;
-}
-
-export interface IssuePayload extends GitHubDelivery {
-  issue: Record<string, unknown>;
-  assignee?: GitHubUser | null;
-}
+import type { Ingestion } from './ingestion.js';
+import { asRecord, labelNames, loginOf, repositoryName } from './payload.js';
 
 /**
  * The users GitHub reports on the issue, most specific first: the issue's own
@@ -22,8 +14,7 @@ function reportedAssignees(issue: Record<string, unknown>): string[] {
 }
 
 /**
- * A critical event exactly when GitHub reports an issue carrying a critical
- * label with someone on it, on the action that assigns.
+ * The assignment worth interrupting someone for, or why nothing will be stored.
  *
  * `opened` is deliberately not a trigger. GitHub delivers `assigned` and
  * `opened` as two deliveries for an issue created already assigned, and both
@@ -35,35 +26,30 @@ function reportedAssignees(issue: Record<string, unknown>): string[] {
  * editing it — is not an assignment and produces nothing, because reporting it
  * would attribute to the labeler an assignment they never made.
  *
- * GitHub's `issues` payload carries no `changes` object and no
- * previous-assignee set, so there is nothing to diff: the reported state is the
- * only evidence available, and this is the closest honest reading of "the
- * assignee set changed".
+ * GitHub's `issues` payload carries no `changes` object and no previous-assignee
+ * set, so there is nothing to diff: the reported state is the only evidence
+ * available, and this is the closest honest reading of "the assignee set
+ * changed".
+ *
+ * Filter and normalization are one pass (ADR-0014), which also means the
+ * reported assignees are read once: the same walk decides whether there is
+ * somebody to tell and who it is.
  */
-export function isCriticalAssignment(payload: unknown): payload is IssuePayload {
-  const webhook = asRecord(payload);
-  const issue = asRecord(webhook?.issue);
-  if (!webhook || !issue) {
-    return false;
+export function criticalAssignment(payload: unknown): Ingestion {
+  const delivery = asRecord(payload);
+  if (delivery?.action !== 'assigned') {
+    return { kind: 'ignored', reason: 'not-critical' };
   }
-  if (!carriesCriticalLabel(labelNames(issue.labels))) {
-    return false;
+  const issue = asRecord(delivery.issue);
+  if (!issue || !carriesCriticalLabel(labelNames(issue.labels))) {
+    return { kind: 'ignored', reason: 'not-critical' };
   }
-  if (!(loginOf(webhook.assignee) ?? reportedAssignees(issue)[0])) {
-    return false;
+  const assignee = loginOf(delivery.assignee) ?? reportedAssignees(issue)[0];
+  if (!assignee) {
+    return { kind: 'ignored', reason: 'not-critical' };
   }
-  return webhook.action === 'assigned';
-}
 
-/**
- * Maps GitHub's issue payload to the ActivityEvent shape. Returns undefined
- * when the payload passes the filter but cannot be normalized, so it is ignored
- * without error. The actor is whoever performed the assignment; the assignee is
- * whoever received it.
- */
-export function toAssignmentEvent(payload: IssuePayload): ActivityEvent | undefined {
-  const issue = asRecord(payload?.issue) ?? {};
-  const actor = loginOf(payload?.sender);
+  const actor = loginOf(delivery.sender);
   // GitHub timestamps the assignment on the issue itself, not on the event: a
   // later assignment moves `updated_at`, and so does the one that lands at
   // creation, which is why `created_at` is no longer read here.
@@ -71,17 +57,21 @@ export function toAssignmentEvent(payload: IssuePayload): ActivityEvent | undefi
   const subject = issue.title;
   const url = issue.html_url;
   if (!actor || !when || typeof subject !== 'string' || typeof url !== 'string') {
-    return undefined;
+    return { kind: 'ignored', reason: 'malformed' };
   }
+
   return {
-    type: 'issue.assigned',
-    repository: repositoryName(payload?.repository),
-    branch: null,
-    actor,
-    subject,
-    assignee: loginOf(payload.assignee) ?? reportedAssignees(issue)[0] ?? null,
-    labels: labelNames(issue.labels),
-    url,
-    when,
+    kind: 'event',
+    event: {
+      type: 'issue.assigned',
+      repository: repositoryName(delivery.repository),
+      branch: null,
+      actor,
+      subject,
+      assignee,
+      labels: labelNames(issue.labels),
+      url,
+      when,
+    },
   };
 }

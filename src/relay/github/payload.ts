@@ -7,17 +7,12 @@
  * without error rather than fail the request.
  */
 
-/**
- * The fields every webhook carries whatever it announces, which each adapter
- * narrows its own payload type from. Declared once because they travel together:
- * a delivery is an action, the sender who caused it, and the repository it
- * happened in.
- */
-export interface GitHubDelivery {
-  action: string;
-  sender: { login: string };
-  repository: { full_name: string };
-}
+// The envelope every webhook carries, whatever it announces, is a comment rather
+// than a type: nothing narrows a whole payload any more — each adapter reads the
+// envelope it needs and answers an `Ingestion` (ADR-0014), so a shared interface
+// would only describe fields no reader has verified. A delivery is an action, the
+// sender who caused it, and the repository it happened in; the repository is read
+// through `repositoryName` below.
 
 /** A non-null object, the precondition every payload walk starts from. */
 export function asRecord(value: unknown): Record<string, unknown> | undefined {

@@ -107,10 +107,11 @@ github-activity-feed/
 │       │   ├── activity-event.ts   # el shape normalizado (§6)
 │       │   └── critical.ts         # la regla: qué hace crítico a un evento
 │       ├── github/                 # la frontera del payload: solo aquí se conoce GitHub
+│       │   ├── ingestion.ts        # el resultado: evento, o rechazo con motivo (ADR-0014)
 │       │   ├── payload.ts          # lectura defensiva de payloads
-│       │   ├── to-activity-event.ts    # única entrada: payload -> ActivityEvent | undefined
-│       │   ├── merge-to-main.ts        # filtro + normalización del merge
-│       │   └── issue-assignment.ts     # filtro + normalización de la asignación
+│       │   ├── to-activity-event.ts    # única entrada: payload -> Ingestion
+│       │   ├── merge-to-main.ts        # filtro + normalización del merge, en una pasada
+│       │   └── issue-assignment.ts     # filtro + normalización de la asignación, en una pasada
 │       ├── activity-event.entity.ts    # la fila persistida (ADR-0004)
 │       ├── activity-events.service.ts  # store/list
 │       ├── activity-stream.ts      # el broadcast: entrega en vivo, sin historia
