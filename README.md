@@ -24,10 +24,11 @@ El proyecto tiene dos mitades que hablan el mismo contrato:
 - **El CLI** (`client/`, Go) se conecta al relay y muestra los eventos en la terminal,
   o consulta el historial almacenado.
 
-Un evento es crítico en dos casos: un pull request fusionado a `main`, y un issue
-asignado que lleva la etiqueta `bug` o `feedback`. Todo lo demás se acusa y se
-descarta. El relay es la memoria compartida del equipo; el CLI es la vista de cada
-desarrollador.
+Un evento es crítico en dos casos: un pull request fusionado a `main`, y un issue con
+la etiqueta `bug` o `feedback` que se asigna o se cierra. El cierre se separa por el
+motivo que reporta GitHub: resuelto (`issue.closed`) o descartado (`issue.dismissed`).
+Todo lo demás se acusa y se descarta. El relay es la memoria compartida del equipo; el
+CLI es la vista de cada desarrollador.
 
 La justificación del diseño, el contrato y el estado del proyecto están en
 [`ARCHITECTURE.md`](ARCHITECTURE.md).

@@ -1,5 +1,6 @@
 import type { Ingestion } from './ingestion.js';
 import { criticalAssignment } from './issue-assignment.js';
+import { criticalClosure } from './issue-closure.js';
 import { mergeToMain } from './merge-to-main.js';
 
 /**
@@ -11,14 +12,19 @@ import { mergeToMain } from './merge-to-main.js';
  * the HTTP seam stay ignorant of `pull_request`, `issues` and their fields.
  *
  * A `malformed` answer is terminal. The payload already passed one adapter's
- * filter, so the other adapter must not read it again: a merge that is critical
- * but unreadable must not end up stored as an assignment just because it is also
- * shaped like nothing the filter would reject. One payload, one answer.
+ * filter, so no later adapter may read it again: a merge that is critical but
+ * unreadable must not end up stored as an assignment just because it is also
+ * shaped like nothing the filter would reject, and the same holds for an issue
+ * closure. One payload, one answer.
  */
 export function ingest(payload: unknown): Ingestion {
   const merge = mergeToMain(payload);
   if (merge.kind === 'event' || merge.reason === 'malformed') {
     return merge;
   }
-  return criticalAssignment(payload);
+  const assignment = criticalAssignment(payload);
+  if (assignment.kind === 'event' || assignment.reason === 'malformed') {
+    return assignment;
+  }
+  return criticalClosure(payload);
 }

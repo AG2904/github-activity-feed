@@ -8,7 +8,7 @@
  */
 
 /** The critical happenings the relay knows how to normalize. A closed set. */
-export type ActivityEventType = 'pr.merged' | 'issue.assigned';
+export type ActivityEventType = 'pr.merged' | 'issue.assigned' | 'issue.closed' | 'issue.dismissed';
 
 declare const isoInstantBrand: unique symbol;
 

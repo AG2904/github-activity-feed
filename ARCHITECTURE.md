@@ -10,7 +10,7 @@
 Sistema de notificaciones en tiempo real para un equipo de desarrollo de 3 personas sobre **GitHub (github.com)**. Notifica en la terminal de los desarrolladores eventos clave:
 
 1. **Pull Requests:** Cuando un PR es fusionado a `main`.
-2. **Issues:** Cuando un issue etiquetado con `bug` o `feedback` es asignado a alguien.
+2. **Issues:** Cuando un issue etiquetado con `bug` o `feedback` es asignado a alguien, o se cierra — reportado como resuelto (`issue.closed`) o descartado (`issue.dismissed`).
 
 El proyecto es principalmente un **portafolio técnico** — demuestra arquitectura, disciplina de testing y documentación —; el uso como herramienta interna del equipo es un objetivo secundario y opcional (ver §9).
 
@@ -111,7 +111,8 @@ github-activity-feed/
 │       │   ├── payload.ts          # lectura defensiva de payloads
 │       │   ├── to-activity-event.ts    # única entrada: payload -> Ingestion
 │       │   ├── merge-to-main.ts        # filtro + normalización del merge, en una pasada
-│       │   └── issue-assignment.ts     # filtro + normalización de la asignación, en una pasada
+│       │   ├── issue-assignment.ts     # filtro + normalización de la asignación, en una pasada
+│       │   └── issue-closure.ts        # filtro + normalización del cierre, en una pasada
 │       ├── activity-event.entity.ts    # la fila persistida (ADR-0004)
 │       ├── activity-events.service.ts  # store/list
 │       ├── activity-stream.ts      # el broadcast: entrega en vivo, sin historia
@@ -173,7 +174,7 @@ github-activity-feed/
 }
 ```
 
-Nueve campos, ni uno más. `type` es un conjunto cerrado de literales (`pr.merged`, `issue.assigned`); `repository` es `owner/name` tal como lo reporta GitHub, y es `null` solo para un evento guardado antes de que la columna existiera (ticket 09); `branch` es la rama de origen de un merge (`head.ref`), y es `null` en una asignación, en una fila anterior a la columna o cuando el payload no trae una usable (ADR-0013); `assignee` es `null` cuando el evento no tiene ninguno, nunca cadena vacía; `when` es UTC en ISO-8601 con milisegundos (`toISOString()`), forma canónica fijada por test. El mismo shape sirve el stream y el historial, para que el cliente parsee una sola cosa.
+Nueve campos, ni uno más. `type` es un conjunto cerrado de literales (`pr.merged`, `issue.assigned`, `issue.closed`, `issue.dismissed`); `repository` es `owner/name` tal como lo reporta GitHub, y es `null` solo para un evento guardado antes de que la columna existiera (ticket 09); `branch` es la rama de origen de un merge (`head.ref`), y es `null` en una asignación, en un cierre, en una fila anterior a la columna o cuando el payload no trae una usable (ADR-0013); `assignee` es `null` cuando el evento no tiene ninguno, nunca cadena vacía — un cierre lo lleva cuando el issue estaba asignado, así que `--user` alcanza a esa persona (ADR-0016); `when` es UTC en ISO-8601 con milisegundos (`toISOString()`), forma canónica fijada por test. El mismo shape sirve el stream y el historial, para que el cliente parsee una sola cosa.
 
 El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este contrato: es una columna de la fila, junto al id de storage, y ninguno de los dos llega al cable (ADR-0005).
 

@@ -30,7 +30,7 @@ _Note_: capitalized `Feed` is the concept; `feed` in code font is the binary.
 _Avoid_: inbox, timeline, log, stream
 
 **Critical event**:
-A GitHub happening worth interrupting a developer for. Today that means a pull request merged into `main`, or an issue assigned while carrying a `bug` or `feedback` label.
+A GitHub happening worth interrupting a developer for. Today that means a pull request merged into `main`, an issue assigned while carrying a `bug` or `feedback` label, or such an issue closed — reported as resolved (`issue.closed`) or as dismissed not planned (`issue.dismissed`).
 _Avoid_: important event, alert, notification
 
 **Merge to main**:
@@ -41,6 +41,16 @@ _Avoid_: merge, integration
 An issue gaining an assignee, whether at creation or later. It is the trigger for the issue-side critical event, gated on the issue carrying a `bug` or `feedback` label at that moment.
 _Note_: GitHub reports it as the `assigned` action in both cases. The `opened` delivery that accompanies a creation arriving already assigned reports the same happening, not a second one (ADR-0012).
 _Avoid_: allocation, ownership
+
+**Closure**:
+An issue closing while carrying a `bug` or `feedback` label, reported as resolved — GitHub's `completed` reason, or no reason at all. It is the end of the attention an assignment started, and it normalizes to `issue.closed`.
+_Note_: the closure carries the issue's assignee when it has one, so the event belongs to that person under `--user` as well as to whoever closed it.
+_Avoid_: completion, resolution
+
+**Dismissal**:
+A closure GitHub reports as `not_planned`: the work was decided against, not done. It is the same happening as a closure and a different piece of news, so it normalizes to its own type, `issue.dismissed`.
+_Note_: an unrecognised or missing `state_reason` is a closure, not a dismissal: not knowing why an issue closed is not evidence that it was discarded (ADR-0016).
+_Avoid_: rejection, wontfix
 
 **Ingestion**:
 What the relay's GitHub adapter decided about one delivered payload: the ActivityEvent it carries, or the reason there is none. It answers "what did this delivery produce?", and it is internal — the wire acknowledges the same success code either way (ADR-0015).

@@ -23,7 +23,7 @@ GitHub ──POST / ──▶ webhook.controller.accept()
                         │ 1. verifica HMAC sobre los bytes crudos
                         │ 2. recién ahora parsea
                         ▼
-                   github/to-activity-event.ts ──▶ merge-to-main | issue-assignment
+                   github/to-activity-event.ts ──▶ merge-to-main | issue-assignment | issue-closure
                         │                              │
                         │                              ├──▶ github/ingestion.ts
                         │                              └──▶ github/payload.ts
@@ -48,18 +48,19 @@ Paso por paso:
    inválida: `401`. Cuerpo ilegible: no es JSON, así que el parseo lo nombra
    `unparseable` y la entrega se acusa con `200` y se descarta sin llegar al adaptador.
 3. **`src/relay/github/to-activity-event.ts`** es la única entrada al adaptador:
-   `ingest()` pregunta por el merge y, si el payload no era crítico, por la
-   asignación. Responde un `Ingestion` (ADR-0015): el evento, o un rechazo con su
-   motivo — `not-critical` para el payload que el filtro descartó, `malformed` para
-   el crítico que no se pudo normalizar. Un `malformed` es terminal: ese payload no
-   se relee como asignación. Desde afuera los dos motivos son indistinguibles a
-   propósito (los dos se acusan con `200` y ninguno se guarda); adentro son la única
-   forma de saber qué pasó.
-4. **`merge-to-main.ts` / `issue-assignment.ts`** aplican el filtro y normalizan en
-   **una sola pasada**: leen `base.ref`, `issue.assignees` y las etiquetas una vez y
-   responden el `Ingestion` directamente. Ya no hay predicado de tipo que prometa
-   campos que no verificó, así que nada se valida dos veces. El repositorio sale de
-   `repository.full_name` (nunca del `url`).
+   `ingest()` pregunta por el merge, si el payload no era crítico por la asignación,
+   y si tampoco por el cierre del issue. Responde un `Ingestion` (ADR-0015): el
+   evento, o un rechazo con su motivo — `not-critical` para el payload que el filtro
+   descartó, `malformed` para el crítico que no se pudo normalizar. Un `malformed` es
+   terminal: ese payload no se relee como otra cosa. Desde afuera los dos motivos son
+   indistinguibles a propósito (los dos se acusan con `200` y ninguno se guarda);
+   adentro son la única forma de saber qué pasó.
+4. **`merge-to-main.ts` / `issue-assignment.ts` / `issue-closure.ts`** aplican el
+   filtro y normalizan en **una sola pasada**: leen `base.ref`, `issue.assignees`,
+   `issue.state_reason` y las etiquetas una vez y responden el `Ingestion`
+   directamente. Ya no hay predicado de tipo que prometa campos que no verificó, así
+   que nada se valida dos veces. El repositorio sale de `repository.full_name` (nunca
+   del `url`).
 5. **`github/payload.ts`** y **`domain/`** son las hojas compartidas: lectura
    defensiva de GitHub, y las reglas de qué hace crítico a un evento. Ninguna conoce
    a un controlador.
@@ -134,7 +135,7 @@ sirve el stream y el historial para que un cliente parsee una sola cosa:
 
 | Campo | Tipo | Notas |
 | --- | --- | --- |
-| `type` | `'pr.merged' \| 'issue.assigned'` | conjunto cerrado |
+| `type` | `'pr.merged' \| 'issue.assigned' \| 'issue.closed' \| 'issue.dismissed'` | conjunto cerrado |
 | `repository` | `string \| null` | `owner/name` |
 | `branch` | `string \| null` | la rama de origen de un merge (`head.ref`); `null` si el evento no tiene una |
 | `actor` | `string` | quien causó el evento |
@@ -191,7 +192,10 @@ Las reglas completas, incluidos los casos que **no** disparan, están en la deci
 *Filtering* de [`.scratch/relay/spec.md`](../.scratch/relay/spec.md). El resumen: un
 merge cuenta solo si está cerrado **y** mergeado **y** su base es `main`; una
 asignación cuenta con la acción que asigna y una etiqueta crítica puesta **en ese
-momento**, y una acción que solo toca un issue ya asignado no produce nada.
+momento**, y una acción que solo toca un issue ya asignado no produce nada. Un cierre
+de issue cuenta con la acción `closed` y una etiqueta crítica puesta en ese momento, y
+el motivo que GitHub reporta lo separa en dos tipos: `issue.closed` para `completed` o
+sin motivo, `issue.dismissed` para `not_planned` (ADR-0016).
 
 ## 4. El cableado (declaraciones, no llamadas)
 
@@ -217,12 +221,13 @@ Estos archivos no aparecen en el grafo de llamadas porque no llaman a nadie: **d
 | `src/relay/history.controller.ts` | `GET /history`: `?user=`, `?repository=` | clientes |
 | `src/relay/stream.controller.ts` | `GET /stream`: compone eventos + heartbeat | clientes |
 | `src/relay/github/to-activity-event.ts` | `ingest()`: única entrada al adaptador | `webhook.controller` |
-| `src/relay/github/ingestion.ts` | `Ingestion` y los motivos del rechazo | los dos normalizadores, el controlador |
+| `src/relay/github/ingestion.ts` | `Ingestion` y los motivos del rechazo | los tres normalizadores, el controlador |
 | `src/relay/github/merge-to-main.ts` | filtro + normalización de `pr.merged`, en una pasada | `to-activity-event` |
 | `src/relay/github/issue-assignment.ts` | filtro + normalización de `issue.assigned`, en una pasada | `to-activity-event` |
-| `src/relay/github/payload.ts` | lectura defensiva de payloads | los dos normalizadores |
+| `src/relay/github/issue-closure.ts` | filtro + normalización de `issue.closed` / `issue.dismissed`, en una pasada | `to-activity-event` |
+| `src/relay/github/payload.ts` | lectura defensiva de payloads | los tres normalizadores |
 | `src/relay/domain/activity-event.ts` | el contrato de 9 campos + `isoInstant()` | adaptador, servicio, controladores |
-| `src/relay/domain/critical.ts` | qué hace crítico a un evento | los dos normalizadores |
+| `src/relay/domain/critical.ts` | qué hace crítico a un evento | los tres normalizadores |
 | `src/relay/activity-events.service.ts` | `store()`, `list()`, `HistoryFilter`, `fromStoredRow()` | los dos controladores de lectura y el de ingreso |
 | `src/relay/activity-event.entity.ts` | la fila persistida | el servicio (TypeORM) |
 | `src/relay/activity-stream.ts` | el broadcast: `deliver()` / `receive()` | `webhook.controller`, `stream.controller` |

@@ -1,6 +1,6 @@
 /**
  * The domain's definition of a critical event (see GLOSSARY.md): the branch
- * whose merges are integrations, and the labels that make an assignment worth
+ * whose merges are integrations, and the labels that make an issue event worth
  * interrupting someone for.
  *
  * These are the product's rules, not GitHub's field paths. The adapter
@@ -9,7 +9,7 @@
  * answered in one place and without reading JSON.
  */
 
-/** An assignment is critical only while the issue carries one of these. */
+/** An issue-side event is critical only while the issue carries one of these. */
 export const CRITICAL_LABELS: readonly string[] = ['bug', 'feedback'];
 
 /** A merge is critical only when its target is this branch. */

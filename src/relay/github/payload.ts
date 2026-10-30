@@ -49,3 +49,16 @@ export function repositoryName(repository: unknown): string | null {
   const fullName = asRecord(repository)?.full_name;
   return typeof fullName === 'string' && fullName !== '' ? fullName : null;
 }
+
+/**
+ * The users GitHub reports on an issue, most specific first: the issue's own
+ * `assignee` (GitHub's pick of "the" assignee) ahead of the full list.
+ *
+ * Both the assignment and the closure adapters read it, so it lives beside the
+ * other payload readers instead of in one of its two callers.
+ */
+export function reportedAssignees(issue: Record<string, unknown>): string[] {
+  const listed = Array.isArray(issue.assignees) ? issue.assignees : [];
+  const logins = [loginOf(issue.assignee), ...listed.map(loginOf)];
+  return [...new Set(logins.filter((login): login is string => login !== undefined))];
+}
