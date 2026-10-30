@@ -24,11 +24,19 @@ El proyecto tiene dos mitades que hablan el mismo contrato:
 - **El CLI** (`client/`, Go) se conecta al relay y muestra los eventos en la terminal,
   o consulta el historial almacenado.
 
-Un evento es crítico en dos casos: un pull request fusionado a `main`, y un issue con
-la etiqueta `bug` o `feedback` que se asigna o se cierra. El cierre se separa por el
-motivo que reporta GitHub: resuelto (`issue.closed`) o descartado (`issue.dismissed`).
-Todo lo demás se acusa y se descarta. El relay es la memoria compartida del equipo; el
-CLI es la vista de cada desarrollador.
+Cuatro eventos son críticos, y cada uno tiene su tarjeta en el feed:
+
+| Tipo | Cuándo | Tarjeta |
+| --- | --- | --- |
+| `pr.merged` | un pull request fusionado a `main` | `maria.perez merged fix/memory-leak into main` |
+| `issue.assigned` | un issue con `bug` o `feedback` que se asigna | `lucia.gomez assigned to tomas.ferreira` |
+| `issue.closed` | ese issue que se cierra como resuelto | `lucia.gomez closed` |
+| `issue.dismissed` | ese issue que se cierra como `not_planned` | `lucia.gomez dismissed as not planned` |
+
+Todo lo demás se acusa y se descarta. El cierre se separa por el motivo que reporta
+GitHub —resuelto o descartado—, así que la terminal no mezcla un bug arreglado con uno
+que se decidió no hacer. El relay es la memoria compartida del equipo; el CLI es la
+vista de cada desarrollador.
 
 La justificación del diseño, el contrato y el estado del proyecto están en
 [`ARCHITECTURE.md`](ARCHITECTURE.md).
@@ -128,7 +136,8 @@ Ninguno de los dos es obligatorio si se usa el camino dockerizado: véase
 3. Qué se ve. Los eventos van a **stdout**; la narración de la sesión va a **stderr**:
 
    - stdout: una tarjeta por evento, por ejemplo
-     `maria.perez merged fix/memory-leak into main`, con el título, las etiquetas, el
+     `maria.perez merged fix/memory-leak into main` o
+     `lucia.gomez dismissed as not planned`, con el título, las etiquetas, el
      repositorio, el tiempo relativo y la URL.
    - stderr: el banner `watching <url>/stream · backfill <n>`, la línea `connected · …`,
      los avisos de reconexión y la línea `stopped · …` al salir con `Ctrl-C`.
@@ -232,6 +241,7 @@ El plan por fases está en [`ARCHITECTURE.md` §7](ARCHITECTURE.md#7-plan-de-imp
 
 Fuera de alcance en esta fase: automatización de despliegue, proxies inversos y TLS;
 empaquetado con goreleaser o instaladores; publicación de las imágenes en un registry;
-cambios al contrato de eventos, al filtro o al formato de cable; autenticación
+cambios al formato de cable más allá de los cuatro tipos de evento ya implementados;
+autenticación
 multiusuario, permisos, monitoreo, métricas y alertas. El despliegue del relay en un
 servidor interno es opcional y no bloquea el cierre de la fase.
