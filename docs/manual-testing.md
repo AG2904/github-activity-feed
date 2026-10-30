@@ -184,6 +184,9 @@ ver el cable. Después de cada uno, hay que mirar `/history`.
 | Entrega duplicada (05) | el mismo body dos veces con el mismo `X-GitHub-Delivery` | dos `200` y **una sola** fila |
 | Asignación con label crítica (03) | el body de abajo | `200` y una fila con `type":"issue.assigned"` |
 | Asignación sin label crítica (04) | el mismo body con `"labels":[{"name":"chore"}]` | `200` y ninguna fila nueva |
+| Cierre con label crítica, resuelto (cierre 01) | el body de cierre con `"state_reason":"completed"` | `200` y una fila con `type":"issue.closed"` |
+| Cierre con label crítica, descartado (cierre 01) | el mismo body con `"state_reason":"not_planned"` | `200` y una fila con `type":"issue.dismissed"` |
+| Cierre sin label crítica (cierre 01) | el body de cierre con `"labels":[{"name":"chore"}]` | `200` y ninguna fila nueva |
 | Filtro por usuario (07) | `curl "http://localhost:3000/history?user=maria.perez"` | solo los eventos donde es actor o assignee |
 | Usuario sin eventos (07) | `curl "http://localhost:3000/history?user=nadie"` | `[]` con `200`, nunca un error |
 | Filtro vacío (07) | `curl "http://localhost:3000/history?user="` | el registro completo |
@@ -193,6 +196,12 @@ El body de asignación, para el caso de arriba:
 
 ```json
 {"action":"assigned","sender":{"login":"lucia.gomez"},"assignee":{"login":"tomas.ferreira"},"issue":{"title":"Webhook drops events under load","html_url":"https://github.com/AG2904/github-activity-feed/issues/7","updated_at":"2026-10-16T11:00:00Z","labels":[{"name":"bug"}],"assignees":[{"login":"tomas.ferreira"}]}}
+```
+
+El body de cierre, para el caso de arriba:
+
+```json
+{"action":"closed","sender":{"login":"lucia.gomez"},"issue":{"title":"Webhook drops events under load","html_url":"https://github.com/AG2904/github-activity-feed/issues/7","state_reason":"completed","updated_at":"2026-10-16T12:00:00Z","labels":[{"name":"bug"}],"assignee":{"login":"tomas.ferreira"},"assignees":[{"login":"tomas.ferreira"}]}}
 ```
 
 ## Paso 7 — Empezar de cero

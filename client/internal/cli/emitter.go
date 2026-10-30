@@ -21,11 +21,13 @@ type emitter struct {
 	filter  activity.Filter
 	printed bool
 	// The session's account of itself: what reached the reader, filter
-	// included, split by the two types that carry a human word. The backfill
-	// reads total as how much history printed; the stop line reads all three.
-	total    int
-	merged   int
-	assigned int
+	// included, split by the types that carry a human word. The backfill reads
+	// total as how much history printed; the stop line reads all of them.
+	total     int
+	merged    int
+	assigned  int
+	closed    int
+	dismissed int
 }
 
 // newEmitter builds the output policy both commands hand their events to: the
@@ -110,6 +112,10 @@ func (e *emitter) count(event activity.Event) {
 		e.merged++
 	case activity.TypeIssueAssigned:
 		e.assigned++
+	case activity.TypeIssueClosed:
+		e.closed++
+	case activity.TypeIssueDismissed:
+		e.dismissed++
 	}
 }
 
@@ -124,7 +130,11 @@ func (e *emitter) summarize(w io.Writer) {
 		fmt.Fprintln(w, "stopped · no events")
 		return
 	}
-	fmt.Fprintf(w, "stopped · %d events · %d merged · %d assigned\n", e.total, e.merged, e.assigned)
+	fmt.Fprintf(
+		w,
+		"stopped · %d events · %d merged · %d assigned · %d closed · %d dismissed\n",
+		e.total, e.merged, e.assigned, e.closed, e.dismissed,
+	)
 }
 
 // group writes the report shape: the same events, one section per repository.

@@ -304,6 +304,27 @@ func TestWatchRendersEveryLabel(t *testing.T) {
 	}
 }
 
+// The two closures are different news — resolved versus not planned — and the
+// card has to say which one without the reader opening GitHub. Both events
+// arrive on the same stream, so the test also pins that the types are named
+// rather than degraded to their raw literal.
+func TestWatchRendersBothClosures(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--no-color")
+	relay.waitConnected(t)
+
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.send(t, closedFrame(when))
+	relay.send(t, dismissedFrame(when))
+
+	want := cards(closedOutput, dismissedOutput)
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want one card per closure outcome %q", got, want)
+	}
+}
+
 // The labels pin has two halves, and this is the second: a card whose event
 // carries no labels starts line two at the title — no empty "[]", no leading
 // space, no extra blank line. Its own event, because the merged fixture now
@@ -565,11 +586,19 @@ func TestWatchSaysStoppedWithTheCountsItShowed(t *testing.T) {
 	relay.send(t, mergedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
 	readUntil(t, stdout, "https://github.com/AG2904/github-activity-feed/pull/42\n")
 
+	// ...and so do the two closures, each counted under its own outcome, so the
+	// account can tell a resolved issue from a discarded one...
+	when := time.Now().Add(-2 * time.Hour)
+	relay.send(t, closedFrame(when))
+	readUntil(t, stdout, closedOutput)
+	relay.send(t, dismissedFrame(when))
+	readUntil(t, stdout, dismissedOutput)
+
 	// ...and then the session ends. The assignment is the card the end cannot
 	// show — Windows by breaking the pipe under its write — so it may never
-	// enter the account: the session must still account for the card it did.
+	// enter the account: the session must still account for the cards it did.
 	endSession(t, feed, stdout, relay, assignedFrame(time.Now().Add(-2*time.Hour-30*time.Minute)))
-	wantStopped(t, feed, "stopped · 1 events · 1 merged · 0 assigned\n")
+	wantStopped(t, feed, "stopped · 3 events · 1 merged · 0 assigned · 1 closed · 1 dismissed\n")
 }
 
 // The account answers "what did I see": an event the filter dropped was never
@@ -593,7 +622,7 @@ func TestWatchStoppedCountsLeaveOutWhatTheFilterDiscarded(t *testing.T) {
 
 	endSession(t, feed, stdout, relay, assignedFrame(when))
 
-	wantStopped(t, feed, "stopped · 1 events · 1 merged · 0 assigned\n")
+	wantStopped(t, feed, "stopped · 1 events · 1 merged · 0 assigned · 0 closed · 0 dismissed\n")
 }
 
 // endSession ends a running watch with the exit path this platform supports,
@@ -768,6 +797,25 @@ func TestWatchFiltersByAssignee(t *testing.T) {
 
 	if got := feed.stdout.String(); got != want {
 		t.Errorf("stdout = %q, want only the assignment where lucia is the assignee %q", got, want)
+	}
+}
+
+// A closure belongs to the person the issue was on as much as to whoever closed
+// it, so --user has to reach it through the assignee slot the event carries.
+func TestWatchFiltersAClosureByItsAssignee(t *testing.T) {
+	relay := newFakeRelay(t)
+	feed := startFeed(t, nil, "watch", "--relay", relay.URL, "--user", "tomas.ferreira")
+	relay.waitConnected(t)
+
+	when := time.Now().Add(-2*time.Hour - 30*time.Minute)
+	relay.send(t, closedFrame(when))
+	relay.send(t, dismissedFrame(when))
+
+	want := closedOutput
+	feed.waitStdout(t, want)
+
+	if got := feed.stdout.String(); got != want {
+		t.Errorf("stdout = %q, want only the closure of the issue assigned to the user %q", got, want)
 	}
 }
 
@@ -1304,6 +1352,14 @@ const (
 		"  [bug] Ship the onboarding checklist\n" +
 		"  AG2904/github-activity-feed · 2h ago\n" +
 		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
+	closedOutput = "lucia.gomez closed\n" +
+		"  [bug] Ship the onboarding checklist\n" +
+		"  AG2904/github-activity-feed · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/issues/7\n"
+	dismissedOutput = "lucia.gomez dismissed as not planned\n" +
+		"  [feedback] Retire the old webhook endpoint\n" +
+		"  AG2904/github-activity-feed · 2h ago\n" +
+		"  https://github.com/AG2904/github-activity-feed/issues/8\n"
 )
 
 // The same two events inside a grouped report, where the header already named
@@ -1347,6 +1403,18 @@ func assignedFrame(when time.Time) string {
 	return eventFrame(when, "issue.assigned", "AG2904/github-activity-feed", "",
 		"maria.perez", "Ship the onboarding checklist", ptr("lucia.gomez"), `["bug"]`,
 		"https://github.com/AG2904/github-activity-feed/issues/7")
+}
+
+func closedFrame(when time.Time) string {
+	return eventFrame(when, "issue.closed", "AG2904/github-activity-feed", "",
+		"lucia.gomez", "Ship the onboarding checklist", ptr("tomas.ferreira"), `["bug"]`,
+		"https://github.com/AG2904/github-activity-feed/issues/7")
+}
+
+func dismissedFrame(when time.Time) string {
+	return eventFrame(when, "issue.dismissed", "AG2904/github-activity-feed", "",
+		"lucia.gomez", "Retire the old webhook endpoint", nil, `["feedback"]`,
+		"https://github.com/AG2904/github-activity-feed/issues/8")
 }
 
 // eventFrame builds the relay's frame for one event. An empty repository or
