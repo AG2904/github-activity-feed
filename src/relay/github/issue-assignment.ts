@@ -1,17 +1,7 @@
 import { isoInstant } from '../domain/activity-event.js';
 import { carriesCriticalLabel } from '../domain/critical.js';
 import type { Ingestion } from './ingestion.js';
-import { asRecord, labelNames, loginOf, repositoryName } from './payload.js';
-
-/**
- * The users GitHub reports on the issue, most specific first: the issue's own
- * `assignee` (GitHub's pick of "the" assignee) ahead of the full list.
- */
-function reportedAssignees(issue: Record<string, unknown>): string[] {
-  const listed = Array.isArray(issue.assignees) ? issue.assignees : [];
-  const logins = [loginOf(issue.assignee), ...listed.map(loginOf)];
-  return [...new Set(logins.filter((login): login is string => login !== undefined))];
-}
+import { asRecord, labelNames, loginOf, reportedAssignees, repositoryName } from './payload.js';
 
 /**
  * The assignment worth interrupting someone for, or why nothing will be stored.

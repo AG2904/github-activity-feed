@@ -228,8 +228,13 @@ la tarjeta se queda en tres líneas. En un pipe no hay un solo escape.
 
 Las tarjetas van a stdout; la sesión entera va a stderr. Al cerrar con `Ctrl-C`, la
 línea de cuenta suma lo que se mostró, filtro incluido —en este recorrido,
-`stopped · 2 events · 1 merged · 1 assigned`—, y `stopped · no events` cuando no se
-mostró nada.
+`stopped · 2 events · 1 merged · 1 assigned · 0 closed · 0 dismissed`—, y `stopped · no
+events` cuando no se mostró nada.
+
+Un cierre de issue con `bug` o `feedback` llega como una tarjeta más, y el motivo que
+GitHub reporta la separa en dos frases: `lucia.gomez closed` cuando se resolvió, y
+`lucia.gomez dismissed as not planned` cuando se descartó. Son noticias distintas: el
+tipo viaja en el cable como `issue.closed` o `issue.dismissed` (ADR-0016).
 
 ## Paso 7 — Lo que no se repite
 

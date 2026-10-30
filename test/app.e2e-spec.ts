@@ -590,6 +590,100 @@ describe('Relay HTTP seam', () => {
     });
   });
 
+  describe('an issue closure becomes an event (ticket 01)', () => {
+    it('stores a closure reported as completed, with the issue assignee', async () => {
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            action: 'closed',
+            issue: {
+              state_reason: 'completed',
+              html_url: issueUrl(91),
+              updated_at: '2026-10-16T10:15:00Z',
+            },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).toContainEqual({
+        type: 'issue.closed',
+        repository: REPOSITORY,
+        branch: null,
+        actor: 'lucia.gomez',
+        subject: 'Webhook drops events under load',
+        assignee: 'tomas.ferreira',
+        labels: ['bug'],
+        url: issueUrl(91),
+        when: '2026-10-16T10:15:00.000Z',
+      });
+    });
+
+    it('stores a closure reported as not planned as its own type, with no assignee', async () => {
+      // The two outcomes are different news: a discarded issue is not a resolved
+      // one. The top-level `assignee` of the delivery is deliberately ignored —
+      // the issue's own state is the evidence.
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            action: 'closed',
+            issue: {
+              state_reason: 'not_planned',
+              html_url: issueUrl(92),
+              labels: [{ name: 'feedback' }],
+              assignee: null,
+              assignees: [],
+            },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).toContainEqual(
+        expect.objectContaining({
+          type: 'issue.dismissed',
+          actor: 'lucia.gomez',
+          assignee: null,
+          labels: ['feedback'],
+          url: issueUrl(92),
+        }),
+      );
+    });
+
+    it('reads a closure with no reported reason as a plain closure', async () => {
+      // `state_reason` arrived after closures did; a payload without it still
+      // closed the issue, and an unknown reason is not a dismissal.
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            action: 'closed',
+            issue: { state_reason: undefined, html_url: issueUrl(93) },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).toContainEqual(
+        expect.objectContaining({ type: 'issue.closed', url: issueUrl(93) }),
+      );
+    });
+
+    it('ignores a closure with a critical label but nobody to attribute it to', async () => {
+      await postWebhook(
+        JSON.stringify(
+          issuePayload({
+            action: 'closed',
+            sender: undefined,
+            issue: { html_url: issueUrl(94) },
+          }),
+        ),
+      ).expect(200);
+
+      const history = await getHistory().expect(200);
+      expect(history.body).not.toContainEqual(expect.objectContaining({ url: issueUrl(94) }));
+    });
+  });
+
   describe('everything else is ignored (ticket 04)', () => {
     /**
      * The negative half of the filter, as one table: every webhook in it has to
@@ -667,6 +761,22 @@ describe('Relay HTTP seam', () => {
           issuePayload({ issue: { html_url: issueUrl(81), labels: [{ name: 'chore' }] } }),
         ),
         marker: issueUrl(81),
+      },
+      {
+        event: 'issues',
+        name: 'a closed issue without a critical label',
+        body: JSON.stringify(
+          issuePayload({
+            action: 'closed',
+            assignee: undefined,
+            issue: {
+              html_url: issueUrl(82),
+              labels: [{ name: 'chore' }, { name: 'area:relay' }],
+              state_reason: 'completed',
+            },
+          }),
+        ),
+        marker: issueUrl(82),
       },
       {
         event: 'ping',

@@ -19,6 +19,11 @@ const (
 	TypePRMerged = "pr.merged"
 	// TypeIssueAssigned is an issue gaining an assignee.
 	TypeIssueAssigned = "issue.assigned"
+	// TypeIssueClosed is an issue closed with its work reported as done.
+	TypeIssueClosed = "issue.closed"
+	// TypeIssueDismissed is an issue closed without the work being done, which
+	// GitHub reports as "not planned".
+	TypeIssueDismissed = "issue.dismissed"
 )
 
 // Event is one ActivityEvent from the relay, with the timestamp already

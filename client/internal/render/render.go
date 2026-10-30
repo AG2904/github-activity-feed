@@ -97,6 +97,12 @@ func (p Palette) headline(event activity.Event) string {
 		if event.Assignee != nil && *event.Assignee != "" {
 			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, clean(*event.Assignee)))
 		}
+	case activity.TypeIssueClosed:
+		parts = append(parts, p.paint(green, "closed"))
+	case activity.TypeIssueDismissed:
+		// The two closures are different news, so the reason rides in the same
+		// sentence instead of being left to the type the feed does not print.
+		parts = append(parts, p.paint(yellow, "dismissed"), p.paint(grey, "as not planned"))
 	default:
 		parts = append(parts, p.paint(grey, clean(event.Type)))
 	}

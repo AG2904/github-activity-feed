@@ -106,9 +106,10 @@ what happened whether or not the terminal shows colour.
   3. `repository · time` — each segment omitted when the event does not carry it (a
      legacy row has no repository).
   A fourth indented line carries the URL only when hyperlinks are unavailable.
-- **Vocabulary.** `merged` and `assigned` are the human words; `pr.merged` and
-  `issue.assigned` stay on the wire and in `--json`. An unknown type falls back to its
-  raw value, so a new event type degrades to legible rather than to blank.
+- **Vocabulary.** `merged`, `assigned`, `closed` and `dismissed` are the human words;
+  `pr.merged`, `issue.assigned`, `issue.closed` and `issue.dismissed` stay on the wire
+  and in `--json`. An unknown type falls back to its raw value, so a new event type
+  degrades to legible rather than to blank.
 - **The destination names the branch when the event carries one.** A merge's source
   branch (`branch`, from the relay's `head.ref`, ADR-0013) renders `actor merged
   <branch> into main`. When `branch` is null — a row stored before the field existed,
@@ -207,6 +208,10 @@ what happened whether or not the terminal shows colour.
     segment and no doubled `into main`;
   - an assigned event renders `actor assigned to assignee`, and `assigned` alone when
     the assignee is null;
+  - a closure renders `actor closed`, and a dismissal renders `actor dismissed as not
+    planned`, so the two outcomes never read alike (ADR-0016);
+  - the stop line splits all four types: `stopped · <n> events · <m> merged · <a>
+    assigned · <c> closed · <d> dismissed`;
   - an event with no labels starts line two with the title instead of printing an
     empty `[]`;
   - a legacy event with `repository: null` renders a context line of just the time;
@@ -324,3 +329,9 @@ what happened whether or not the terminal shows colour.
   weight, the two states keep green and yellow, the people cyan, the branch keeps the
   location blue, the repository drops to the grey of the time, and the reason moves
   red → magenta, so the reason stays warm without red's alarm.
+- 2026-10-30: **Amendment — closures get their own sentences.** Two new relay types
+  join the vocabulary: `issue.closed` renders `actor closed` and `issue.dismissed`
+  renders `actor dismissed as not planned`. The reason of the closure travels in the
+  type rather than in a new field (ADR-0016), so the card needs no extra line, and the
+  stop line gains `closed` and `dismissed` counters — it accounts for what reached the
+  reader, and a type it omitted would make that account wrong.

@@ -111,9 +111,10 @@ Paso por paso:
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
    cualquier punto, el retorno es `0`, no un error. Cualquiera sea el camino de
    salida —`Ctrl-C` incluido—, el `defer out.summarize(stderr)` imprime la última
-   línea de la sesión: `stopped · <n> events · <k> merged · <l> assigned` cuando se
-   mostró algo, `stopped · no events` cuando no. Los conteos son de eventos
-   **mostrados**, filtro incluido: la respuesta a "qué vi", no a "qué mandó el relay".
+   línea de la sesión: `stopped · <n> events · <k> merged · <a> assigned · <c> closed ·
+   <d> dismissed` cuando se mostró algo, `stopped · no events` cuando no. Los conteos
+   son de eventos **mostrados**, filtro incluido: la respuesta a "qué vi", no a "qué
+   mandó el relay".
 8. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
    jitter de hasta un cuarto del paso. Una conexión que entregó al menos un evento
    válido resetea la escalera, así que un corte aislado vuelve a esperar un segundo.
@@ -177,9 +178,9 @@ con diferencias de representación:
 
 | Campo | Tipo en Go | Notas |
 | --- | --- | --- |
-| `Type` | `string` | `pr.merged` o `issue.assigned`; el CLI no valida el conjunto |
+| `Type` | `string` | `pr.merged`, `issue.assigned`, `issue.closed` o `issue.dismissed`; el CLI no valida el conjunto |
 | `Repository` | `*string` | `nil` solo para una fila anterior a la columna |
-| `Branch` | `*string` | `nil` en una asignación, en una fila anterior a la columna, o si el payload no traía `head.ref` usable (ADR-0013) |
+| `Branch` | `*string` | `nil` en una asignación, en un cierre, en una fila anterior a la columna, o si el payload no traía `head.ref` usable (ADR-0013) |
 | `Actor` | `string` | |
 | `Subject` | `string` | |
 | `Assignee` | `*string` | `nil` cuando el evento no tiene uno |
@@ -194,6 +195,11 @@ ausentes o `null` no rechazan el evento, y el renderer cae en la frase derivada 
 tipo. `labels` ausente queda `nil`, distinto de
 una lista vacía solo en el modelo: el renderizador lee la longitud, así que las dos
 formas imprimen el título sin un `[]` vacío.
+
+El verbo de la frase sale del tipo: `merged [<branch>] into main`, `assigned [to
+<assignee>]`, `closed`, y `dismissed as not planned`. Los dos cierres son noticias
+distintas —resuelto o descartado— y la tarjeta lo dice, porque el motivo que GitHub
+reporta viaja en el tipo (ADR-0016).
 
 ### 2.2 `activity.Filter` — el filtro local
 
@@ -345,7 +351,8 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   para golangci-lint, con la misma versión que fija CI (v2.13). Publicar binarios
   sigue siendo manual, con `npm run cli:dist`.
 - **El detalle de los colores**: la paleta por rol vive en `render.go` —cian para las
-  personas, verde para la integración, amarillo para la asignación, azul para la rama
+  personas, verde para la integración y el cierre resuelto, amarillo para la asignación
+  y el descarte, azul para la rama
   —la ubicación que importa—, magenta para las etiquetas —la razón, cálida sin la
   alarma del rojo— y gris para el repositorio, el conector y el tiempo— y no cambia el
   flujo.
