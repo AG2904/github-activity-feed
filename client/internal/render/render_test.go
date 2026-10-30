@@ -7,7 +7,58 @@ package render
 import (
 	"testing"
 	"time"
+
+	"github.com/AG2904/github-activity-feed/client/internal/activity"
 )
+
+// TestHeadlineColoursByState pins the palette by role: each state word has its
+// own slot, and a closure never borrows the colour of the event that started its
+// work. The words are the signal; the colour only reinforces which state it is.
+func TestHeadlineColoursByState(t *testing.T) {
+	palette := Palette{Color: true}
+	tests := []struct {
+		name  string
+		event activity.Event
+		want  string
+	}{
+		{
+			name:  "a merge stays green",
+			event: activity.Event{Type: activity.TypePRMerged, Actor: "maria.perez"},
+			want:  "\x1b[36mmaria.perez\x1b[0m \x1b[32mmerged\x1b[0m \x1b[90minto\x1b[0m \x1b[32mmain\x1b[0m",
+		},
+		{
+			name: "an assignment stays yellow",
+			event: activity.Event{
+				Type:     activity.TypeIssueAssigned,
+				Actor:    "lucia.gomez",
+				Assignee: ptrTo("tomas.ferreira"),
+			},
+			want: "\x1b[36mlucia.gomez\x1b[0m \x1b[33massigned\x1b[0m \x1b[90mto\x1b[0m \x1b[36mtomas.ferreira\x1b[0m",
+		},
+		{
+			name:  "a resolved closure is white",
+			event: activity.Event{Type: activity.TypeIssueClosed, Actor: "lucia.gomez"},
+			want:  "\x1b[36mlucia.gomez\x1b[0m \x1b[37mclosed\x1b[0m",
+		},
+		{
+			name:  "a dismissal is red and names the reason",
+			event: activity.Event{Type: activity.TypeIssueDismissed, Actor: "lucia.gomez"},
+			want:  "\x1b[36mlucia.gomez\x1b[0m \x1b[31mdismissed\x1b[0m \x1b[90mas not planned\x1b[0m",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := palette.headline(tt.event); got != tt.want {
+				t.Fatalf("headline() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// ptrTo gives an event the nullable assignee a headline reads.
+func ptrTo(value string) *string {
+	return &value
+}
 
 func TestClean(t *testing.T) {
 	tests := []struct {

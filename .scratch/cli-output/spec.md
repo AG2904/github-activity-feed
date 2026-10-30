@@ -169,6 +169,8 @@ what happened whether or not the terminal shows colour.
   | actor | cyan | the person who acted |
   | `merged` | green | integration: something reached `main` |
   | `assigned` | yellow | attention: work landed on someone |
+  | `closed` | white | the work is done: a neutral end state, distinct from the integration's green |
+  | `dismissed` | red | the work was dropped; the sentence already says `as not planned` |
   | `main` | green | the destination of the same fact |
   | assignee | cyan | the other person in the sentence |
   | `into` / `to` | grey | the connector is grammar, not information |
@@ -183,7 +185,7 @@ what happened whether or not the terminal shows colour.
   (`90`), not faint (`2`): conhost with VT ignores the faint attribute, so the context
   would lose its de-emphasis exactly on the console this palette is bounded by. No emoji,
   no box drawing, no reverse video: the console is a portability boundary.
-- **Colour is never the only signal.** `merged` and `assigned` are different words, the
+- **Colour is never the only signal.** The four state words are different words, the
   repository contains a slash, labels sit in brackets. A reader who loses colour loses
   reinforcement and nothing else.
 - **Escape discipline is unchanged**: colour and hyperlinks only when stdout is a
@@ -335,3 +337,10 @@ what happened whether or not the terminal shows colour.
   type rather than in a new field (ADR-0016), so the card needs no extra line, and the
   stop line gains `closed` and `dismissed` counters — it accounts for what reached the
   reader, and a type it omitted would make that account wrong.
+- 2026-10-30: **Amendment — the closures get their own slots.** `closed` renders in
+  white (`37`) and `dismissed` in red (`31`), because the first borrowed the
+  integration's green and the second the assignment's yellow, and a state that looks
+  like a different happening is a state the reader has to disambiguate by reading.
+  White is the neutral end state; red is the one outcome that says the work will not
+  happen. Both stay inside the sixteen-colour set, and both remain reinforcement: the
+  words `closed` and `dismissed as not planned` carry the signal.

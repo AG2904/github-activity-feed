@@ -13,13 +13,14 @@ import (
 	"github.com/AG2904/github-activity-feed/client/internal/activity"
 )
 
-// The palette carries roles, not decoration: two states, the people, the place,
+// The palette carries roles, not decoration: four states, the people, the place,
 // and the reason. Every role is a regular weight; bold is structure and belongs
 // to the title and the grouped heading. Grey is context: the repository, the
 // connectors and the time. The branch carries the location blue, the states keep
-// green and yellow, and the reason is magenta — warm without red's alarm.
-// Sixteen-colour codes, because the binary ships to terminals that are not
-// Windows Terminal.
+// their own slot — green for the integration, yellow for the assignment, white
+// for the resolved closure and red for the dismissed one — and the reason is
+// magenta — warm without competing with the states. Sixteen-colour codes, because
+// the binary ships to terminals that are not Windows Terminal.
 const (
 	reset   = "\x1b[0m"
 	bold    = "\x1b[1m"
@@ -29,6 +30,8 @@ const (
 	yellow  = "\x1b[33m"
 	blue    = "\x1b[34m"
 	magenta = "\x1b[35m"
+	white   = "\x1b[37m"
+	red     = "\x1b[31m"
 )
 
 // Palette renders one event per call. Color enables ANSI colour, bold, and OSC
@@ -98,11 +101,11 @@ func (p Palette) headline(event activity.Event) string {
 			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, clean(*event.Assignee)))
 		}
 	case activity.TypeIssueClosed:
-		parts = append(parts, p.paint(green, "closed"))
+		parts = append(parts, p.paint(white, "closed"))
 	case activity.TypeIssueDismissed:
 		// The two closures are different news, so the reason rides in the same
 		// sentence instead of being left to the type the feed does not print.
-		parts = append(parts, p.paint(yellow, "dismissed"), p.paint(grey, "as not planned"))
+		parts = append(parts, p.paint(red, "dismissed"), p.paint(grey, "as not planned"))
 	default:
 		parts = append(parts, p.paint(grey, clean(event.Type)))
 	}

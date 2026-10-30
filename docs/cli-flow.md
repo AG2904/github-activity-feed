@@ -351,8 +351,8 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   para golangci-lint, con la misma versión que fija CI (v2.13). Publicar binarios
   sigue siendo manual, con `npm run cli:dist`.
 - **El detalle de los colores**: la paleta por rol vive en `render.go` —cian para las
-  personas, verde para la integración y el cierre resuelto, amarillo para la asignación
-  y el descarte, azul para la rama
+  personas, verde para la integración, amarillo para la asignación, blanco para el
+  cierre resuelto y rojo para el descarte, azul para la rama
   —la ubicación que importa—, magenta para las etiquetas —la razón, cálida sin la
   alarma del rojo— y gris para el repositorio, el conector y el tiempo— y no cambia el
   flujo.
