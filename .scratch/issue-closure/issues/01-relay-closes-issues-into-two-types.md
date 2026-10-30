@@ -14,24 +14,24 @@ The nine-field shape does not move (ADR-0005). The reason of the closure lives i
 that would break every deep-equality assertion and the stored rows. No
 migration: the entity already stores `type` as text.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A delivery with `action: "closed"` whose issue carries `bug` or `feedback`
+- [x] A delivery with `action: "closed"` whose issue carries `bug` or `feedback`
       stores an event; one without a critical label stores nothing.
-- [ ] `issue.state_reason: "completed"`, `null` or absent yields `issue.closed`;
+- [x] `issue.state_reason: "completed"`, `null` or absent yields `issue.closed`;
       `"not_planned"` yields `issue.dismissed`; an unrecognised value yields
       `issue.closed`.
-- [ ] The event carries repository, `branch: null`, actor from `sender.login`,
+- [x] The event carries repository, `branch: null`, actor from `sender.login`,
       subject, the issue's assignee (or `null`), the flattened labels, the issue
       URL, and `issue.updated_at` as its canonical instant.
-- [ ] A closure that passes the filter but cannot be normalized is `malformed`,
+- [x] A closure that passes the filter but cannot be normalized is `malformed`,
       and the merge-then-assignment-then-closure composition stops there.
-- [ ] `ActivityEventType` names the four literals; no field is added and no
+- [x] `ActivityEventType` names the four literals; no field is added and no
       stored row or served history changes for the existing payloads.
-- [ ] The end-to-end suite covers: closed + `bug` (completed), closed + `feedback`
+- [x] The end-to-end suite covers: closed + `bug` (completed), closed + `feedback`
       (not planned), closed without a critical label, closed with a critical
       label but nobody to attribute it to, and the existing merge and assignment
       cases still green with no edit.
-- [ ] `npm test`, `npm run build` and `npm run lint` are green.
-- [ ] `GLOSSARY.md`, `docs/relay-flow.md`, `ARCHITECTURE.md` and a new ADR
+- [x] `npm test`, `npm run build` and `npm run lint` are green.
+- [x] `GLOSSARY.md`, `docs/relay-flow.md`, `ARCHITECTURE.md` and a new ADR
       describe the two types and why the outcome is in `type`.

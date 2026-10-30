@@ -56,9 +56,9 @@ cli-output specs. Historical records under `docs/tickets/` are not rewritten.
 
 | ID | Specs | Route | Status | Commit |
 | --- | --- | --- | --- | --- |
-| T1 | S1–S6, S9, relay half of S10 | inline | pending | — |
-| T2 | S7–S9, CLI half of S10 | inline | pending | — |
-| T3 | S10, evidence record | inline | pending | — |
+| T1 | S1–S6, S9, relay half of S10 | inline | done | `f0c3fec` |
+| T2 | S7–S9, CLI half of S10 | inline | done | `0d26cfd` |
+| T3 | S10, evidence record | inline | done | this commit |
 
 ## Log
 
@@ -76,5 +76,15 @@ already a closed set of literals. `assignee` is kept because the closure of an
 issue assigned to someone is that person's event under `--user`, and the payload
 reports it truthfully.
 
-L4 (2026-10-30): implementation starting. Relay first: the contract literal, the
-closure adapter, the composition, the suite and the living relay docs.
+L4 (2026-10-30): relay first — the contract literal, the closure adapter, the
+composition, the suite and the living relay docs. Then the CLI: the two literals,
+the two sentences, the stopped line and its own suite. Relay suite 67/67,
+`build`/`lint` clean, `go vet`/`gofmt` clean, client suite green, docs encoding
+check clean.
+
+L5 (2026-10-30): differential readback — the existing merge and assignment cases
+still compare the whole nine-field row and exact stdout, and pass without an
+edit, so the change is additive.
+
+L6 (2026-10-30): evidence record written under
+`docs/tickets/issue-closure/01-closed-issues-reach-the-feed.md`.
