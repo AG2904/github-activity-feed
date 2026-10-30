@@ -88,3 +88,16 @@ edit, so the change is additive.
 
 L6 (2026-10-30): evidence record written under
 `docs/tickets/issue-closure/01-closed-issues-reach-the-feed.md`.
+
+L7 (2026-10-30): independent verification. All S1–S10 passed; no blockers. The
+verifier confirmed the mapping table, the field sources, `malformed` terminality
+and the one-reading rule with its own probes, and observed both cards and the
+full stop line from the compiled binary. Two advisories are documented, not
+corrected: `issue.assignee` wins over `issue.assignees[0]` (the same precedence
+the assignment adapter has used since the baseline, and GitHub mirrors the two),
+and an empty title still stores (the same `typeof` rule as the other adapters).
+Its client stop-line probe was committed as
+`client/test/closure_stopline_test.go`. Its adapter-level unit probes were not
+committed: the relay has one documented testing seam — the HTTP boundary — and
+asserting refusal reasons is the separate seam ADR-0015 leaves for the feature
+that first consumes them.
