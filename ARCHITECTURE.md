@@ -1,7 +1,7 @@
 # Documento de Arquitectura y Diseño: GitHub Activity Feed CLI & Relay
 
 > **Estado:** Diseño actualizado tras la migración de plataforma a GitHub (§2 y §9). El Relay (Fase 1) y la CLI (Fase 2) están implementados y en `main`; la Fase 3 (CI, README, release y demo) está completa; el deploy opcional queda pendiente.
-> **Fecha original:** 11 de Octubre, 2026. **Actualizado:** 18 de Octubre, 2026.
+> **Fecha original:** 11 de Octubre, 2026. **Actualizado:** 31 de Octubre, 2026.
 
 ---
 
@@ -199,11 +199,12 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
    - [x] Interfaz visual en terminal (formato legible, timestamps relativos): dos líneas por evento, badges con color, hipervínculos OSC 8 y reporte agrupado por repositorio — tickets 02 y 07.
    - [x] Compilar binarios estáticos multiplataforma: `npm run cli:dist` para windows/amd64, linux/amd64, darwin/amd64 y darwin/arm64, con `CGO_ENABLED=0` y `-trimpath`, y la versión inyectada por `-ldflags` — ticket 08. Con esto la Fase 2 queda cerrada.
 
-3. **Fase 3: Validación y Demo**
-   - CI con **GitHub Actions** (typecheck, lint, suite e2e en cada PR).
-   - Demostración con payloads reales de GitHub (fixtures capturados) y, opcionalmente, un webhook real vía túnel.
-   - Publicación de binarios de la CLI para la demo.
-   - *Opcional:* despliegue del relay en servidor interno y prueba con el equipo de 3 devs.
+3. **Fase 3: Validación y Demo** — *completa*
+   - [x] CI con **GitHub Actions** (typecheck, lint, suite e2e en cada PR): primera corrida verde en `main` (run `40050526347`, 24 de Octubre de 2026) y una corrida roja en un PR descartable que probó el gate de formato (run `40051037419`). Relay y cliente corren como jobs independientes, más un job de documentación (encoding y un solo directorio por diagrama).
+   - [x] Demostración con payloads reales de GitHub: dos entregas capturadas de github.com y un cierre derivado de ellas, con el `.cast` y el GIF versionados en `docs/demo/`.
+   - [x] Publicación de binarios de la CLI: release `v1.0.0` con los cuatro binarios y `SHA256SUMS`, cortado por el tag y verificado contra el `.exe` descargado.
+   - [x] Camino dockerizado (ADR-0014): las dos imágenes con las versiones fijadas, en `docker-compose.yml` y con la tabla de versiones en `docs/docker.md`.
+   - [ ] *Opcional:* despliegue del relay en servidor interno y prueba con el equipo de 3 devs — queda fuera del cierre de la fase.
 
 ---
 
@@ -231,3 +232,9 @@ El identificador de entrega (`X-GitHub-Delivery`) **no** es un campo de este con
 - [x] CI (GitHub Actions) configurado y verificado: primera corrida verde en `main`
   (run `40050526347`, 24 de Octubre de 2026) y corrida roja en un PR descartable
   (run `40051037419`, falla en `Check formatting`).
+- [x] **Fase 3 cerrada (31 de Octubre, 2026):** release `v1.0.0` con los cuatro binarios
+  y `SHA256SUMS` (verificado: el checksum publicado coincide con el `.exe` descargado y
+  el binario responde `v1.0.0`), camino dockerizado (ADR-0014), demo regrabada con un
+  cierre en vivo, y los eventos de cierre (`issue.closed` / `issue.dismissed`) en el
+  relay y en el CLI. Lo que queda del plan —el despliegue opcional del §7— no bloquea
+  el cierre.

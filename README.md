@@ -4,9 +4,8 @@
 [![Node](https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white)](package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-<!-- Los badges de CI y de release vuelven cuando el repositorio sea público:
-     shields y el endpoint de Actions no resuelven contra un repo privado, así
-     que hoy mostrarían "repo not found" a cualquiera que abra el README. -->
+[![CI](https://github.com/AG2904/github-activity-feed/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AG2904/github-activity-feed/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/AG2904/github-activity-feed?label=release)](https://github.com/AG2904/github-activity-feed/releases/latest)
 
 ![El CLI en acción: feed history --group-by-repo devuelve el historial agrupado y feed watch imprime un cierre apenas llega](docs/demo/demo.gif)
 
@@ -236,13 +235,20 @@ El plan por fases está en [`ARCHITECTURE.md` §7](ARCHITECTURE.md#7-plan-de-imp
   idempotencia por entrega, stream SSE e historial.
 - **Fase 2 — el CLI:** completa. `watch` y `history`, filtros locales, renderizado en
   tarjetas y binarios estáticos para cuatro plataformas.
-- **Fase 3 — validación y demo:** en progreso. Incluye CI en GitHub Actions, la
-  publicación de binarios, el camino dockerizado (ADR-0014) y una demostración con
-  payloads reales de GitHub.
+- **Fase 3 — validación y demo:** completa. CI en GitHub Actions en cada push a
+  `main` y en cada PR, los binarios publicados en el
+  [release `v1.0.0`](https://github.com/AG2904/github-activity-feed/releases/tag/v1.0.0),
+  el camino dockerizado (ADR-0014) y una demostración con payloads reales de GitHub.
+  El despliegue del relay en un servidor interno sigue siendo opcional y no bloquea el
+  cierre de la fase.
 
 Fuera de alcance en esta fase: automatización de despliegue, proxies inversos y TLS;
 empaquetado con goreleaser o instaladores; publicación de las imágenes en un registry;
 cambios al formato de cable más allá de los cuatro tipos de evento ya implementados;
-autenticación
-multiusuario, permisos, monitoreo, métricas y alertas. El despliegue del relay en un
-servidor interno es opcional y no bloquea el cierre de la fase.
+autenticación multiusuario, permisos, monitoreo, métricas y alertas. El despliegue del
+relay en un servidor interno es opcional y no bloquea el cierre de la fase.
+
+## Seguridad y contribución
+
+Las reglas para contribuir están en [`CONTRIBUTING.md`](CONTRIBUTING.md); cómo reportar
+una vulnerabilidad, en [`SECURITY.md`](SECURITY.md).
