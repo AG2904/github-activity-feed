@@ -4,8 +4,12 @@
 [![Node](https://img.shields.io/badge/node-24-339933?logo=node.js&logoColor=white)](package.json)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+<!-- Los badges de CI y de release esperan a que el repositorio sea público:
+     shields y el endpoint de Actions responden "repo not found" contra un repo
+     privado. Descomentar las dos líneas al cambiar la visibilidad.
 [![CI](https://github.com/AG2904/github-activity-feed/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AG2904/github-activity-feed/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AG2904/github-activity-feed?label=release)](https://github.com/AG2904/github-activity-feed/releases/latest)
+-->
 
 ![El CLI en acción: feed history --group-by-repo devuelve el historial agrupado y feed watch imprime un cierre apenas llega](docs/demo/demo.gif)
 
