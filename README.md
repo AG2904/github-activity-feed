@@ -8,11 +8,12 @@
      shields y el endpoint de Actions no resuelven contra un repo privado, así
      que hoy mostrarían "repo not found" a cualquiera que abra el README. -->
 
-![El CLI en acción: feed history --group-by-repo devuelve el historial agrupado y feed watch imprime una asignación apenas llega](docs/demo/demo.gif)
+![El CLI en acción: feed history --group-by-repo devuelve el historial agrupado y feed watch imprime un cierre apenas llega](docs/demo/demo.gif)
 
-Grabación real de punta a punta: el relay con una base temporal, los dos payloads
-capturados de github.com en [`docs/demo/`](docs/demo/) reenviados con su firma, y el
-binario compilado. El `.cast` del que sale el GIF está versionado al lado.
+Grabación real de punta a punta: el relay con una base temporal, los payloads de
+[`docs/demo/`](docs/demo/) —dos capturados de github.com y un cierre derivado de
+ellos— reenviados con su firma, y el binario compilado. El `.cast` del que sale el GIF
+está versionado al lado.
 
 Un sistema que convierte las entregas críticas de GitHub en una fuente de actividad
 para un equipo de desarrollo, y un CLI que la muestra en la terminal.
