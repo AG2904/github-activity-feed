@@ -48,7 +48,7 @@
   "devDependencies": {
     "@nestjs/cli": "^12.0.12",
     "@nestjs/schematics": "^12.0.10",
-    "@nestjs/testing": "^12.2.0",
+    "@nestjs/testing": "^12.3.3",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.6",
     "@types/supertest": "^7.2.1",
@@ -61,9 +61,9 @@
     "vitest": "^5.0.5"
   },
   "dependencies": {
-    "@nestjs/common": "^12.2.0",
-    "@nestjs/core": "^12.2.0",
-    "@nestjs/platform-express": "^12.3.2",
+    "@nestjs/common": "^12.3.3",
+    "@nestjs/core": "^12.3.3",
+    "@nestjs/platform-express": "^12.3.3",
     "@nestjs/typeorm": "^12.0.2",
     "better-sqlite3": "^12.11.1",
     "reflect-metadata": "^0.2.2",
