@@ -121,9 +121,14 @@ jobs:
         # to a minor version and the action resolves its latest patch; the
         # documented exclusions (best-effort stderr narration, best-effort Close)
         # live in that config file, not here.
+        #
+        # The pin follows the Go toolchain: golangci-lint typechecks through the
+        # stdlib's export data, and a binary built with an older Go refuses a
+        # newer one outright. v2.13 was built with Go 1.26 and failed the moment
+        # go.mod asked for 1.27.3; v2.15 is built with Go 1.27.
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.13
+          version: v2.15
           # `uses:` steps do not read the job's working-directory default, so
           # the nested module path (ADR-0009) is repeated explicitly.
           working-directory: client

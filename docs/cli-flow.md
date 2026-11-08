@@ -348,7 +348,7 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   staticcheck; la config y sus exclusiones documentadas viven en
   `client/.golangci.yml`) y la suite con `-race`. Los chequeos estáticos también
   corren en local: `npm run cli:lint` para `go vet` y `npm run cli:lint:static`
-  para golangci-lint, con la misma versión que fija CI (v2.13). Publicar binarios
+  para golangci-lint, con la misma versión que fija CI (v2.15). Publicar binarios
   sigue siendo manual, con `npm run cli:dist`.
 - **El detalle de los colores**: la paleta por rol vive en `render.go` —cian para las
   personas, verde para la integración, amarillo para la asignación, blanco para el

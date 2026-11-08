@@ -7,8 +7,10 @@
 # (https://github.com/uber-go/guide/blob/master/style.md#linting):
 # errcheck, goimports, revive, govet, staticcheck. In the v2 configuration
 # format goimports is a formatter, not a linter, hence its own section below.
-# CI pins golangci-lint v2.13 — the version this file is written against —
+# CI pins golangci-lint v2.15 — the version this file is written against —
 # and the same version can be run locally via `npm run cli:lint:static`.
+# It follows the Go toolchain: a golangci-lint built with an older Go cannot
+# read the export data of a newer stdlib, so bump both in the same change.
 
 version: "2"
 
