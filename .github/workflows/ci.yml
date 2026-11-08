@@ -80,7 +80,7 @@ jobs:
       - name: Set up Go 1.27
         uses: actions/setup-go@v7
         with:
-          # client/go.mod declares `go 1.27.0`; let the module be the source of
+          # client/go.mod declares `go 1.27.3`; let the module be the source of
           # truth instead of repeating the version here.
           go-version-file: client/go.mod
           # The built-in cache keys on go.sum, which this module does not have

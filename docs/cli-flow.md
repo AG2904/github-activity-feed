@@ -246,7 +246,7 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 - **`client/cmd/feed/main.go`** — señales, `os.Exit`, y el único lugar que conoce
   `os.Args` y `os.Stdout`/`os.Stderr`. La versión entra por
   `-ldflags "-X main.version=<v>"` y por defecto es `dev`.
-- **`client/go.mod`** — módulo anidado, `go 1.27.0`, **sin un solo `require`**: el
+- **`client/go.mod`** — módulo anidado, `go 1.27.3`, **sin un solo `require`**: el
   cliente se construye con la biblioteca estándar y nada más (ADR-0008, ADR-0009).
   Por eso todos los comandos de Go se corren dentro de `client/`.
 - **`client/internal/cli/terminal_windows.go` y `terminal_other.go`** — dos builds de

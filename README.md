@@ -50,7 +50,7 @@ La justificación del diseño, el contrato y el estado del proyecto están en
 | Herramienta | Versión | Para qué |
 | --- | --- | --- |
 | Node.js | 24 (la versión que apuntan los tipos de las dependencias) | el relay |
-| Go | 1.27 (`client/go.mod` declara `go 1.27.0`) | el CLI |
+| Go | 1.27.3 (`client/go.mod` declara `go 1.27.3`) | el CLI |
 
 Ninguno de los dos es obligatorio si se usa el camino dockerizado: véase
 [Todo junto en Docker](#todo-junto-en-docker).

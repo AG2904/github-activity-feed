@@ -24,7 +24,7 @@ probar: cada una usa un doble del otro lado del cable.
 | Pieza | Verificado en esta máquina |
 | --- | --- |
 | Node + npm | v26.8.2 / npm 12.2.0 |
-| Go | 1.27.1 (`go.mod` pide 1.27.0) |
+| Go | 1.27.3 (`go.mod` pide 1.27.3) |
 | Relay | build limpio, 54 tests e2e en ~14 s |
 | CLI | build limpio, `go test ./...` en ~2 min |
 | Puertos | `3000` libre; el CLI asume `http://localhost:3000` |
