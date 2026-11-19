@@ -14,6 +14,9 @@ process is spawned and no dependency is added.
 
 **Status:** ready-for-human
 
+Verificación manual pendiente, con los comandos y el entorno ya relevado:
+[`../manual-verification.md`](../manual-verification.md).
+
 - [ ] `feed watch --notify=bell` rings once per shown live event; `--notify=off`
       and the no-flag default ring for none.
 - [ ] An unknown `--notify` value exits `2` and prints the usage line naming the
