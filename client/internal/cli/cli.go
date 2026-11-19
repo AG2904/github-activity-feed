@@ -61,7 +61,7 @@ func printUsage(w io.Writer) {
 	fmt.Fprintf(w, `feed shows the GitHub activity relay's critical events in the terminal.
 
 Usage:
-  feed watch   [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json]
+  feed watch   [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json] [--notify <off|bell|osc|auto>]
   feed history [--relay <url>] [--user <login>] [--repo <owner/name>] [--no-color] [--json | --group-by-repo]
   feed --version
 

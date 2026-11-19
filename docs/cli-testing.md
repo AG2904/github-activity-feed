@@ -61,6 +61,7 @@ mismo mecanismo que va a usar el binario distribuido (ticket 08): si aparece `de
 | `./feed` | `2` | vacío | el uso completo |
 | `./feed bogus` | `2` | vacío | `feed: unknown command "bogus"` y el uso |
 | `./feed watch --relay ://bad` | `1` | vacío | `watching ://bad/stream · backfill 10`, `parse "://bad/stream": missing protocol scheme` y `stopped · no events` |
+| `./feed watch --notify loud` | `2` | vacío | `feed watch: --notify "loud" is not one of off, bell, osc or auto` y el uso |
 | `./feed history --relay http://127.0.0.1:1 --json` | `1` | vacío | `history: Get "…": … connection refused` |
 | `./feed history --relay http://127.0.0.1:1 --json --group-by-repo` | `2` | vacío | `history: --json and --group-by-repo cannot be combined: grouping is presentation, and raw output has none` |
 
@@ -375,6 +376,42 @@ cerrado. Los caminos de salida automatizados —una URL inusable, un stdout cerr
 contexto cancelado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalError` y
 `TestWatchSaysStoppedWithTheCountsItShowed`.
 
+## Paso 13 — La señal: `--notify`
+
+El feed sigue siendo el mismo; `--notify` decide si además algo suena fuera de la
+terminal. Los cuatro valores son `off`, `bell`, `osc` y `auto`, y `off` es el
+default: sin flag, un watch no rinde nada.
+
+```bash
+./feed watch --relay http://localhost:3000 --notify bell
+```
+
+Con un evento vivo, la terminal suena una vez por tarjeta mostrada. El bell va al
+dispositivo de consola —`CONOUT$` en Windows, `/dev/tty` en el resto—, no a los
+flujos, así que se puede comprobar que no ensucia el contrato:
+
+```bash
+./feed watch --relay http://localhost:3000 --notify bell > out.txt 2> err.txt
+```
+
+`out.txt` y `err.txt` quedan **byte por byte iguales** a los del mismo watch sin
+el flag: la tarjeta, el banner y la cuenta no cambian. Lo único distinto es algo
+que no está en los archivos.
+
+Lo que la señal respeta, y conviene probar a mano porque la suite no puede ver la
+consola:
+
+| Caso | Cómo | Qué esperar |
+| --- | --- | --- |
+| el backfill no rinde | `--backfill 10 --notify bell` sobre un historial con eventos | las diez tarjetas se imprimen en silencio; el bell llega recién con el primer evento vivo |
+| `feed history` no rinde | `./feed history --relay http://localhost:3000` | ninguna señal, con o sin `--notify` (el flag ni siquiera existe ahí) |
+| un evento filtrado no rinde | `--user nadie --notify bell` y mandar un merge | ni tarjeta ni bell: la regla es "mostrado", no "recibido" |
+| sin consola no hay señal | correr el watch desde un servicio o con la salida a un archivo y sin terminal | el watch funciona igual; la señal simplemente no tiene dónde escribir |
+| `osc` y `auto` todavía callan | `--notify osc` o `--notify auto` | se aceptan y no suenan: la secuencia del terminal llega en su propio ticket |
+
+Un valor que no existe es un error de uso, no un watch silencioso:
+`./feed watch --notify loud` sale con `2` y nombra los cuatro aceptados.
+
 ## Matriz de casos por ticket
 
 | Ticket | Caso | Paso | Automatizado |
@@ -391,6 +428,9 @@ contexto cancelado— están en `TestWatchSaysStoppedWhenItLeavesThroughAFatalEr
 | 04 — la conexión se sostiene | el heartbeat mantiene vivo el stream | 9 | sí |
 | 05 — filtrar para sí | actor, assignee, repo, AND, mayúsculas | 6 | sí |
 | rama — el merge nombra su rama | la tarjeta dice `merged <rama> into main`, o vuelve a `merged into main` si es `null` | 4, 5 | sí |
+| notificaciones — la señal | el flag, sus cuatro valores y el rechazo de un valor desconocido | 2, 13 | sí (el rechazo y la aceptación) |
+| notificaciones — la señal | `--notify` no agrega un byte a stdout ni a stderr | 13 | sí |
+| notificaciones — la señal | el bell por evento mostrado, y el silencio del backfill, del historial y de lo filtrado | 13 | a mano (la consola no se ve desde un pipe) |
 | 06 — la primera conexión no es una pantalla en blanco | — | — | **pendiente** |
 | 07 — el historial responde | — | — | **pendiente** |
 | 08 — distribuir el binario | `--version` inyectada | 1 | parcial (solo la inyección) |

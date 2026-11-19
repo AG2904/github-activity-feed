@@ -12,7 +12,7 @@ process is spawned and no dependency is added.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 - [ ] `feed watch --notify=bell` rings once per shown live event; `--notify=off`
       and the no-flag default ring for none.

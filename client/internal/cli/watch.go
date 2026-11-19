@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AG2904/github-activity-feed/client/internal/activity"
+	"github.com/AG2904/github-activity-feed/client/internal/notify"
 	"github.com/AG2904/github-activity-feed/client/internal/sse"
 )
 
@@ -23,14 +24,24 @@ import (
 // none may reach stdout, so a silent terminal reads as "nothing happened" and
 // not as "it hung", and the event feed stays a contract.
 func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json]")
+	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json] [--notify <off|bell|osc|auto>]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
 	user, repository := addFilters(fs)
 	backfillFlag := fs.Int("backfill", 10, "how many stored events the first connection prints (0 disables)")
 	noColor := fs.Bool("no-color", false, "disable colour and hyperlinks")
 	jsonOut := fs.Bool("json", false, "write each event's payload verbatim")
+	notifyFlag := fs.String("notify", "off", "raise a signal outside the feed: "+notify.Values())
 	if code, ok := parseFlags(fs, args); !ok {
 		return code
+	}
+	// The mode is checked before anything is announced or opened: a typo in the
+	// flag is a usage error, not a watch that holds the terminal while raising
+	// nothing.
+	mode, ok := notify.Parse(*notifyFlag)
+	if !ok {
+		fmt.Fprintf(stderr, "feed watch: --notify %q is not one of %s\n\n", *notifyFlag, notify.Values())
+		fs.Usage()
+		return 2
 	}
 
 	base := strings.TrimRight(*relay, "/")
@@ -49,6 +60,15 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintln(stderr)
 
 	out := newEmitter(stdout, *noColor, *jsonOut, activity.Filter{User: *user, Repository: *repository})
+	// The signal holds the second output decision of the session: what tells a
+	// reader who is not looking at the terminal that something happened. It is
+	// built from the console and never from stdout, opened only when a mode asks
+	// for it, and silent when there is no console to open (ADR-0017).
+	var device io.Writer
+	if mode != notify.Off {
+		device = console()
+	}
+	signal := notify.New(mode, device)
 	// The stop line is deferred, not written at each return: there is more
 	// than one way out of this function — Ctrl-C, an unusable URL, a closed
 	// stdout — and the session's account must speak on all of them.
@@ -79,7 +99,7 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 			}
 		}
 
-		eventSeen, err := stream(ctx, target, out, func() {
+		eventSeen, err := stream(ctx, target, out, signal, func() {
 			// The first accepted connection is the only moment "is it alive?"
 			// has no other reply, so it answers in words: how much history
 			// printed, or that there is none. Every later connection is a
@@ -128,7 +148,12 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 // context is cancelled. It reports whether a valid event arrived, which is
 // what resets the backoff even when the filter discards it, and calls connected
 // once the response is accepted.
-func stream(ctx context.Context, target string, out *emitter, connected func()) (eventSeen bool, err error) {
+//
+// A shown event is signalled after its card was written, never before and never
+// instead: the signal belongs to the live connection, so the backfill and the
+// history path — which share the card writer — never ring, and an event the
+// filter discarded is not signalled because the rule is "shown", not "received".
+func stream(ctx context.Context, target string, out *emitter, signal *notify.Sink, connected func()) (eventSeen bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
 		return false, &fatalError{err}
@@ -177,5 +202,8 @@ func stream(ctx context.Context, target string, out *emitter, connected func()) 
 		if err := out.paint(payload, event); err != nil {
 			return eventSeen, &fatalError{err}
 		}
+		// The signal follows the card: a notification never speaks for an event
+		// the reader did not see, and a failure in it is not the session's.
+		signal.Notify()
 	}
 }

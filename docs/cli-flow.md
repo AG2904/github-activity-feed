@@ -60,6 +60,10 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │                      └─ o payload crudo (--json)
                               │                      ▼
                               │                 stdout: el evento
+                              │                      │
+                              │                      ▼
+                              │                 notify.Sink.Notify()
+                              │                      └─ la consola: el bell
                               │
                               └── error ──▶ backoff 1 → 30 s ──▶ vuelve al loop
 
@@ -106,7 +110,18 @@ Paso por paso:
    `paint()` imprime el payload tal cual (`--json`) o lo renderiza como la tarjeta de
    tres líneas —la frase, el título con las etiquetas al frente, el contexto— más la
    URL cuando no hay hyperlink, y lo suma a la cuenta de lo mostrado.
-7. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
+7. **La señal** (`internal/notify`) es la segunda decisión de salida de la sesión:
+   qué le dice a alguien que no está mirando la terminal que algo pasó. `watch()`
+   la construye con el modo de `--notify` —`off`, `bell`, `osc` o `auto`; `off` por
+   defecto— y con la consola del proceso (`CONOUT$` en Windows, `/dev/tty` en el
+   resto), abierta solo si el modo la pide; sin consola no hay dónde escribir y
+   todo es no-op. `stream()` la despierta **después** de que la tarjeta se
+   escribió y solo para un evento del vivo: el backfill y el historial comparten
+   `paint` y nunca rinden, y un evento que el filtro descartó tampoco, porque la
+   regla es "mostrado", no "recibido". Un fallo al escribirla no es un error de la
+   sesión. En este corte `bell` es lo único que suena; `osc` y `auto` se aceptan y
+   callan hasta sus propios tickets.
+8. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
    cualquier punto, el retorno es `0`, no un error. Cualquiera sea el camino de
@@ -115,7 +130,7 @@ Paso por paso:
    <d> dismissed` cuando se mostró algo, `stopped · no events` cuando no. Los conteos
    son de eventos **mostrados**, filtro incluido: la respuesta a "qué vi", no a "qué
    mandó el relay".
-8. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
+9. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
    jitter de hasta un cuarto del paso. Una conexión que entregó al menos un evento
    válido resetea la escalera, así que un corte aislado vuelve a esperar un segundo.
 
@@ -255,6 +270,11 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
   `SetConsoleMode` cargado por `LazyDLL`; si el console lo rechaza, devuelve `false`
   y no se emite un solo escape. En el resto de las plataformas alcanza con
   `ModeCharDevice`.
+- **`client/internal/cli/console_windows.go` y `console_other.go`** — dos builds de
+  la misma función: el dispositivo de consola del proceso (`CONOUT$` en Windows,
+  `/dev/tty` en el resto), o `nil` cuando no hay ninguno. Es el destino de la señal
+  y no de los flujos, que es lo que permite notificar sin ensuciar `feed watch |
+  jq` ni un stderr redirigido a un log.
 - **`client/test/`** — la suite no importa paquetes internos: compila dos binarios y
   les habla por la costura del proceso.
 
@@ -273,6 +293,9 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 | `client/internal/cli/stored.go` | el historial como filas crudas | los dos caminos de lectura |
 | `client/internal/cli/terminal_windows.go` | la terminal en Windows: es consola, y aprende escapes | la regla de color |
 | `client/internal/cli/terminal_other.go` | la terminal en el resto | la regla de color |
+| `client/internal/notify/notify.go` | la política de señal: qué rinde y qué no | el watch |
+| `client/internal/cli/console_windows.go` | la consola del proceso, en Windows | la señal |
+| `client/internal/cli/console_other.go` | la consola del proceso, en el resto | la señal |
 | `client/internal/sse/sse.go` | frames SSE a payloads | la conexión en vivo |
 | `client/internal/activity/activity.go` | el contrato: el evento y su filtro | los dos comandos |
 | `client/internal/render/render.go` | la tarjeta de un evento | los dos comandos |
@@ -297,6 +320,13 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   reconexión, la línea `stopped` de la salida y los errores van a stderr, en texto
   plano y sin TTY-gating —una sesión redirigida a un log merece la misma narración
   que una terminal—. Eso es lo que hace seguros `feed watch | jq` y `feed watch | tee`.
+- **La notificación no es salida.** El bell —y, cuando lleguen, las secuencias del
+  terminal— se escribe en el dispositivo de consola, nunca en stdout ni en stderr:
+  `feed watch | jq` y `feed watch 2> log` reciben exactamente lo mismo con
+  `--notify` prendido o apagado. La regla es "mostrado", no "recibido": el backfill
+  y `feed history` no rinden, y un evento filtrado tampoco. `off` es el default,
+  una señal que no se puede entregar se descarta, y ninguna señal cambia un código
+  de salida (ADR-0017).
 - **La sesión se narra tres veces y nada más.** Un banner al arrancar, una sola
   línea `connected` tras la primera conexión —una reconexión dice
   `watch: reconnected`, nunca un segundo `connected`— y una línea de cuenta al salir.
