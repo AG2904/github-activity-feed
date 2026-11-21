@@ -126,7 +126,7 @@ func TestSinkNeverWritesAFrameWhereEscapesAreNotUnderstood(t *testing.T) {
 // TestSinkSwallowsAFailedWrite pins the ADR's degradation: a signal that cannot
 // be delivered never becomes the session's error, so Notify must not panic and
 // must not report anything.
-func TestSinkSwallowsAFailedWrite(t *testing.T) {
+func TestSinkSwallowsAFailedWrite(_ *testing.T) {
 	event := activity.Event{Type: activity.TypeIssueClosed, Actor: "lucia.gomez", Subject: "done"}
 	New(Bell, failingWriter{}, true, func(string) string { return "" }).Notify(event)
 }
@@ -134,7 +134,7 @@ func TestSinkSwallowsAFailedWrite(t *testing.T) {
 // failingWriter rejects every write, standing in for a console that is gone.
 type failingWriter struct{}
 
-func (failingWriter) Write(p []byte) (int, error) {
+func (failingWriter) Write(_ []byte) (int, error) {
 	return 0, errWriteFailed
 }
 

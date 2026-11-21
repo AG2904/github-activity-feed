@@ -36,3 +36,12 @@ Verificación manual pendiente, con los comandos y el entorno ya relevado:
       and states explicitly that it is not output, with the "shown, not received"
       rule; the manual testing document gains the by-hand bell check.
 - [x] The shipped client still imports no process-spawning package.
+
+## Comments
+
+- 2026-11-21 — golangci-lint v2.15.0 (la versión que corre CI) sobre `client/`:
+  **0 issues**. En el primer intento marcó dos parámetros sin usar en
+  `internal/notify/notify_test.go` (`revive unused-parameter`), arreglados en el
+  código, no con `//nolint`. `go test -race` no corre en esta máquina (sin
+  cgo/gcc); lo cubre CI. Queda pendiente solo la campanada audible y los casos
+  B/C de `../manual-verification.md`.

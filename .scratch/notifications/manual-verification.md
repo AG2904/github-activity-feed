@@ -13,7 +13,7 @@ de abajo queden registrados en `issues/01-the-watch-can-ring.md`.
 | Spec | `.scratch/notifications/spec.md` |
 | Ticket implementado | `issues/01-the-watch-can-ring.md` (`Status: ready-for-human`) |
 | Rama | `feat/notifications` |
-| Siguiente ticket | `02-the-sentence-exists-once.md` (no empezar hasta que esto cierre) |
+| Tickets 02–04 | implementados en esta rama (`ec41468`, `bf6003c`, `16b4c19`) |
 
 Lo que el ticket 01 dejó funcionando: `--notify=off|bell|osc|auto` en `feed watch`,
 `off` por defecto, un bell por evento **mostrado** del stream vivo, el sink escrito
@@ -30,32 +30,26 @@ hasta sus propios tickets.
   `TestWatchNotificationsLeaveTheStreamsAlone` comparando dos corridas. No hace
   falta revisarlo a mano.
 
-Quedan abiertos exactamente dos puntos, y por razones distintas: uno nunca corrió
-en esta máquina, el otro es un efecto físico que ningún pipe puede observar.
+Queda abierto exactamente un punto: el que nunca se puede ver desde un pipe.
 
-## Chequeo 1 — golangci-lint
+## Chequeo 1 — golangci-lint (hecho)
 
-`npm run cli:lint:static` es `cd client && golangci-lint run`, con las cinco reglas
-de `client/.golangci.yml`. **No está instalado acá**, así que nunca corrió.
-
-Ruta recomendada, versión exacta y sin tocar la instalación de Go:
+Corrió el 21 de noviembre de 2026 con la versión exacta de CI:
 
 ```powershell
-$env:GOARCH = "amd64"     # ver "Hallazgos del entorno": el Go local es 386
+$env:GOARCH = "amd64"
 go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
-& "$(go env GOPATH)\bin\golangci-lint" version      # esperado: v2.15.0
+& "C:\Users\Andrés\go\bin\golangci-lint.exe" version   # v2.15.0, compilado con go1.27.0
 cd client
-& "$(go env GOPATH)\bin\golangci-lint" run          # esperado: sin salida, exit 0
+& "C:\Users\Andrés\go\bin\golangci-lint.exe" run        # 0 issues
 ```
 
-Si imprime algo, es un hallazgo real: se arregla en el código, no se silencia con
-un `//nolint` sin discutirlo.
+Resultado: **0 issues**. Encontró dos hallazgos reales en el primer intento —dos
+parámetros sin usar en `internal/notify/notify_test.go`, `revive
+unused-parameter`— que se arreglaron en el código, no con `//nolint`.
 
-Ruta sin instalar nada: abrir el PR de `feat/notifications` a `main`. **Ojo**: CI
-solo dispara con push a `main` y con pull requests a `main` (`ci.yml` líneas 3-7),
-así que pushear la rama no ejecuta nada. El job `client` corre
-`golangci-lint-action@v9` (v2.15) y además `go test -race ./...`, que localmente no
-corremos.
+`go test -race ./...`, el otro paso del job `client` de CI, no se puede correr acá:
+`-race` exige cgo y esta máquina no tiene gcc ni clang. Queda cubierto por CI.
 
 ## Chequeo 2 — que la campanada suene
 
@@ -117,22 +111,22 @@ propósito.
 
 ## Hallazgos del entorno
 
-- **El Go instalado es de 32 bits**: `GOROOT = C:\Program Files (x86)\Go`,
-  `GOHOSTARCH = 386`, y GOTOOLCHAIN=auto baja `go1.27.3 windows/386`. Todo lo
-  compilado acá es `windows/386` mientras CI corre `ubuntu/amd64`. No rompe nada,
-  pero explica descargas lentas y por qué el `go install` de arriba fuerza
-  `GOARCH=amd64`. Alinear la instalación con amd64 es una decisión aparte.
+- **El Go local cambió a amd64**: `go env GOHOSTARCH` y `GOARCH` hoy responden
+  `amd64` (la nota anterior decía 386). El `go install` de arriba igual fuerza
+  `GOARCH=amd64` para que el binario coincida con la máquina y con CI
+  (`ubuntu/amd64`).
 - **`npm` no corre desde PowerShell** en esta máquina: `npm.ps1` está bloqueado por
   la política de ejecución. Usar `npm.cmd` (o `cmd /c npm ...`).
-- **golangci-lint no está instalado** y CI no corre con push a ramas.
+- **golangci-lint v2.15.0 quedó instalado** en
+  `C:\Users\Andrés\go\bin\golangci-lint.exe` y corre limpio. CI sigue sin disparar
+  con push a ramas.
+- **`-race` no se puede correr acá**: exige cgo y no hay gcc ni clang. Lo cubre CI.
 
 ## Qué no hacer
 
 - No agregar un seam inyectable ni un `FEED_NOTIFY_*` para volver observable el
   bell: la decisión está en ADR-0017 y en la spec, y el `off` por defecto es parte
   de ella.
-- No instalar Go ni golangci-lint sin avisar; el `go install` de arriba es lo único
-  que este documento propone.
 - No tocar `allowOSC777`, `bellStyle` ni el switch de Ghostty desde el código. Son
   del usuario.
 - No marcar el ticket `done`: eso pide merge y el registro de evidencia bajo
@@ -140,6 +134,6 @@ propósito.
 
 ## Cómo cerrar
 
-Registrar en `issues/01-the-watch-can-ring.md`, al final y como una línea de log:
-qué versión de golangci-lint corrió y con qué resultado, y qué comprobó el chequeo
-B/C (terminal usada, casos observados). Después, recién ahí, empezar el ticket 02.
+El chequeo de golangci-lint ya está registrado arriba y en el ticket 01. Falta solo
+la campanada: registrar qué terminal se usó y qué casos B/C se observaron, y
+después borrar este documento.
