@@ -1,10 +1,20 @@
 name: CI
 
+# Every branch is a candidate, not only main: a feature branch can sit for days
+# on dependencies that moved under it, and a push to one used to run nothing at
+# all. `pull_request` carries no base filter for the same reason, and because a
+# fork's branch is not a branch of this repository -- that event is the only way
+# a contributor's PR reaches these jobs.
+#
+# A PR branch therefore runs twice: once for the push on its head, once for the
+# merge commit GitHub builds for the PR. That is deliberate -- the second run is
+# the only one that proves the branch merges cleanly into its base -- so the
+# concurrency group stays keyed on github.ref, which keeps the two apart
+# instead of letting one cancel the other.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
-    branches: [main]
 
 # The suites only need the checkout: neither one talks to GitHub or to a real
 # relay. No repository secrets are involved.
