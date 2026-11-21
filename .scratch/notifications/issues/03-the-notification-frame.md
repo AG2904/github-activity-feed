@@ -14,24 +14,28 @@ test can pin its shape without a console. This is the client's first unit test.
 
 **Blocked by:** 01 (the call site and the sink), 02 (the sentence)
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
+
+Chequeo visual pendiente: `--notify=osc` en una terminal soportada, anotando la
+terminal y su versión en `docs/cli-testing.md` (paso 13). La forma del frame ya está
+fijada por `client/internal/notify/frame_test.go`.
 
 - [ ] `--notify=osc` produces one system notification per shown live event on a
       supporting terminal; the by-hand check and the terminal used are recorded in
       the manual testing document.
-- [ ] The frame carries exactly one introducer and one terminator.
-- [ ] No control byte appears inside a field, for event text carrying `ESC`,
+- [x] The frame carries exactly one introducer and one terminator.
+- [x] No control byte appears inside a field, for event text carrying `ESC`,
       `BEL`, C0/C1, a newline, a tab and a semicolon.
-- [ ] A payload crafted as a complete escape sequence produces one frame and no
+- [x] A payload crafted as a complete escape sequence produces one frame and no
       second introducer: the text can never start a sequence of its own.
-- [ ] A semicolon in a field is rendered as a space, so the title and the body
+- [x] A semicolon in a field is rendered as a space, so the title and the body
       cannot be rewritten by event text.
-- [ ] The title is clamped to 64 runes and the body to 200; an over-long subject
+- [x] The title is clamped to 64 runes and the body to 200; an over-long subject
       neither truncates mid-rune nor stalls the write.
-- [ ] Bidi override characters are dropped; the URL and any markup or hyperlink
+- [x] Bidi override characters are dropped; the URL and any markup or hyperlink
       are absent from every frame.
-- [ ] On a terminal without support the frame is dropped silently: no bytes reach
+- [x] On a terminal without support the frame is dropped silently: no bytes reach
       the feed, and the watch keeps running.
-- [ ] The choice of protocol per terminal is recorded in the flow document, and
+- [x] The choice of protocol per terminal is recorded in the flow document, and
       the frame's contract is traceable to ADR-0017.
-- [ ] The shipped client still imports no process-spawning package.
+- [x] The shipped client still imports no process-spawning package.

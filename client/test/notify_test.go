@@ -61,20 +61,23 @@ func TestWatchUsageNamesEveryNotifyMode(t *testing.T) {
 
 // The signal is not output: with the same event on the wire, a watch that
 // notifies writes the same card as one that does not, and neither of the two
-// streams ever carries the bell. The console is where the signal goes, which is
-// exactly why its presence cannot be asserted here — the by-hand case lives in
-// docs/cli-testing.md, paso 13.
+// streams ever carries the bell or the frame. The console is where the signal
+// goes, which is exactly why its presence cannot be asserted here — the by-hand
+// case lives in docs/cli-testing.md, paso 13.
 func TestWatchNotificationsLeaveTheStreamsAlone(t *testing.T) {
 	plain := watchOneCard(t)
-	signalled := watchOneCard(t, "--notify", "bell")
-
-	if signalled != plain {
-		t.Errorf("the card with --notify = %q, want it identical to %q", signalled, plain)
-	}
-	for _, stream := range []string{plain, signalled} {
-		if strings.ContainsRune(stream, '\a') || hasEscape(stream) {
-			t.Errorf("a control byte reached the feed: %q", stream)
-		}
+	for _, mode := range []string{"off", "bell", "osc", "auto"} {
+		t.Run(mode, func(t *testing.T) {
+			signalled := watchOneCard(t, "--notify", mode)
+			if signalled != plain {
+				t.Errorf("the card with --notify=%s = %q, want it identical to %q", mode, signalled, plain)
+			}
+			for _, stream := range []string{plain, signalled} {
+				if strings.ContainsRune(stream, '\a') || hasEscape(stream) {
+					t.Errorf("a control byte reached the feed with --notify=%s: %q", mode, stream)
+				}
+			}
+		})
 	}
 }
 

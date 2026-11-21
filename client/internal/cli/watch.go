@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -68,7 +69,7 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if mode != notify.Off {
 		device = console()
 	}
-	signal := notify.New(mode, device)
+	signal := notify.New(mode, device, os.Getenv)
 	// The stop line is deferred, not written at each return: there is more
 	// than one way out of this function — Ctrl-C, an unusable URL, a closed
 	// stdout — and the session's account must speak on all of them.
@@ -204,6 +205,6 @@ func stream(ctx context.Context, target string, out *emitter, signal *notify.Sin
 		}
 		// The signal follows the card: a notification never speaks for an event
 		// the reader did not see, and a failure in it is not the session's.
-		signal.Notify()
+		signal.Notify(event)
 	}
 }

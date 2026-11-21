@@ -68,7 +68,7 @@ func (p Palette) card(w io.Writer, event activity.Event, now time.Time, shape li
 	card.WriteString("\n")
 	if !p.Color {
 		card.WriteString("  ")
-		card.WriteString(clean(event.URL))
+		card.WriteString(Clean(event.URL))
 		card.WriteString("\n")
 	}
 
@@ -93,12 +93,12 @@ type segment struct {
 // phrase rather than reusing this one. An unknown type degrades to its raw value
 // and no destination, so a new event type still reads as something.
 func segments(event activity.Event) []segment {
-	parts := []segment{{cyan, clean(event.Actor)}}
+	parts := []segment{{cyan, Clean(event.Actor)}}
 	switch event.Type {
 	case activity.TypePRMerged:
 		parts = append(parts, segment{green, "merged"})
 		if event.Branch != nil && *event.Branch != "" {
-			parts = append(parts, segment{blue, clean(*event.Branch)})
+			parts = append(parts, segment{blue, Clean(*event.Branch)})
 		}
 		parts = append(parts,
 			segment{grey, "into"},
@@ -107,7 +107,7 @@ func segments(event activity.Event) []segment {
 	case activity.TypeIssueAssigned:
 		parts = append(parts, segment{yellow, "assigned"})
 		if event.Assignee != nil && *event.Assignee != "" {
-			parts = append(parts, segment{grey, "to"}, segment{cyan, clean(*event.Assignee)})
+			parts = append(parts, segment{grey, "to"}, segment{cyan, Clean(*event.Assignee)})
 		}
 	case activity.TypeIssueClosed:
 		parts = append(parts, segment{white, "closed"})
@@ -116,7 +116,7 @@ func segments(event activity.Event) []segment {
 		// sentence instead of being left to the type the feed does not print.
 		parts = append(parts, segment{red, "dismissed"}, segment{grey, "as not planned"})
 	default:
-		parts = append(parts, segment{grey, clean(event.Type)})
+		parts = append(parts, segment{grey, Clean(event.Type)})
 	}
 	return parts
 }
@@ -153,15 +153,15 @@ func (p Palette) headline(event activity.Event) string {
 func (p Palette) title(event activity.Event) string {
 	labels := ""
 	if len(event.Labels) > 0 {
-		labels = p.paint(magenta, "["+clean(strings.Join(event.Labels, ", "))+"]") + " "
+		labels = p.paint(magenta, "["+Clean(strings.Join(event.Labels, ", "))+"]") + " "
 	}
 	if !p.Color {
-		return labels + clean(event.Subject)
+		return labels + Clean(event.Subject)
 	}
 	// The subject is concatenated into the hyperlink, so an ST byte inside it
 	// would close the link the palette opens and retarget the rest; cleaning
 	// both halves keeps the sequence the palette's own.
-	return labels + bold + "\x1b]8;;" + clean(event.URL) + "\x1b\\" + clean(event.Subject) + "\x1b]8;;\x1b\\" + reset
+	return labels + bold + "\x1b]8;;" + Clean(event.URL) + "\x1b\\" + Clean(event.Subject) + "\x1b]8;;\x1b\\" + reset
 }
 
 // context is the repository and the freshness, in the order a reader asks for
@@ -170,20 +170,24 @@ func (p Palette) title(event activity.Event) string {
 func (p Palette) context(event activity.Event, now time.Time, shape lineShape) string {
 	parts := make([]string, 0, 2)
 	if shape == withRepository && hasRepository(event) {
-		parts = append(parts, p.paint(grey, clean(*event.Repository)))
+		parts = append(parts, p.paint(grey, Clean(*event.Repository)))
 	}
 	parts = append(parts, p.paint(grey, relative(now, event.When)))
 	return strings.Join(parts, p.paint(grey, " · "))
 }
 
-// clean renders event text as displayable characters. Every field in a card
+// Clean renders event text as displayable characters. Every field in a card
 // comes from the relay, which stored it verbatim, and a terminal acts on C0,
 // DEL and C1 bytes the program would otherwise never emit: without this the
 // colour gate — which only decides which escapes the program adds — would be
 // mistaken for a filter of the ones the event brings. A line break or a tab
 // inside a field would also split the card's own layout, so they become a space
 // instead of disappearing.
-func clean(text string) string {
+//
+// It is exported because the notification frame puts the same event text in
+// front of a terminal and must inherit the same property: every variable field
+// of the frame passes through here before it is assembled (ADR-0017).
+func Clean(text string) string {
 	return strings.Map(func(r rune) rune {
 		switch {
 		case r == '\n' || r == '\t':

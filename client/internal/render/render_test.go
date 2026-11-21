@@ -1,7 +1,7 @@
 package render
 
 // In-package unit tests for the two pure helpers every card goes through:
-// clean must strip every byte a terminal would act on, and relative must keep
+// Clean must strip every byte a terminal would act on, and relative must keep
 // the human boundaries of the freshness line.
 
 import (
@@ -254,8 +254,8 @@ func TestClean(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := clean(tt.give); got != tt.want {
-				t.Fatalf("clean(%q) = %q, want %q", tt.give, got, tt.want)
+			if got := Clean(tt.give); got != tt.want {
+				t.Fatalf("Clean(%q) = %q, want %q", tt.give, got, tt.want)
 			}
 		})
 	}

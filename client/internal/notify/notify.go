@@ -1,10 +1,16 @@
 // Package notify is the signal a shown event can raise outside the feed. It
-// owns the modes, and from their own tickets the terminal protocols and the
-// frame they carry. It never writes to stdout or stderr and it never fails a
-// session: a signal that cannot be delivered is not an error (ADR-0017).
+// owns the whole decision: the modes, the environment-only detection, the
+// protocol each terminal is known to speak, and the frame the terminal turns
+// into a desktop notification. It never writes to stdout or stderr and it never
+// fails a session: a signal that cannot be delivered is not an error
+// (ADR-0017).
 package notify
 
-import "io"
+import (
+	"io"
+
+	"github.com/AG2904/github-activity-feed/client/internal/activity"
+)
 
 // Mode is how a shown event announces itself outside the feed.
 type Mode int
@@ -58,28 +64,39 @@ func Values() string {
 // no-op, and every failure is swallowed so a signal can never take down a
 // watch.
 type Sink struct {
-	mode Mode
-	out  io.Writer
+	mode     Mode
+	protocol Protocol
+	out      io.Writer
 }
 
 // New builds the sink the watch holds for the life of the process. The mode
-// decides what is written; the writer decides whether it can be.
-func New(mode Mode, out io.Writer) *Sink {
+// decides what is written; the writer decides whether it can be; and the lookup
+// is the environment the terminal already published, read once here because the
+// protocol is a fixed-per-process decision.
+func New(mode Mode, out io.Writer, lookup Lookup) *Sink {
 	if mode == Off {
 		out = nil
 	}
-	return &Sink{mode: mode, out: out}
+	sink := &Sink{mode: mode, out: out}
+	if mode == OSC {
+		sink.protocol = Detect(lookup)
+	}
+	return sink
 }
 
-// Notify raises the signal for one event the feed showed. Until the frame's own
-// ticket lands, osc and auto are silent: they are accepted so a reader can write
-// the flag they want before the mechanism exists, and they will never ring
-// something the mode did not ask for.
-func (s *Sink) Notify() {
+// Notify raises the signal for one event the feed showed. The bell carries no
+// event text at all, by construction; osc writes the one frame the terminal is
+// known to speak, and no bytes at all when the environment identified no
+// terminal. A write that fails is swallowed: a signal is never the session's
+// error. auto stays silent until its own ticket lands.
+func (s *Sink) Notify(event activity.Event) {
 	if s == nil || s.out == nil {
 		return
 	}
-	if s.mode == Bell {
+	switch s.mode {
+	case Bell:
 		_, _ = io.WriteString(s.out, "\a")
+	case OSC:
+		_, _ = s.out.Write(Frame(s.protocol, event))
 	}
 }

@@ -119,9 +119,19 @@ Paso por paso:
    escribió y solo para un evento del vivo: el backfill y el historial comparten
    `paint` y nunca rinden, y un evento que el filtro descartó tampoco, porque la
    regla es "mostrado", no "recibido". Un fallo al escribirla no es un error de la
-   sesión. En este corte `bell` es lo único que suena; `osc` y `auto` se aceptan y
-   callan hasta sus propios tickets.
-8. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
+   sesión.
+8. **La secuencia del terminal** (`internal/notify/frame.go`) es lo que `osc`
+   escribe: un frame —una notificación— por evento mostrado del vivo. El protocolo
+   se elige de lo que la terminal ya publica, nunca de una consulta: `OSC 99` para
+   kitty (`KITTY_WINDOW_ID`, `TERM=xterm-kitty`), `OSC 777` para Windows Terminal
+   (`WT_SESSION`), y `OSC 9` para iTerm2, Ghostty y WezTerm (`TERM_PROGRAM`,
+   `TERM=xterm-ghostty`). Una terminal que el entorno no identifica no recibe
+   ningún byte. El frame es una plantilla fija —un solo introductor y un solo
+   terminador, ambos del programa— sobre campos que pasan por `render.Clean`: un
+   `;` se vuelve espacio, los overrides bidi se descartan, el título se corta a 64
+   runas y el cuerpo a 200, y la URL nunca viaja. La razón entera está en
+   ADR-0017. `auto` sigue callando hasta su propio ticket.
+9. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
    cualquier punto, el retorno es `0`, no un error. Cualquiera sea el camino de
@@ -130,7 +140,7 @@ Paso por paso:
    <d> dismissed` cuando se mostró algo, `stopped · no events` cuando no. Los conteos
    son de eventos **mostrados**, filtro incluido: la respuesta a "qué vi", no a "qué
    mandó el relay".
-9. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
+10. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
    jitter de hasta un cuarto del paso. Una conexión que entregó al menos un evento
    válido resetea la escalera, así que un corte aislado vuelve a esperar un segundo.
 
@@ -294,6 +304,7 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 | `client/internal/cli/terminal_windows.go` | la terminal en Windows: es consola, y aprende escapes | la regla de color |
 | `client/internal/cli/terminal_other.go` | la terminal en el resto | la regla de color |
 | `client/internal/notify/notify.go` | la política de señal: qué rinde y qué no | el watch |
+| `client/internal/notify/frame.go` | detección del terminal y el frame OSC | `osc` |
 | `client/internal/cli/console_windows.go` | la consola del proceso, en Windows | la señal |
 | `client/internal/cli/console_other.go` | la consola del proceso, en el resto | la señal |
 | `client/internal/sse/sse.go` | frames SSE a payloads | la conexión en vivo |
@@ -320,13 +331,15 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   reconexión, la línea `stopped` de la salida y los errores van a stderr, en texto
   plano y sin TTY-gating —una sesión redirigida a un log merece la misma narración
   que una terminal—. Eso es lo que hace seguros `feed watch | jq` y `feed watch | tee`.
-- **La notificación no es salida.** El bell —y, cuando lleguen, las secuencias del
-  terminal— se escribe en el dispositivo de consola, nunca en stdout ni en stderr:
+- **La notificación no es salida.** El bell y el frame OSC se escriben en el
+  dispositivo de consola, nunca en stdout ni en stderr:
   `feed watch | jq` y `feed watch 2> log` reciben exactamente lo mismo con
   `--notify` prendido o apagado. La regla es "mostrado", no "recibido": el backfill
-  y `feed history` no rinden, y un evento filtrado tampoco. `off` es el default,
-  una señal que no se puede entregar se descarta, y ninguna señal cambia un código
-  de salida (ADR-0017).
+  y `feed history` no rinden, y un evento filtrado tampoco. El frame es una
+  plantilla fija sobre campos limpiados, con un solo introductor y un solo
+  terminador del programa: el texto del evento no puede empezar una secuencia
+  propia. `off` es el default, una señal que no se puede entregar se descarta, y
+  ninguna señal cambia un código de salida (ADR-0017).
 - **La sesión se narra tres veces y nada más.** Un banner al arrancar, una sola
   línea `connected` tras la primera conexión —una reconexión dice
   `watch: reconnected`, nunca un segundo `connected`— y una línea de cuenta al salir.

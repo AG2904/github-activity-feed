@@ -407,7 +407,20 @@ consola:
 | `feed history` no rinde | `./feed history --relay http://localhost:3000` | ninguna señal, con o sin `--notify` (el flag ni siquiera existe ahí) |
 | un evento filtrado no rinde | `--user nadie --notify bell` y mandar un merge | ni tarjeta ni bell: la regla es "mostrado", no "recibido" |
 | sin consola no hay señal | correr el watch desde un servicio o con la salida a un archivo y sin terminal | el watch funciona igual; la señal simplemente no tiene dónde escribir |
-| `osc` y `auto` todavía callan | `--notify osc` o `--notify auto` | se aceptan y no suenan: la secuencia del terminal llega en su propio ticket |
+| `osc` en una terminal soportada | `--notify osc` en una terminal de las de abajo y mandar un merge | una notificación del sistema por tarjeta mostrada; en una terminal sin soporte, nada aparece y el watch sigue |
+| `auto` todavía calla | `--notify auto` | se acepta y no suena: la selección automática llega en su propio ticket |
+
+`osc` escribe un frame —una notificación— por evento mostrado del vivo, con el
+protocolo que la terminal publica: `OSC 9` para iTerm2, Ghostty y WezTerm, `OSC 777`
+para Windows Terminal y `OSC 99` para kitty. No consulta la terminal ni escribe
+nada para averiguarlo. Si el entorno no identifica una terminal que entienda el
+frame, no se escribe ningún byte y el watch sigue igual. El texto es la misma
+frase de la tarjeta, más el asunto y el repositorio; la URL no viaja. La razón
+completa está en ADR-0017.
+
+> El chequeo visual de esta fila queda pendiente de una mano humana: qué terminal
+> y qué versión se usó. La forma del frame sí está fijada por los tests unitarios
+> de `internal/notify`.
 
 Un valor que no existe es un error de uso, no un watch silencioso:
 `./feed watch --notify loud` sale con `2` y nombra los cuatro aceptados.
