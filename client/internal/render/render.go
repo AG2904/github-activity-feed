@@ -76,40 +76,73 @@ func (p Palette) card(w io.Writer, event activity.Event, now time.Time, shape li
 	return err
 }
 
-// headline is the sentence: who acted, what the verb was, and where it landed.
-// A merge names the branch that landed when the event carries one; a null
-// branch — a legacy row or a payload without a usable head ref — falls back to
-// the type-derived phrase, because pr.merged still means a merge into main. A
-// type that means something else gets its own phrase rather than reusing this
-// one. An unknown type degrades to its raw value and no destination, so a new
-// event type still reads as something.
-func (p Palette) headline(event activity.Event) string {
-	parts := []string{p.paint(cyan, clean(event.Actor))}
+// segment is one word-group of the sentence and the palette slot it wears. The
+// sentence is built once as these segments, so its plain form and its coloured
+// form cannot describe the same event differently: the plain form joins the
+// texts, the coloured one paints each with its role.
+type segment struct {
+	code string
+	text string
+}
+
+// segments is the one source of truth for an event's sentence: who acted, what
+// the verb was, and where it landed. A merge names the branch that landed when
+// the event carries one; a null branch — a legacy row or a payload without a
+// usable head ref — falls back to the type-derived phrase, because pr.merged
+// still means a merge into main. A type that means something else gets its own
+// phrase rather than reusing this one. An unknown type degrades to its raw value
+// and no destination, so a new event type still reads as something.
+func segments(event activity.Event) []segment {
+	parts := []segment{{cyan, clean(event.Actor)}}
 	switch event.Type {
 	case activity.TypePRMerged:
-		parts = append(parts, p.paint(green, "merged"))
+		parts = append(parts, segment{green, "merged"})
 		if event.Branch != nil && *event.Branch != "" {
-			parts = append(parts, p.paint(blue, clean(*event.Branch)))
+			parts = append(parts, segment{blue, clean(*event.Branch)})
 		}
 		parts = append(parts,
-			p.paint(grey, "into"),
-			p.paint(green, "main"),
+			segment{grey, "into"},
+			segment{green, "main"},
 		)
 	case activity.TypeIssueAssigned:
-		parts = append(parts, p.paint(yellow, "assigned"))
+		parts = append(parts, segment{yellow, "assigned"})
 		if event.Assignee != nil && *event.Assignee != "" {
-			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, clean(*event.Assignee)))
+			parts = append(parts, segment{grey, "to"}, segment{cyan, clean(*event.Assignee)})
 		}
 	case activity.TypeIssueClosed:
-		parts = append(parts, p.paint(white, "closed"))
+		parts = append(parts, segment{white, "closed"})
 	case activity.TypeIssueDismissed:
 		// The two closures are different news, so the reason rides in the same
 		// sentence instead of being left to the type the feed does not print.
-		parts = append(parts, p.paint(red, "dismissed"), p.paint(grey, "as not planned"))
+		parts = append(parts, segment{red, "dismissed"}, segment{grey, "as not planned"})
 	default:
-		parts = append(parts, p.paint(grey, clean(event.Type)))
+		parts = append(parts, segment{grey, clean(event.Type)})
 	}
-	return strings.Join(parts, " ")
+	return parts
+}
+
+// Sentence is the plain sentence an event produces: the card's headline with no
+// escape sequence and nothing about the terminal in it. The coloured card is
+// built from the same segments, so the two cannot drift, and a signal raised
+// outside the feed carries this text rather than a second rendering of the event.
+func Sentence(event activity.Event) string {
+	parts := segments(event)
+	texts := make([]string, len(parts))
+	for i, part := range parts {
+		texts[i] = part.text
+	}
+	return strings.Join(texts, " ")
+}
+
+// headline is the sentence in its coloured form: the same segments as Sentence,
+// each painted with its role when colour is allowed.
+func (p Palette) headline(event activity.Event) string {
+	parts := segments(event)
+	texts := make([]string, len(parts))
+	for i, part := range parts {
+		texts[i] = p.paint(part.code, part.text)
+	}
+	return strings.Join(texts, " ")
 }
 
 // title is the reason and the thing itself: the labels the event carries come

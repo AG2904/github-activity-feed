@@ -5,6 +5,7 @@ package render
 // the human boundaries of the freshness line.
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -58,6 +59,131 @@ func TestHeadlineColoursByState(t *testing.T) {
 // ptrTo gives an event the nullable assignee a headline reads.
 func ptrTo(value string) *string {
 	return &value
+}
+
+// TestSentence pins the plain sentence each type produces, derived from the
+// event alone: no escape sequence, no terminal, and an unknown type degraded to
+// its raw value rather than dropped.
+func TestSentence(t *testing.T) {
+	tests := []struct {
+		name  string
+		event activity.Event
+		want  string
+	}{
+		{
+			name:  "a merge names its branch",
+			event: activity.Event{Type: activity.TypePRMerged, Actor: "maria.perez", Branch: ptrTo("fix/memory-leak")},
+			want:  "maria.perez merged fix/memory-leak into main",
+		},
+		{
+			name:  "a merge without a branch still lands in main",
+			event: activity.Event{Type: activity.TypePRMerged, Actor: "maria.perez"},
+			want:  "maria.perez merged into main",
+		},
+		{
+			name: "an assignment names the assignee",
+			event: activity.Event{
+				Type:     activity.TypeIssueAssigned,
+				Actor:    "lucia.gomez",
+				Assignee: ptrTo("tomas.ferreira"),
+			},
+			want: "lucia.gomez assigned to tomas.ferreira",
+		},
+		{
+			name:  "an assignment with no assignee keeps the verb",
+			event: activity.Event{Type: activity.TypeIssueAssigned, Actor: "lucia.gomez"},
+			want:  "lucia.gomez assigned",
+		},
+		{
+			name:  "a resolved closure",
+			event: activity.Event{Type: activity.TypeIssueClosed, Actor: "lucia.gomez"},
+			want:  "lucia.gomez closed",
+		},
+		{
+			name:  "a dismissal names its reason",
+			event: activity.Event{Type: activity.TypeIssueDismissed, Actor: "lucia.gomez"},
+			want:  "lucia.gomez dismissed as not planned",
+		},
+		{
+			name:  "an unknown type degrades to its raw value",
+			event: activity.Event{Type: "release.published", Actor: "maria.perez"},
+			want:  "maria.perez release.published",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := Sentence(tt.event); got != tt.want {
+				t.Fatalf("Sentence() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestColouredCardEqualsThePlainSentence pins the two renderings of one event to
+// one source of truth: once the palette's own escapes are removed, the coloured
+// headline must be exactly the plain sentence the notifier will carry. The four
+// known types and an unknown one cover every branch of the sentence.
+func TestColouredCardEqualsThePlainSentence(t *testing.T) {
+	palette := Palette{Color: true}
+	tests := []struct {
+		name  string
+		event activity.Event
+	}{
+		{
+			name:  "a merge",
+			event: activity.Event{Type: activity.TypePRMerged, Actor: "maria.perez", Branch: ptrTo("fix/memory-leak")},
+		},
+		{
+			name:  "a merge without a branch",
+			event: activity.Event{Type: activity.TypePRMerged, Actor: "maria.perez"},
+		},
+		{
+			name: "an assignment",
+			event: activity.Event{
+				Type:     activity.TypeIssueAssigned,
+				Actor:    "lucia.gomez",
+				Assignee: ptrTo("tomas.ferreira"),
+			},
+		},
+		{
+			name:  "a resolved closure",
+			event: activity.Event{Type: activity.TypeIssueClosed, Actor: "lucia.gomez"},
+		},
+		{
+			name:  "a dismissal",
+			event: activity.Event{Type: activity.TypeIssueDismissed, Actor: "lucia.gomez"},
+		},
+		{
+			name:  "an unknown type",
+			event: activity.Event{Type: "release.published", Actor: "maria.perez"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plain := Sentence(tt.event)
+			if got := stripANSI(palette.headline(tt.event)); got != plain {
+				t.Fatalf("coloured headline without escapes = %q, want plain sentence %q", got, plain)
+			}
+		})
+	}
+}
+
+// stripANSI removes the CSI sequences the palette emits — ESC '[' parameters and
+// a final byte — so a coloured form can be compared with its plain source.
+func stripANSI(text string) string {
+	var plain strings.Builder
+	for i := 0; i < len(text); i++ {
+		if text[i] == 0x1b && i+1 < len(text) && text[i+1] == '[' {
+			j := i + 2
+			for j < len(text) && (text[j] < 0x40 || text[j] > 0x7e) {
+				j++
+			}
+			i = j
+			continue
+		}
+		plain.WriteByte(text[i])
+	}
+	return plain.String()
 }
 
 func TestClean(t *testing.T) {
