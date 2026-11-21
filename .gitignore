@@ -1,6 +1,9 @@
 # gentle-ai generated skill registry (machine-local, contains absolute paths)
 .atl/
 
+# gentle-ai ODD work logs (machine-local; the specs live under .scratch/)
+odd/
+
 node_modules/
 dist/
 .env
