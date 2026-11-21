@@ -408,7 +408,8 @@ consola:
 | un evento filtrado no rinde | `--user nadie --notify bell` y mandar un merge | ni tarjeta ni bell: la regla es "mostrado", no "recibido" |
 | sin consola no hay señal | correr el watch desde un servicio o con la salida a un archivo y sin terminal | el watch funciona igual; la señal simplemente no tiene dónde escribir |
 | `osc` en una terminal soportada | `--notify osc` en una terminal de las de abajo y mandar un merge | una notificación del sistema por tarjeta mostrada; en una terminal sin soporte, nada aparece y el watch sigue |
-| `auto` todavía calla | `--notify auto` | se acepta y no suena: la selección automática llega en su propio ticket |
+| `auto` en una terminal identificada | `--notify auto` en kitty, iTerm2, WezTerm, Ghostty o Windows Terminal | el mismo frame que `osc` |
+| `auto` sin terminal identificada | `--notify auto` en GNOME Terminal, Alacritty o Terminal.app | el bell, como si se hubiera pedido `bell` |
 
 `osc` escribe un frame —una notificación— por evento mostrado del vivo, con el
 protocolo que la terminal publica: `OSC 9` para iTerm2, Ghostty y WezTerm, `OSC 777`
@@ -418,9 +419,46 @@ frame, no se escribe ningún byte y el watch sigue igual. El texto es la misma
 frase de la tarjeta, más el asunto y el repositorio; la URL no viaja. La razón
 completa está en ADR-0017.
 
-> El chequeo visual de esta fila queda pendiente de una mano humana: qué terminal
-> y qué versión se usó. La forma del frame sí está fijada por los tests unitarios
-> de `internal/notify`.
+`auto` es la misma decisión, sin saber qué terminal tenés: usa el frame cuando el
+entorno identifica una de las terminales de la tabla y el bell cuando no. Tampoco
+pregunta nada.
+
+> El chequeo visual de estas filas queda pendiente de una mano humana: qué
+> terminal y qué versión se usó. La forma del frame sí está fijada por los tests
+> unitarios de `internal/notify`.
+
+### Qué terminal entiende qué
+
+| Terminal | Secuencia | Qué hace falta |
+| --- | --- | --- |
+| Windows Terminal | `OSC 777` | desde la v1.26 y solo con `profiles.defaults."compatibility.allowOSC777": true`; sin eso, su respuesta es el bell con el estilo que tengas elegido |
+| Ghostty | `OSC 9` | entiende la secuencia sin configuración; su propio switch decide si muestra la notificación |
+| iTerm2 | `OSC 9` | lo mismo: la secuencia entra sin configurar, su switch decide |
+| WezTerm | `OSC 9` | sin configuración |
+| kitty | `OSC 99` | sin configuración |
+| GNOME Terminal | — | cae al bell |
+| Alacritty | — | cae al bell |
+| Terminal.app (macOS) | — | cae al bell |
+
+En Windows Terminal, el bell solo se ve si `bellStyle` no lo apaga. En
+`settings.json`:
+
+```json
+"profiles": { "defaults": { "bellStyle": "all" } }
+```
+
+`audible` suena, `window` parpadea, `taskbar` destaca la barra, `all` hace todo y
+`none` lo apaga: `none` es el falso negativo número uno. En la terminal integrada
+de VS Code el equivalente es `terminal.integrated.enableBell`.
+
+Dentro de tmux la secuencia **no pasa** por defecto: el multiplexor la filtra. El
+cliente no envuelve el frame en un escape de passthrough, porque eso exige
+`allow-passthrough all` en tu configuración y esa opción apaga el filtrado de tmux
+para **todos** los paneles, no solo este. Si querés notificaciones dentro de tmux,
+usá `--notify bell` o habilitá el passthrough vos mismo.
+
+Ninguno de estos ajustes —`allowOSC777`, `bellStyle`, el switch de Ghostty o el
+passthrough de tmux— lo toca el cliente: son tuyos.
 
 Un valor que no existe es un error de uso, no un watch silencioso:
 `./feed watch --notify loud` sale con `2` y nombra los cuatro aceptados.
@@ -443,7 +481,8 @@ Un valor que no existe es un error de uso, no un watch silencioso:
 | rama — el merge nombra su rama | la tarjeta dice `merged <rama> into main`, o vuelve a `merged into main` si es `null` | 4, 5 | sí |
 | notificaciones — la señal | el flag, sus cuatro valores y el rechazo de un valor desconocido | 2, 13 | sí (el rechazo y la aceptación) |
 | notificaciones — la señal | `--notify` no agrega un byte a stdout ni a stderr | 13 | sí |
-| notificaciones — la señal | el bell por evento mostrado, y el silencio del backfill, del historial y de lo filtrado | 13 | a mano (la consola no se ve desde un pipe) |
+| notificaciones - la señal | el bell por evento mostrado, y el silencio del backfill, del historial y de lo filtrado | 13 | a mano (la consola no se ve desde un pipe) |
+| notificaciones - la señal | el frame `osc` por evento mostrado, y `auto` eligiendo entre frame y bell | 13 | parcial (la forma y la elección en `internal/notify`; el efecto visual a mano) |
 | 06 — la primera conexión no es una pantalla en blanco | — | — | **pendiente** |
 | 07 — el historial responde | — | — | **pendiente** |
 | 08 — distribuir el binario | `--version` inyectada | 1 | parcial (solo la inyección) |

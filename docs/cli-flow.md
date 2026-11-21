@@ -130,7 +130,9 @@ Paso por paso:
    terminador, ambos del programa— sobre campos que pasan por `render.Clean`: un
    `;` se vuelve espacio, los overrides bidi se descartan, el título se corta a 64
    runas y el cuerpo a 200, y la URL nunca viaja. La razón entera está en
-   ADR-0017. `auto` sigue callando hasta su propio ticket.
+   ADR-0017. `auto` no inventa un protocolo: elige ese frame cuando el entorno
+   identifica una de esas terminales y el bell cuando no. La tabla de qué
+   terminal entiende qué vive en `docs/cli-testing.md`, no en este mapa.
 9. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en

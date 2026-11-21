@@ -69,26 +69,44 @@ type Sink struct {
 	out      io.Writer
 }
 
+// resolve turns the requested mode into the signal the terminal can actually
+// produce. It is a pure function of the mode and the environment the terminal
+// already published, so the choice is testable without a terminal: auto becomes
+// the frame when the environment identifies a terminal that speaks one, and the
+// bell otherwise. It never probes (ADR-0017).
+func resolve(mode Mode, lookup Lookup) (Mode, Protocol) {
+	switch mode {
+	case OSC:
+		return OSC, Detect(lookup)
+	case Auto:
+		protocol := Detect(lookup)
+		if protocol == NoProtocol {
+			return Bell, NoProtocol
+		}
+		return OSC, protocol
+	default:
+		return mode, NoProtocol
+	}
+}
+
 // New builds the sink the watch holds for the life of the process. The mode
 // decides what is written; the writer decides whether it can be; and the lookup
 // is the environment the terminal already published, read once here because the
-// protocol is a fixed-per-process decision.
+// protocol is a fixed-per-process decision. Auto is resolved here, so the sink
+// itself only ever holds a concrete signal.
 func New(mode Mode, out io.Writer, lookup Lookup) *Sink {
 	if mode == Off {
 		out = nil
 	}
-	sink := &Sink{mode: mode, out: out}
-	if mode == OSC {
-		sink.protocol = Detect(lookup)
-	}
-	return sink
+	resolved, protocol := resolve(mode, lookup)
+	return &Sink{mode: resolved, protocol: protocol, out: out}
 }
 
 // Notify raises the signal for one event the feed showed. The bell carries no
 // event text at all, by construction; osc writes the one frame the terminal is
 // known to speak, and no bytes at all when the environment identified no
 // terminal. A write that fails is swallowed: a signal is never the session's
-// error. auto stays silent until its own ticket lands.
+// error.
 func (s *Sink) Notify(event activity.Event) {
 	if s == nil || s.out == nil {
 		return
