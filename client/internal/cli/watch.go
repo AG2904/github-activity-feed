@@ -25,7 +25,7 @@ import (
 // none may reach stdout, so a silent terminal reads as "nothing happened" and
 // not as "it hung", and the event feed stays a contract.
 func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json] [--notify <off|bell|osc|auto>]")
+	fs := newFlagSet("watch", stderr, "usage: feed watch [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json] [--notify <"+notify.Syntax()+">]")
 	relay := fs.String("relay", relayFallback(), "relay base URL")
 	user, repository := addFilters(fs)
 	backfillFlag := fs.Int("backfill", 10, "how many stored events the first connection prints (0 disables)")

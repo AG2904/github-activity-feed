@@ -8,6 +8,7 @@ package notify
 
 import (
 	"io"
+	"strings"
 
 	"github.com/AG2904/github-activity-feed/client/internal/activity"
 )
@@ -54,7 +55,35 @@ func Parse(text string) (Mode, bool) {
 // Values names the accepted values for the usage line and the refusal: one
 // sentence, one spelling, so the flag cannot accept a value it never names.
 func Values() string {
-	return "off, bell, osc or auto"
+	return prose(names(), ", ", " or ")
+}
+
+// Syntax names the accepted values the way a usage line spells a flag's set.
+func Syntax() string {
+	return strings.Join(names(), "|")
+}
+
+// names is the accepted spelling of each mode, in the order the usage line names
+// them, derived from the one table so a fifth mode cannot leave a stale copy
+// behind.
+func names() []string {
+	texts := make([]string, len(modes))
+	for i, m := range modes {
+		texts[i] = m.text
+	}
+	return texts
+}
+
+// prose joins values the way a sentence does: separators between all but the
+// last, and the final conjunction before it.
+func prose(values []string, separator, conjunction string) string {
+	if len(values) == 0 {
+		return ""
+	}
+	if len(values) == 1 {
+		return values[0]
+	}
+	return strings.Join(values[:len(values)-1], separator) + conjunction + values[len(values)-1]
 }
 
 // Sink writes the signal for one shown event. Its writer is the console the

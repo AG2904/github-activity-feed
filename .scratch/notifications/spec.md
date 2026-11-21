@@ -190,8 +190,9 @@ Two seams, one of them new:
   byte inside a field, a `;` that becomes a space, a clamped title and body, bidi
   stripped, no URL, and a plain sentence equal to the coloured card with escapes
   removed. The environment detection is tested the same way, as a pure function
-  over an injected lookup, so no test depends on the machine it runs on. This is
-  the client's first unit test and the ADR records the reason.
+  over an injected lookup, so no test depends on the machine it runs on. It is
+  the client's first unit test that pins a byte no pipe can observe, and the ADR
+  records the reason.
 
 Not tested, deliberately: the console write itself, which is a single call whose
 failure is ignored by design, and the notification daemon's behaviour, which is

@@ -135,11 +135,12 @@ and the tmux note belong in `docs/cli-testing.md`, where a reader already goes t
 run the thing by hand.
 
 The frame's encoder is a pure function, and pinning its property — one `ESC`, one
-terminator, no control byte in a field — needs the first unit test in `client/`:
-so far the suite compiles the binary and speaks to it across the process
-boundary, and a byte that goes to a console cannot be observed from a pipe. The
-e2e suite keeps its half: `--notify` parsing and refusals, and the invariant that
-enabling notifications adds no byte to stdout or stderr.
+terminator, no control byte in a field — needs a unit test inside `client/`
+rather than one across the process boundary: a byte that goes to a console cannot
+be observed from a pipe, so `internal/notify/frame_test.go` pins the frame's
+shape beside the package that builds it. The e2e suite keeps its half: `--notify`
+parsing and refusals, and the invariant that enabling notifications adds no byte
+to stdout or stderr.
 
 What this does not do is worth being explicit about, because it is what the
 other option was for: no click opens the pull request, no unread badge survives

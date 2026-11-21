@@ -19,20 +19,20 @@ Verificación manual pendiente, con los comandos y el entorno ya relevado:
 
 - [ ] `feed watch --notify=bell` rings once per shown live event; `--notify=off`
       and the no-flag default ring for none.
-- [ ] An unknown `--notify` value exits `2` and prints the usage line naming the
+- [x] An unknown `--notify` value exits `2` and prints the usage line naming the
       four accepted values; `feed watch --help` shows the same four.
-- [ ] Nothing new reaches stdout or stderr in any mode: a redirected watch is
+- [x] Nothing new reaches stdout or stderr in any mode: a redirected watch is
       byte-identical to the base commit for the same scripted relay, and `--json`
       output is unchanged.
 - [ ] Backfill and `feed history` never ring, even with a mode enabled.
 - [ ] A filtered event is not signalled, because the rule is "shown", not
       "received"; the by-hand case is recorded in the manual testing document.
-- [ ] With no console attached (the suite's pipes, a service, a redirected
+- [x] With no console attached (the suite's pipes, a service, a redirected
       shell), the mode is a no-op and every exit code is unchanged.
-- [ ] A signal that cannot be delivered never surfaces as an error, is not
+- [x] A signal that cannot be delivered never surfaces as an error, is not
       retried, and does not change the `stopped · …` session account.
-- [ ] The client still exits `0` on `Ctrl-C` with a mode enabled.
-- [ ] The client's flow document describes the sink as part of the output policy
+- [x] The client still exits `0` on `Ctrl-C` with a mode enabled.
+- [x] The client's flow document describes the sink as part of the output policy
       and states explicitly that it is not output, with the "shown, not received"
       rule; the manual testing document gains the by-hand bell check.
-- [ ] The shipped client still imports no process-spawning package.
+- [x] The shipped client still imports no process-spawning package.
