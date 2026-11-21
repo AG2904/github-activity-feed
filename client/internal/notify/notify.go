@@ -90,15 +90,26 @@ func resolve(mode Mode, lookup Lookup) (Mode, Protocol) {
 }
 
 // New builds the sink the watch holds for the life of the process. The mode
-// decides what is written; the writer decides whether it can be; and the lookup
-// is the environment the terminal already published, read once here because the
+// decides what is written; the writer decides whether it can be; escapes says
+// whether that console acts on escape sequences at all; and the lookup is the
+// environment the terminal already published, read once here because the
 // protocol is a fixed-per-process decision. Auto is resolved here, so the sink
 // itself only ever holds a concrete signal.
-func New(mode Mode, out io.Writer, lookup Lookup) *Sink {
+func New(mode Mode, out io.Writer, escapes bool, lookup Lookup) *Sink {
 	if mode == Off {
 		out = nil
 	}
 	resolved, protocol := resolve(mode, lookup)
+	// A console that does not act on escapes would print the frame literally.
+	// Auto falls back to the bell it can deliver; an explicit osc asked for a
+	// frame, so its answer to an unusable console is no signal instead.
+	if resolved == OSC && !escapes {
+		if mode == Auto {
+			resolved, protocol = Bell, NoProtocol
+		} else {
+			out = nil
+		}
+	}
 	return &Sink{mode: resolved, protocol: protocol, out: out}
 }
 

@@ -66,10 +66,11 @@ func watch(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	// built from the console and never from stdout, opened only when a mode asks
 	// for it, and silent when there is no console to open (ADR-0017).
 	var device io.Writer
+	escapes := false
 	if mode != notify.Off {
-		device = console()
+		device, escapes = console()
 	}
-	signal := notify.New(mode, device, os.Getenv)
+	signal := notify.New(mode, device, escapes, os.Getenv)
 	// The stop line is deferred, not written at each return: there is more
 	// than one way out of this function — Ctrl-C, an unusable URL, a closed
 	// stdout — and the session's account must speak on all of them.

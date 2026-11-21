@@ -282,14 +282,30 @@ func TestFrameTextIsTheSentenceAndTheSubject(t *testing.T) {
 	}
 }
 
-// TestNoProtocolWritesNothing pins the degradation: a terminal the environment
-// does not identify receives no frame at all, rather than a sequence it may
-// print literally.
-func TestNoProtocolWritesNothing(t *testing.T) {
+// TestUnidentifiedTerminalGetsTheWidestFrame pins the explicit flag's promise:
+// `osc` asked for a frame, so an environment the detector does not recognize
+// still gets the sequence the widest set of terminals understands. The ones that
+// do not understand it drop it, which is the failure mode the ADR accepts.
+func TestUnidentifiedTerminalGetsTheWidestFrame(t *testing.T) {
 	event := activity.Event{Type: activity.TypeIssueClosed, Actor: "lucia.gomez", Subject: "done"}
 
-	if frame := Frame(NoProtocol, event); len(frame) != 0 {
-		t.Fatalf("Frame() = %q, want no bytes", frame)
+	frame := string(Frame(NoProtocol, event))
+	if !strings.HasPrefix(frame, "\x1b]9;") {
+		t.Fatalf("Frame() = %q, want the OSC 9 fallback", frame)
+	}
+	if got := strings.Count(frame, "\x1b"); got != 1 {
+		t.Fatalf("introducers = %d, want exactly 1: %q", got, frame)
+	}
+}
+
+// TestFrameOmitsTheSeparatorWhenTheBodyIsEmpty keeps the single-field protocols
+// from ending in a dangling separator when the event carries no subject.
+func TestFrameOmitsTheSeparatorWhenTheBodyIsEmpty(t *testing.T) {
+	event := activity.Event{Type: "release.published", Actor: "maria.perez"}
+
+	frame := string(Frame(OSC9, event))
+	if want := "\x1b]9;maria.perez release.published\a"; frame != want {
+		t.Fatalf("Frame() = %q, want %q", frame, want)
 	}
 }
 

@@ -126,21 +126,23 @@ func segments(event activity.Event) []segment {
 // built from the same segments, so the two cannot drift, and a signal raised
 // outside the feed carries this text rather than a second rendering of the event.
 func Sentence(event activity.Event) string {
-	parts := segments(event)
-	texts := make([]string, len(parts))
-	for i, part := range parts {
-		texts[i] = part.text
-	}
-	return strings.Join(texts, " ")
+	return joinSegments(segments(event), func(part segment) string { return part.text })
 }
 
 // headline is the sentence in its coloured form: the same segments as Sentence,
 // each painted with its role when colour is allowed.
 func (p Palette) headline(event activity.Event) string {
-	parts := segments(event)
+	return joinSegments(segments(event), func(part segment) string { return p.paint(part.code, part.text) })
+}
+
+// joinSegments gives the one sentence its two renderings: each segment goes
+// through paint and the results are joined by the single space the sentence
+// uses. Sentence and headline differ only in that function, so they cannot
+// drift in shape either.
+func joinSegments(parts []segment, paint func(segment) string) string {
 	texts := make([]string, len(parts))
 	for i, part := range parts {
-		texts[i] = p.paint(part.code, part.text)
+		texts[i] = paint(part)
 	}
 	return strings.Join(texts, " ")
 }

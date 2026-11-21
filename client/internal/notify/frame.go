@@ -12,13 +12,13 @@ import (
 	"github.com/AG2904/github-activity-feed/client/internal/render"
 )
 
-// Protocol is the escape sequence a terminal acts on. The zero value is no
-// protocol: a terminal the environment does not identify gets no frame at all,
-// because a frame it does not understand is not worth the bytes.
+// Protocol is the escape sequence a terminal acts on. The zero value means the
+// environment did not identify the terminal: detection has no answer, and the
+// frame falls back to the widest sequence rather than inventing one.
 type Protocol int
 
 const (
-	// NoProtocol means the terminal is not known to understand any frame.
+	// NoProtocol means the environment did not identify the terminal.
 	NoProtocol Protocol = iota
 	// OSC9 is iTerm2's notification sequence, also understood by Ghostty,
 	// WezTerm and kitty: one message, no separate title or body.
@@ -75,24 +75,35 @@ func Detect(lookup Lookup) Protocol {
 // Frame builds the bytes a terminal turns into one notification for one event.
 // It is the only constructor, and it takes the event rather than strings, so
 // every field necessarily came through the sanitizer and no caller can hand it
-// text that skipped it. A protocol the terminal is not known to speak yields no
-// bytes at all.
+// text that skipped it. OSC 9 is the fallback for an unidentified terminal: the
+// widest sequence is safe to emit without probing, and the terminals that do not
+// act on it drop it in silence (ADR-0017).
 func Frame(protocol Protocol, event activity.Event) []byte {
 	title := field(render.Sentence(event), titleLimit)
 	body := field(bodyText(event), bodyLimit)
 
 	switch protocol {
-	case OSC9:
-		return frame("9;" + title + messageSeparator + body)
 	case OSC777:
 		return frame("777;notify;" + title + ";" + body)
 	case OSC99:
 		// The two semicolons are always present, even with empty metadata; an
 		// empty payload type defaults to a title.
-		return frame("99;;" + title + messageSeparator + body)
+		return frame("99;;" + message(title, body))
 	default:
-		return nil
+		// OSC 9 is also the fallback for a terminal the environment does not
+		// identify: an explicit `--notify=osc` asked for a frame, and the
+		// terminals that do not understand the sequence drop it in silence.
+		return frame("9;" + message(title, body))
 	}
+}
+
+// message joins the title and the body for the protocols that carry a single
+// field, omitting the separator when there is no body.
+func message(title, body string) string {
+	if body == "" {
+		return title
+	}
+	return title + messageSeparator + body
 }
 
 // bodyText is the part of the frame that is not the sentence: the subject and

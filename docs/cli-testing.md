@@ -414,10 +414,10 @@ consola:
 `osc` escribe un frame —una notificación— por evento mostrado del vivo, con el
 protocolo que la terminal publica: `OSC 9` para iTerm2, Ghostty y WezTerm, `OSC 777`
 para Windows Terminal y `OSC 99` para kitty. No consulta la terminal ni escribe
-nada para averiguarlo. Si el entorno no identifica una terminal que entienda el
-frame, no se escribe ningún byte y el watch sigue igual. El texto es la misma
-frase de la tarjeta, más el asunto y el repositorio; la URL no viaja. La razón
-completa está en ADR-0017.
+nada para averiguarlo. Si el entorno no la identifica, usa `OSC 9`, la secuencia
+más extendida: una terminal que no la entiende no muestra nada y el watch sigue
+igual. El texto es la misma frase de la tarjeta, más el asunto y el repositorio;
+la URL no viaja. La razón completa está en ADR-0017.
 
 `auto` es la misma decisión, sin saber qué terminal tenés: usa el frame cuando el
 entorno identifica una de las terminales de la tabla y el bell cuando no. Tampoco

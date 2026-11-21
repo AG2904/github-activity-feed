@@ -69,7 +69,7 @@ func TestSinkWritesTheResolvedSignal(t *testing.T) {
 		{name: "off writes nothing", mode: Off, env: kitty, want: "", exact: true},
 		{name: "bell writes the bell", mode: Bell, env: unknown, want: "\a", exact: true},
 		{name: "osc writes the kitty frame", mode: OSC, env: kitty, want: "\x1b]99;;maria.perez merged fix/memory-leak into main"},
-		{name: "osc on an unknown terminal writes nothing", mode: OSC, env: unknown, want: "", exact: true},
+		{name: "osc falls back to the widest sequence", mode: OSC, env: unknown, want: "\x1b]9;maria.perez merged fix/memory-leak into main"},
 		{name: "auto writes the frame the terminal speaks", mode: Auto, env: kitty, want: "\x1b]99;;maria.perez merged fix/memory-leak into main"},
 		{name: "auto falls back to the bell", mode: Auto, env: unknown, want: "\a", exact: true},
 	}
@@ -77,7 +77,7 @@ func TestSinkWritesTheResolvedSignal(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var out bytes.Buffer
 			lookup := func(name string) string { return tt.env[name] }
-			New(tt.mode, &out, lookup).Notify(event)
+			New(tt.mode, &out, true, lookup).Notify(event)
 
 			got := out.String()
 			if tt.exact && got != tt.want {
@@ -93,12 +93,42 @@ func TestSinkWritesTheResolvedSignal(t *testing.T) {
 	}
 }
 
+// TestSinkNeverWritesAFrameWhereEscapesAreNotUnderstood pins the console
+// capability: a console that would print the sequence literally gets no frame,
+// while the bell — a character, not an escape — still works. Auto falls back to
+// the bell because a signal it can deliver beats one it cannot.
+func TestSinkNeverWritesAFrameWhereEscapesAreNotUnderstood(t *testing.T) {
+	event := activity.Event{Type: activity.TypeIssueClosed, Actor: "lucia.gomez", Subject: "done"}
+	kitty := map[string]string{"KITTY_WINDOW_ID": "3"}
+
+	tests := []struct {
+		name string
+		mode Mode
+		want string
+	}{
+		{name: "osc writes nothing", mode: OSC, want: ""},
+		{name: "auto falls back to the bell", mode: Auto, want: "\a"},
+		{name: "bell still rings", mode: Bell, want: "\a"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			lookup := func(name string) string { return kitty[name] }
+			New(tt.mode, &out, false, lookup).Notify(event)
+
+			if got := out.String(); got != tt.want {
+				t.Fatalf("written = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestSinkSwallowsAFailedWrite pins the ADR's degradation: a signal that cannot
 // be delivered never becomes the session's error, so Notify must not panic and
 // must not report anything.
 func TestSinkSwallowsAFailedWrite(t *testing.T) {
 	event := activity.Event{Type: activity.TypeIssueClosed, Actor: "lucia.gomez", Subject: "done"}
-	New(Bell, failingWriter{}, func(string) string { return "" }).Notify(event)
+	New(Bell, failingWriter{}, true, func(string) string { return "" }).Notify(event)
 }
 
 // failingWriter rejects every write, standing in for a console that is gone.

@@ -1,6 +1,6 @@
 # Desktop notifications for the feed
 
-Status: ready-for-agent
+Status: ready-for-human
 
 ## Problem Statement
 

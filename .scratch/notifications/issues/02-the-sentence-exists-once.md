@@ -11,12 +11,15 @@ needs no console and no terminal to be verified.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
-- [ ] Every event type has one plain sentence, derived from the event alone.
-- [ ] The rendered card is byte-identical to the base commit for every existing
+Implementado en `ec41468`: `render.Sentence` es la frase plana y la tarjeta coloreada
+sale de los mismos segmentos. Sin chequeo manual pendiente más allá del merge.
+
+- [x] Every event type has one plain sentence, derived from the event alone.
+- [x] The rendered card is byte-identical to the base commit for every existing
       expectation, in colour and with colour off.
-- [ ] A test pins that the coloured card with its escapes removed equals the plain
+- [x] A test pins that the coloured card with its escapes removed equals the plain
       sentence, for the four known types and for an unknown one.
-- [ ] An unknown type still degrades to its raw value in both forms.
-- [ ] No behaviour, flag or output contract changes.
+- [x] An unknown type still degrades to its raw value in both forms.
+- [x] No behaviour, flag or output contract changes.

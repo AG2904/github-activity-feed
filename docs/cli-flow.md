@@ -32,6 +32,7 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │ despacho: watch | history
                               │ flags de watch: --relay --user --repo
                               │                 --backfill <n> --no-color --json
+                              │                 --notify <off|bell|osc|auto>
                               │ banner "watching <url> · backfill <n>" en stderr
                               ▼
                          internal/cli/watch.go · watch()
@@ -62,8 +63,8 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │                 stdout: el evento
                               │                      │
                               │                      ▼
-                              │                 notify.Sink.Notify()
-                              │                      └─ la consola: el bell
+                              │                 notify.Sink.Notify(event)
+                              │                      └─ la consola: el bell o el frame OSC
                               │
                               └── error ──▶ backoff 1 → 30 s ──▶ vuelve al loop
 
@@ -125,11 +126,14 @@ Paso por paso:
    se elige de lo que la terminal ya publica, nunca de una consulta: `OSC 99` para
    kitty (`KITTY_WINDOW_ID`, `TERM=xterm-kitty`), `OSC 777` para Windows Terminal
    (`WT_SESSION`), y `OSC 9` para iTerm2, Ghostty y WezTerm (`TERM_PROGRAM`,
-   `TERM=xterm-ghostty`). Una terminal que el entorno no identifica no recibe
-   ningún byte. El frame es una plantilla fija —un solo introductor y un solo
-   terminador, ambos del programa— sobre campos que pasan por `render.Clean`: un
+   `TERM=xterm-ghostty`). Cuando el entorno no identifica la terminal, `osc` usa
+   `OSC 9`, la secuencia más extendida: la que no la entiende la descarta. El
+   frame es una plantilla fija —un solo introductor y un solo terminador, ambos
+   del programa— sobre campos que pasan por `render.Clean`: un
    `;` se vuelve espacio, los overrides bidi se descartan, el título se corta a 64
-   runas y el cuerpo a 200, y la URL nunca viaja. La razón entera está en
+   runas y el cuerpo a 200, y la URL nunca viaja. La consola de Windows se pide en
+   modo VT; si lo rechaza, el frame no se escribe y `auto` cae al bell. La razón
+   entera está en
    ADR-0017. `auto` no inventa un protocolo: elige ese frame cuando el entorno
    identifica una de esas terminales y el bell cuando no. La tabla de qué
    terminal entiende qué vive en `docs/cli-testing.md`, no en este mapa.
@@ -356,11 +360,11 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   escapes. Un pipe recibe texto plano.
 - **El texto del relay llega a la terminal sin bytes de control.** Los campos de un
   evento vienen del relay tal como lo guardó, y un terminal ejecuta los C0, DEL y C1
-  que la paleta jamás escribiría. `clean` los descarta —y convierte un salto de línea
+  que la paleta jamás escribiría. `Clean` los descarta —y convierte un salto de línea
   o un tab en un espacio, porque también partirían la tarjeta— antes de componer la
-  tarjeta, el encabezado agrupado y la línea de URL, así la única fuente de escapes
-  sigue siendo la paleta con color o sin él. `--json` es la excepción deliberada:
-  escribe el payload tal como llegó.
+  tarjeta, el encabezado agrupado, la línea de URL y el frame de la notificación, así
+  la única fuente de escapes sigue siendo el programa. `--json` es la excepción
+  deliberada: escribe el payload tal como llegó.
 - **Tampoco el texto ajeno llega crudo por un error.** El `status` de una respuesta
   no es texto propio: `printable` lo vacía de bytes de control antes de que el error
   se imprima en stderr, que es texto plano. Y un redirect no se sigue: `relayClient`
