@@ -15,6 +15,16 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # better-sqlite3 13 is held back on purpose. typeorm 1.1.2 declares
+    # `peerOptional better-sqlite3 ^12.0.0`, and the relay image build
+    # (`npm prune --omit=dev`) re-resolves the tree and fails with ERESOLVE
+    # while `npm ci` from the lockfile stays green -- so the PR looks half
+    # healthy and can never merge. Widen this range once a typeorm release
+    # admits 13, and bump the `allowScripts` pin in package.json with it.
+    ignore:
+      - dependency-name: better-sqlite3
+        versions:
+          - '>=13.0.0 <14.0.0'
     groups:
       # One PR for the whole NestJS family: they are released together and a
       # split set is a build that cannot be merged one piece at a time.
