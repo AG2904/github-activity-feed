@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/AG2904/github-activity-feed/client/internal/notify"
 )
 
 const defaultRelay = "http://localhost:3000"
@@ -61,12 +63,12 @@ func printUsage(w io.Writer) {
 	fmt.Fprintf(w, `feed shows the GitHub activity relay's critical events in the terminal.
 
 Usage:
-  feed watch   [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json]
+  feed watch   [--relay <url>] [--user <login>] [--repo <owner/name>] [--backfill <n>] [--no-color] [--json] [--notify <%[1]s>]
   feed history [--relay <url>] [--user <login>] [--repo <owner/name>] [--no-color] [--json | --group-by-repo]
   feed --version
 
-The relay resolves as --relay, then $RELAY_URL, then %s.
-`, defaultRelay)
+The relay resolves as --relay, then $RELAY_URL, then %[2]s.
+`, notify.Syntax(), defaultRelay)
 }
 
 // relayFallback is the flag's default, so a flag that is present wins over the

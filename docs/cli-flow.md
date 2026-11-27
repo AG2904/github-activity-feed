@@ -32,6 +32,7 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │ despacho: watch | history
                               │ flags de watch: --relay --user --repo
                               │                 --backfill <n> --no-color --json
+                              │                 --notify <off|bell|osc|auto>
                               │ banner "watching <url> · backfill <n>" en stderr
                               ▼
                          internal/cli/watch.go · watch()
@@ -60,6 +61,10 @@ terminal ──feed watch──▶ cmd/feed/main.go (signal.NotifyContext)
                               │                      └─ o payload crudo (--json)
                               │                      ▼
                               │                 stdout: el evento
+                              │                      │
+                              │                      ▼
+                              │                 notify.Sink.Notify(event)
+                              │                      └─ la consola: el bell o el frame OSC
                               │
                               └── error ──▶ backoff 1 → 30 s ──▶ vuelve al loop
 
@@ -106,7 +111,33 @@ Paso por paso:
    `paint()` imprime el payload tal cual (`--json`) o lo renderiza como la tarjeta de
    tres líneas —la frase, el título con las etiquetas al frente, el contexto— más la
    URL cuando no hay hyperlink, y lo suma a la cuenta de lo mostrado.
-7. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
+7. **La señal** (`internal/notify`) es la segunda decisión de salida de la sesión:
+   qué le dice a alguien que no está mirando la terminal que algo pasó. `watch()`
+   la construye con el modo de `--notify` —`off`, `bell`, `osc` o `auto`; `off` por
+   defecto— y con la consola del proceso (`CONOUT$` en Windows, `/dev/tty` en el
+   resto), abierta solo si el modo la pide; sin consola no hay dónde escribir y
+   todo es no-op. `stream()` la despierta **después** de que la tarjeta se
+   escribió y solo para un evento del vivo: el backfill y el historial comparten
+   `paint` y nunca rinden, y un evento que el filtro descartó tampoco, porque la
+   regla es "mostrado", no "recibido". Un fallo al escribirla no es un error de la
+   sesión.
+8. **La secuencia del terminal** (`internal/notify/frame.go`) es lo que `osc`
+   escribe: un frame —una notificación— por evento mostrado del vivo. El protocolo
+   se elige de lo que la terminal ya publica, nunca de una consulta: `OSC 99` para
+   kitty (`KITTY_WINDOW_ID`, `TERM=xterm-kitty`), `OSC 777` para Windows Terminal
+   (`WT_SESSION`), y `OSC 9` para iTerm2, Ghostty y WezTerm (`TERM_PROGRAM`,
+   `TERM=xterm-ghostty`). Cuando el entorno no identifica la terminal, `osc` usa
+   `OSC 9`, la secuencia más extendida: la que no la entiende la descarta. El
+   frame es una plantilla fija —un solo introductor y un solo terminador, ambos
+   del programa— sobre campos que pasan por `render.Clean`: un
+   `;` se vuelve espacio, los overrides bidi se descartan, el título se corta a 64
+   runas y el cuerpo a 200, y la URL nunca viaja. La consola de Windows se pide en
+   modo VT; si lo rechaza, el frame no se escribe y `auto` cae al bell. La razón
+   entera está en
+   ADR-0017. `auto` no inventa un protocolo: elige ese frame cuando el entorno
+   identifica una de esas terminales y el bell cuando no. La tabla de qué
+   terminal entiende qué vive en `docs/cli-testing.md`, no en este mapa.
+9. **El loop** decide qué hacer con el error. Un error `fatal` (URL inválida, stdout
    cerrado) sale con `1`. Todo lo demás se reintenta: primero se calcula la espera,
    después se duerme, y se vuelve a llamar a `stream()`. Si `ctx` se canceló en
    cualquier punto, el retorno es `0`, no un error. Cualquiera sea el camino de
@@ -115,7 +146,7 @@ Paso por paso:
    <d> dismissed` cuando se mostró algo, `stopped · no events` cuando no. Los conteos
    son de eventos **mostrados**, filtro incluido: la respuesta a "qué vi", no a "qué
    mandó el relay".
-8. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
+10. **`backoff`** arranca en un segundo, duplica hasta un techo de treinta, y suma un
    jitter de hasta un cuarto del paso. Una conexión que entregó al menos un evento
    válido resetea la escalera, así que un corte aislado vuelve a esperar un segundo.
 
@@ -255,6 +286,11 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
   `SetConsoleMode` cargado por `LazyDLL`; si el console lo rechaza, devuelve `false`
   y no se emite un solo escape. En el resto de las plataformas alcanza con
   `ModeCharDevice`.
+- **`client/internal/cli/console_windows.go` y `console_other.go`** — dos builds de
+  la misma función: el dispositivo de consola del proceso (`CONOUT$` en Windows,
+  `/dev/tty` en el resto), o `nil` cuando no hay ninguno. Es el destino de la señal
+  y no de los flujos, que es lo que permite notificar sin ensuciar `feed watch |
+  jq` ni un stderr redirigido a un log.
 - **`client/test/`** — la suite no importa paquetes internos: compila dos binarios y
   les habla por la costura del proceso.
 
@@ -273,6 +309,10 @@ lugar donde un cambio en el formato de los frames puede romperlo (ADR-0007).
 | `client/internal/cli/stored.go` | el historial como filas crudas | los dos caminos de lectura |
 | `client/internal/cli/terminal_windows.go` | la terminal en Windows: es consola, y aprende escapes | la regla de color |
 | `client/internal/cli/terminal_other.go` | la terminal en el resto | la regla de color |
+| `client/internal/notify/notify.go` | la política de señal: qué rinde y qué no | el watch |
+| `client/internal/notify/frame.go` | detección del terminal y el frame OSC | `osc` |
+| `client/internal/cli/console_windows.go` | la consola del proceso, en Windows | la señal |
+| `client/internal/cli/console_other.go` | la consola del proceso, en el resto | la señal |
 | `client/internal/sse/sse.go` | frames SSE a payloads | la conexión en vivo |
 | `client/internal/activity/activity.go` | el contrato: el evento y su filtro | los dos comandos |
 | `client/internal/render/render.go` | la tarjeta de un evento | los dos comandos |
@@ -297,6 +337,15 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   reconexión, la línea `stopped` de la salida y los errores van a stderr, en texto
   plano y sin TTY-gating —una sesión redirigida a un log merece la misma narración
   que una terminal—. Eso es lo que hace seguros `feed watch | jq` y `feed watch | tee`.
+- **La notificación no es salida.** El bell y el frame OSC se escriben en el
+  dispositivo de consola, nunca en stdout ni en stderr:
+  `feed watch | jq` y `feed watch 2> log` reciben exactamente lo mismo con
+  `--notify` prendido o apagado. La regla es "mostrado", no "recibido": el backfill
+  y `feed history` no rinden, y un evento filtrado tampoco. El frame es una
+  plantilla fija sobre campos limpiados, con un solo introductor y un solo
+  terminador del programa: el texto del evento no puede empezar una secuencia
+  propia. `off` es el default, una señal que no se puede entregar se descarta, y
+  ninguna señal cambia un código de salida (ADR-0017).
 - **La sesión se narra tres veces y nada más.** Un banner al arrancar, una sola
   línea `connected` tras la primera conexión —una reconexión dice
   `watch: reconnected`, nunca un segundo `connected`— y una línea de cuenta al salir.
@@ -311,11 +360,11 @@ Son las cosas que un lector nuevo rompe sin querer. Cada una tiene su ADR.
   escapes. Un pipe recibe texto plano.
 - **El texto del relay llega a la terminal sin bytes de control.** Los campos de un
   evento vienen del relay tal como lo guardó, y un terminal ejecuta los C0, DEL y C1
-  que la paleta jamás escribiría. `clean` los descarta —y convierte un salto de línea
+  que la paleta jamás escribiría. `Clean` los descarta —y convierte un salto de línea
   o un tab en un espacio, porque también partirían la tarjeta— antes de componer la
-  tarjeta, el encabezado agrupado y la línea de URL, así la única fuente de escapes
-  sigue siendo la paleta con color o sin él. `--json` es la excepción deliberada:
-  escribe el payload tal como llegó.
+  tarjeta, el encabezado agrupado, la línea de URL y el frame de la notificación, así
+  la única fuente de escapes sigue siendo el programa. `--json` es la excepción
+  deliberada: escribe el payload tal como llegó.
 - **Tampoco el texto ajeno llega crudo por un error.** El `status` de una respuesta
   no es texto propio: `printable` lo vacía de bytes de control antes de que el error
   se imprima en stderr, que es texto plano. Y un redirect no se sigue: `relayClient`

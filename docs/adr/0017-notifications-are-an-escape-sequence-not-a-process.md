@@ -22,7 +22,7 @@ by construction.
 
 The provider of every field in an event is the relay, which stored whatever
 GitHub sent. That text reaches a terminal twice today — the card and the `OSC 8`
-hyperlink — and `render.clean` is what keeps both honest: it drops C0, DEL and
+hyperlink — and `render.Clean` is what keeps both honest: it drops C0, DEL and
 C1, so it drops `ESC` (0x1b) and `BEL` (0x07), the two bytes a second sequence
 would need. The notification frame inherits that property only if it is built the
 same way, so the contract is:
@@ -31,14 +31,15 @@ same way, so the contract is:
    `activity.Event` and returns the bytes — never a function that takes strings;
 2. a fixed template — the introducer, the terminator and the separator are the
    program's own literals, and the only variable parts are fields that came out
-   of `clean`;
+   of `render.Clean`;
 3. `;` becomes a space in each field, because `OSC 777` uses it as the separator
    between title and body and a subject is free to contain one;
 4. each field is clamped (title to 64 runes, body to 200), because a notification
    daemon is not a scrollback and a 4 KB subject is a denial of service against
    it;
-5. bidi overrides (U+202A–202E, U+2066–2069) are dropped, because `clean` predates
-   them and they reverse what a toast shows without changing a visible byte;
+5. bidi overrides (U+202A–202E, U+2066–2069) are dropped, because `render.Clean`
+   predates them and they reverse what a toast shows without changing a visible
+   byte;
 6. the URL never travels: no hyperlink, no markup. A ping says what happened, and
    the feed remains the place where a link is clickable.
 
@@ -134,11 +135,12 @@ and the tmux note belong in `docs/cli-testing.md`, where a reader already goes t
 run the thing by hand.
 
 The frame's encoder is a pure function, and pinning its property — one `ESC`, one
-terminator, no control byte in a field — needs the first unit test in `client/`:
-so far the suite compiles the binary and speaks to it across the process
-boundary, and a byte that goes to a console cannot be observed from a pipe. The
-e2e suite keeps its half: `--notify` parsing and refusals, and the invariant that
-enabling notifications adds no byte to stdout or stderr.
+terminator, no control byte in a field — needs a unit test inside `client/`
+rather than one across the process boundary: a byte that goes to a console cannot
+be observed from a pipe, so `internal/notify/frame_test.go` pins the frame's
+shape beside the package that builds it. The e2e suite keeps its half: `--notify`
+parsing and refusals, and the invariant that enabling notifications adds no byte
+to stdout or stderr.
 
 What this does not do is worth being explicit about, because it is what the
 other option was for: no click opens the pull request, no unread badge survives

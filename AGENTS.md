@@ -8,7 +8,7 @@ from `client/` and `npm` commands run from the root.
 - **Reaching the relay** — webhook auth, which events are critical, SSE fan-out,
   history: `docs/relay-flow.md`; code in `src/relay/`.
 - **The terminal client** — dispatch, `watch`, `history`, rendering: `docs/cli-flow.md`;
-  code in `client/internal/{cli,activity,render,sse}/`.
+  code in `client/internal/{cli,activity,render,notify,sse}/`.
 - **Running the two together** — `docs/manual-testing.md` for the relay and a
   signed webhook, `docs/end-to-end-testing.md` for both halves at once, or
   `docs/docker.md` to run both in containers with no local toolchain.

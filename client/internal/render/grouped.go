@@ -114,7 +114,7 @@ func byRepository(events []activity.Event) ([]repositoryGroup, []activity.Event)
 // so it is the one line worth weighting when escapes are in use: bold for the
 // structure and blue, the location role, as the branch carries it in the feed.
 func (p Palette) heading(w io.Writer, repository string) error {
-	repository = clean(repository)
+	repository = Clean(repository)
 	if p.Color {
 		repository = p.paint(bold+blue, repository)
 	}

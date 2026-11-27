@@ -68,7 +68,7 @@ func (p Palette) card(w io.Writer, event activity.Event, now time.Time, shape li
 	card.WriteString("\n")
 	if !p.Color {
 		card.WriteString("  ")
-		card.WriteString(clean(event.URL))
+		card.WriteString(Clean(event.URL))
 		card.WriteString("\n")
 	}
 
@@ -76,40 +76,75 @@ func (p Palette) card(w io.Writer, event activity.Event, now time.Time, shape li
 	return err
 }
 
-// headline is the sentence: who acted, what the verb was, and where it landed.
-// A merge names the branch that landed when the event carries one; a null
-// branch — a legacy row or a payload without a usable head ref — falls back to
-// the type-derived phrase, because pr.merged still means a merge into main. A
-// type that means something else gets its own phrase rather than reusing this
-// one. An unknown type degrades to its raw value and no destination, so a new
-// event type still reads as something.
-func (p Palette) headline(event activity.Event) string {
-	parts := []string{p.paint(cyan, clean(event.Actor))}
+// segment is one word-group of the sentence and the palette slot it wears. The
+// sentence is built once as these segments, so its plain form and its coloured
+// form cannot describe the same event differently: the plain form joins the
+// texts, the coloured one paints each with its role.
+type segment struct {
+	code string
+	text string
+}
+
+// segments is the one source of truth for an event's sentence: who acted, what
+// the verb was, and where it landed. A merge names the branch that landed when
+// the event carries one; a null branch — a legacy row or a payload without a
+// usable head ref — falls back to the type-derived phrase, because pr.merged
+// still means a merge into main. A type that means something else gets its own
+// phrase rather than reusing this one. An unknown type degrades to its raw value
+// and no destination, so a new event type still reads as something.
+func segments(event activity.Event) []segment {
+	parts := []segment{{cyan, Clean(event.Actor)}}
 	switch event.Type {
 	case activity.TypePRMerged:
-		parts = append(parts, p.paint(green, "merged"))
+		parts = append(parts, segment{green, "merged"})
 		if event.Branch != nil && *event.Branch != "" {
-			parts = append(parts, p.paint(blue, clean(*event.Branch)))
+			parts = append(parts, segment{blue, Clean(*event.Branch)})
 		}
 		parts = append(parts,
-			p.paint(grey, "into"),
-			p.paint(green, "main"),
+			segment{grey, "into"},
+			segment{green, "main"},
 		)
 	case activity.TypeIssueAssigned:
-		parts = append(parts, p.paint(yellow, "assigned"))
+		parts = append(parts, segment{yellow, "assigned"})
 		if event.Assignee != nil && *event.Assignee != "" {
-			parts = append(parts, p.paint(grey, "to"), p.paint(cyan, clean(*event.Assignee)))
+			parts = append(parts, segment{grey, "to"}, segment{cyan, Clean(*event.Assignee)})
 		}
 	case activity.TypeIssueClosed:
-		parts = append(parts, p.paint(white, "closed"))
+		parts = append(parts, segment{white, "closed"})
 	case activity.TypeIssueDismissed:
 		// The two closures are different news, so the reason rides in the same
 		// sentence instead of being left to the type the feed does not print.
-		parts = append(parts, p.paint(red, "dismissed"), p.paint(grey, "as not planned"))
+		parts = append(parts, segment{red, "dismissed"}, segment{grey, "as not planned"})
 	default:
-		parts = append(parts, p.paint(grey, clean(event.Type)))
+		parts = append(parts, segment{grey, Clean(event.Type)})
 	}
-	return strings.Join(parts, " ")
+	return parts
+}
+
+// Sentence is the plain sentence an event produces: the card's headline with no
+// escape sequence and nothing about the terminal in it. The coloured card is
+// built from the same segments, so the two cannot drift, and a signal raised
+// outside the feed carries this text rather than a second rendering of the event.
+func Sentence(event activity.Event) string {
+	return joinSegments(segments(event), func(part segment) string { return part.text })
+}
+
+// headline is the sentence in its coloured form: the same segments as Sentence,
+// each painted with its role when colour is allowed.
+func (p Palette) headline(event activity.Event) string {
+	return joinSegments(segments(event), func(part segment) string { return p.paint(part.code, part.text) })
+}
+
+// joinSegments gives the one sentence its two renderings: each segment goes
+// through paint and the results are joined by the single space the sentence
+// uses. Sentence and headline differ only in that function, so they cannot
+// drift in shape either.
+func joinSegments(parts []segment, paint func(segment) string) string {
+	texts := make([]string, len(parts))
+	for i, part := range parts {
+		texts[i] = paint(part)
+	}
+	return strings.Join(texts, " ")
 }
 
 // title is the reason and the thing itself: the labels the event carries come
@@ -120,15 +155,15 @@ func (p Palette) headline(event activity.Event) string {
 func (p Palette) title(event activity.Event) string {
 	labels := ""
 	if len(event.Labels) > 0 {
-		labels = p.paint(magenta, "["+clean(strings.Join(event.Labels, ", "))+"]") + " "
+		labels = p.paint(magenta, "["+Clean(strings.Join(event.Labels, ", "))+"]") + " "
 	}
 	if !p.Color {
-		return labels + clean(event.Subject)
+		return labels + Clean(event.Subject)
 	}
 	// The subject is concatenated into the hyperlink, so an ST byte inside it
 	// would close the link the palette opens and retarget the rest; cleaning
 	// both halves keeps the sequence the palette's own.
-	return labels + bold + "\x1b]8;;" + clean(event.URL) + "\x1b\\" + clean(event.Subject) + "\x1b]8;;\x1b\\" + reset
+	return labels + bold + "\x1b]8;;" + Clean(event.URL) + "\x1b\\" + Clean(event.Subject) + "\x1b]8;;\x1b\\" + reset
 }
 
 // context is the repository and the freshness, in the order a reader asks for
@@ -137,20 +172,24 @@ func (p Palette) title(event activity.Event) string {
 func (p Palette) context(event activity.Event, now time.Time, shape lineShape) string {
 	parts := make([]string, 0, 2)
 	if shape == withRepository && hasRepository(event) {
-		parts = append(parts, p.paint(grey, clean(*event.Repository)))
+		parts = append(parts, p.paint(grey, Clean(*event.Repository)))
 	}
 	parts = append(parts, p.paint(grey, relative(now, event.When)))
 	return strings.Join(parts, p.paint(grey, " · "))
 }
 
-// clean renders event text as displayable characters. Every field in a card
+// Clean renders event text as displayable characters. Every field in a card
 // comes from the relay, which stored it verbatim, and a terminal acts on C0,
 // DEL and C1 bytes the program would otherwise never emit: without this the
 // colour gate — which only decides which escapes the program adds — would be
 // mistaken for a filter of the ones the event brings. A line break or a tab
 // inside a field would also split the card's own layout, so they become a space
 // instead of disappearing.
-func clean(text string) string {
+//
+// It is exported because the notification frame puts the same event text in
+// front of a terminal and must inherit the same property: every variable field
+// of the frame passes through here before it is assembled (ADR-0017).
+func Clean(text string) string {
 	return strings.Map(func(r rune) rune {
 		switch {
 		case r == '\n' || r == '\t':

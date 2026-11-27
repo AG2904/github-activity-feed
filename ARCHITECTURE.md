@@ -149,7 +149,8 @@ github-activity-feed/
     ├── cmd/feed/main.go       # el binario: arranca el proceso y traduce Ctrl-C
     ├── internal/activity/     # el shape normalizado y el filtro por Involvement
     ├── internal/sse/          # el parser SSE a mano (ADR-0007)
-    ├── internal/render/       # las dos líneas del feed y el reporte agrupado
+    ├── internal/render/       # la tarjeta del feed y el reporte agrupado
+    ├── internal/notify/       # la señal fuera del feed: bell, detección y frame OSC (ADR-0017)
     ├── internal/cli/          # dispatch, watch/history, emitter, idle y retry (ADR-0008)
     ├── tools/build.mjs        # binarios estáticos y versión (`npm run cli:*`)
     ├── test/                  # e2e sobre el límite del proceso
